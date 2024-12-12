@@ -3,7 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
-import { getServerSession } from "next-auth";
 
 export const authOptions = {
   providers: [

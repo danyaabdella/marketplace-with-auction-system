@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CitySelect, CountrySelect, StateSelect } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../libs/firebase';
+import { storage } from "@/libs/firebase";
 import { toast } from "react-hot-toast";
 
 export default function SignUp() {
