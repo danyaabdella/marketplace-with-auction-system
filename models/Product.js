@@ -30,6 +30,12 @@ const ProductSchema = new Schema(
     deliveryRule: { type: String, enum: DELIVERY_RULE_ENUM, required: true },
     images: { type: [String], default: [] },
     reviews: [ReviewSchema],
+    isDeleted: { type: Boolean, default: false }, 
+    trashDate: { 
+      type: Date, 
+      default: null, 
+      expires: 30 * 60 * 60 * 60, // Automatically delete after 30 days
+    },
     location: { 
       type: { type: String, enum: ['Point'], required: true },
       coordinates: { type: [Number], required: true }
