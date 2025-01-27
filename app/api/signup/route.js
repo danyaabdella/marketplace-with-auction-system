@@ -1,5 +1,5 @@
 import User from "@/models/User";
-import bcrypt from "bcryptjs";
+import argon2 from 'argon2';
 import { checkSession, connectToDB, isSeller } from "@/libs/functions";
 
 export async function POST(req) {
@@ -16,7 +16,7 @@ export async function POST(req) {
             );
         }
 
-        const hashedPassword = await bcrypt.hash(body.password, 10);
+        const hashedPassword = await argon2.hash(body.password);  
         body.password = hashedPassword;
         const createdUser = await User.create(body);
 
@@ -76,7 +76,7 @@ export async function PUT(req) {
         // Prepare the update data
         const updateData = {};
         if (fullName) updateData.fullName = fullName;
-        if (password) updateData.password = await bcrypt.hash(password, 10); // Hash the new password
+        if (password) updateData.password = await argon2.hash(password);  
         if (image) updateData.image = image;
         if (stateName) updateData.stateName = stateName;
         if (cityName) updateData.cityName = cityName;

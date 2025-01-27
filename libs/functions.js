@@ -26,7 +26,7 @@ export async function fetchUserData() {
 
   let isConnected = false;
   
-  export async function connectToDB() {
+export async function connectToDB() {
     if (isConnected) {
       console.log("Using existing database connection");
       return;
@@ -55,7 +55,7 @@ export async function isSeller() {
     }
 }
 
-  export async function userInfo() {
+export async function userInfo() {
     const session = await getServerSession(options)
     const userEmail = session?.user?.email;
     console.log("User email: ", userEmail);
@@ -65,7 +65,7 @@ export async function isSeller() {
     connectToDB();
     let userInfo = await User.findOne({email: userEmail})
 
-    console.log("user info to check role: ", userInfo.role);
+    console.log("user info to check role: ", userInfo);
     if(!userInfo) {
       return false;
     }
@@ -73,7 +73,7 @@ export async function isSeller() {
     return userInfo;
   }
 
-  export async function checkSession(email) {
+export async function checkSession(email) {
       if (!email) {
           return new Response(
               JSON.stringify({ error: "User email is required." }),
