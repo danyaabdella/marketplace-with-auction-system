@@ -113,191 +113,309 @@ export default function SignUp() {
     });
   };
 
+  // return (
+  //   <div className="max-h-screen flex items-center justify-center">
+  //     <div className="w-full max-w-4xl bg-gray-200 p-6 rounded-lg shadow-lg mt-3  border">
+  //       <h2 className="text-2xl font-bold text-center mb-6">Sign Up</h2>
+  //        {error && (
+  //               <div className="my-4 text-center text-red-500">
+  //                   {error}
+  //               </div>
+  //           )}
+  //       <form onSubmit={handleFormSubmit}>
+  //           <div className="grow grid md:grid-cols-2 sm:grid-cols-1 gap-5">
+  //               <div className="">
+  //                   <div className="mb-2">
+  //                       <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+  //                       Full Name
+  //                       </label>
+  //                       <input
+  //                       type="text"
+  //                       id="fullName"
+  //                       onChange={ev => setFullName(ev.target.value)}
+  //                       placeholder="Enter your full name"
+  //                       className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+  //                       required
+  //                       />
+  //                   </div>
+
+  //                   <div className="mb-2">
+  //                       <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+  //                       Email
+  //                       </label>
+  //                       <input
+  //                       type="email"
+  //                       id="email"
+  //                       onChange={ev => {setEmail(ev.target.value)}}
+  //                       placeholder="Enter your email"
+  //                       className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+  //                       required
+  //                       />
+  //                   </div>
+
+  //                   <div className="mb-2">
+  //                       <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+  //                       Password
+  //                       </label>
+  //                       <input
+  //                       type="password"
+  //                       id="password"
+  //                       onChange={ev => setPassword(ev.target.value)}
+  //                       placeholder="Enter a strong password"
+  //                       className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+  //                       required
+  //                       />
+  //                   </div>
+
+  //                   <div className="mb-4">
+  //                       <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+  //                       Confirm Password
+  //                       </label>
+  //                       <input
+  //                       onChange={ev => setConfirmPassword(ev.target.value)} 
+  //                       type="password"
+  //                       id="confirmPassword"
+  //                       placeholder="Re-Enter password"
+  //                       className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+  //                       required
+  //                       />
+  //                   </div>
+  //               </div>
+  //               <div className="">
+  //                   <div className="mb-4">
+  //                       <label className="block text-sm font-medium text-gray-700">Sign Up As</label>
+  //                       <div className="flex items-center space-x-4 mt-2">
+  //                       <label className="flex items-center">
+  //                           <input
+  //                           type="radio"
+  //                           name="role"
+  //                           value="Seller"
+  //                           onChange={() => setRole("Seller")}
+  //                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+  //                           />
+  //                           <span className="ml-2">Seller</span>
+  //                       </label>
+  //                       <label className="flex items-center">
+  //                           <input
+  //                           type="radio"
+  //                           name="role"
+  //                           value="Buyer"
+  //                           onChange={() => setRole("Buyer")}
+  //                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+  //                           />
+  //                           <span className="ml-2">Buyer</span>
+  //                       </label>
+  //                       </div>
+  //                       {role === "Seller" && (
+  //                           <div className="mt-3">
+  //                               <div className="mb-4">
+  //                                   <label htmlFor="tinNumber" className="block text-sm font-medium text-gray-700">
+  //                                   TIN Number
+  //                                   </label>
+  //                                   <input
+  //                                   type="file"
+  //                                   id="tinNumber"
+  //                                   className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+  //                                   onChange={(e) => handleUpload(e.target.files[0], setTinFileUrl)}
+  //                                   required
+  //                                   />
+  //                                   {tinFileUrl && (
+  //                                   <p className="text-sm text-green-500 mt-2">File uploaded successfully!</p>
+  //                                   )}
+  //                               </div>
+
+  //                               <div className="mb-4">
+  //                                   <label htmlFor="nationalId" className="block text-sm font-medium text-gray-700">
+  //                                   National ID
+  //                                   </label>
+  //                                   <input
+  //                                   type="file"
+  //                                   id="nationalId"
+  //                                   className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+  //                                   onChange={(e) => handleUpload(e.target.files[0], setNationalIdFileUrl)}
+  //                                   required
+  //                                   />
+  //                                   {nationalIdFileUrl && (
+  //                                   <p className="text-sm text-green-500 mt-2">File uploaded successfully!</p>
+  //                                   )}
+  //                               </div>
+  //                           </div>
+  //                       )}
+  //                   <div className="mb-4">
+  //                       <div className="mb-2 mt-5">
+  //                           <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+  //                           Phone Number
+  //                           </label>
+  //                           <input
+  //                           type="number"
+  //                           onChange={ev => setPhoneNumber(ev.target.value)}
+  //                           id="phoneNumber"
+  //                           placeholder="Enter Phone Number"
+  //                           className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+  //                           required
+  //                           />
+  //                       </div>
+  //                     <label className="block text-sm font-medium text-gray-700">Location</label>
+  //                     <div className="flex flex-col sm:flex-row gap-4">
+  //                       <div className="flex gap-3 items-center mt-2">
+  //                         <StateSelect
+  //                             defaultValue={stateId ? { id: stateId, name: stateName } : 0}
+  //                             countryid={70}
+  //                             onChange={(e) => {
+  //                             setStateId(e.id);
+  //                             setStateName(e.name);
+  //                             }}
+  //                             placeHolder="Select Region"
+  //                         />
+  //                       </div>
+  //                       <div className="flex gap-3 items-center mt-2">
+  //                         <CitySelect
+  //                             defaultValue={cityId ? { id: cityId, name: cityName } : 0}
+  //                             countryid={70}
+  //                             stateid={stateId}
+  //                             onChange={(e) => {
+  //                             setCityId(e.id);
+  //                             setCityName(e.name);
+  //                             }}
+  //                             placeHolder="Select City"
+  //                         />
+  //                       </div>
+  //                     </div>
+  //                   </div>
+  //                   </div>
+  //               </div>
+  //           </div>
+  //           <div className="flex justify-center mt-6">
+  //               <button
+  //                   type="submit"
+  //                   className="w-1/3 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+  //                   disabled={creatingUser}
+  //               >
+  //                   Sign Up
+  //               </button>
+  //           </div>
+  //        <div className="mt-4 text-center">
+  //           <p className="text-sm text-gray-600">Already have an account? <a href="/signin" className="text-blue-600 hover:text-blue-800">Sign In</a></p>
+  //        </div>
+  //       </form>
+  //     </div>
+  //   </div>
+  // );
   return (
-    <div className="max-h-screen flex items-center justify-center">
-      <div className="w-full max-w-4xl bg-gray-200 p-6 rounded-lg shadow-lg mt-3  border">
-        <h2 className="text-2xl font-bold text-center mb-6">Sign Up</h2>
-         {error && (
-                <div className="my-4 text-center text-red-500">
-                    {error}
-                </div>
-            )}
-        <form onSubmit={handleFormSubmit}>
-            <div className="grow grid md:grid-cols-2 sm:grid-cols-1 gap-5">
-                <div className="">
-                    <div className="mb-2">
-                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                        Full Name
-                        </label>
-                        <input
-                        type="text"
-                        id="fullName"
-                        onChange={ev => setFullName(ev.target.value)}
-                        placeholder="Enter your full name"
-                        className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        required
-                        />
-                    </div>
-
-                    <div className="mb-2">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email
-                        </label>
-                        <input
-                        type="email"
-                        id="email"
-                        onChange={ev => {setEmail(ev.target.value)}}
-                        placeholder="Enter your email"
-                        className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        required
-                        />
-                    </div>
-
-                    <div className="mb-2">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
-                        </label>
-                        <input
-                        type="password"
-                        id="password"
-                        onChange={ev => setPassword(ev.target.value)}
-                        placeholder="Enter a strong password"
-                        className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        required
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                        Confirm Password
-                        </label>
-                        <input
-                        onChange={ev => setConfirmPassword(ev.target.value)} 
-                        type="password"
-                        id="confirmPassword"
-                        placeholder="Re-Enter password"
-                        className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                        required
-                        />
-                    </div>
-                </div>
-                <div className="">
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Sign Up As</label>
-                        <div className="flex items-center space-x-4 mt-2">
-                        <label className="flex items-center">
-                            <input
-                            type="radio"
-                            name="role"
-                            value="Seller"
-                            onChange={() => setRole("Seller")}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="ml-2">Seller</span>
-                        </label>
-                        <label className="flex items-center">
-                            <input
-                            type="radio"
-                            name="role"
-                            value="Buyer"
-                            onChange={() => setRole("Buyer")}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="ml-2">Buyer</span>
-                        </label>
-                        </div>
-                        {role === "Seller" && (
-                            <div className="mt-3">
-                                <div className="mb-4">
-                                    <label htmlFor="tinNumber" className="block text-sm font-medium text-gray-700">
-                                    TIN Number
-                                    </label>
-                                    <input
-                                    type="file"
-                                    id="tinNumber"
-                                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    onChange={(e) => handleUpload(e.target.files[0], setTinFileUrl)}
-                                    required
-                                    />
-                                    {tinFileUrl && (
-                                    <p className="text-sm text-green-500 mt-2">File uploaded successfully!</p>
-                                    )}
-                                </div>
-
-                                <div className="mb-4">
-                                    <label htmlFor="nationalId" className="block text-sm font-medium text-gray-700">
-                                    National ID
-                                    </label>
-                                    <input
-                                    type="file"
-                                    id="nationalId"
-                                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    onChange={(e) => handleUpload(e.target.files[0], setNationalIdFileUrl)}
-                                    required
-                                    />
-                                    {nationalIdFileUrl && (
-                                    <p className="text-sm text-green-500 mt-2">File uploaded successfully!</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    <div className="mb-4">
-                        <div className="mb-2 mt-5">
-                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                            Phone Number
-                            </label>
-                            <input
-                            type="number"
-                            onChange={ev => setPhoneNumber(ev.target.value)}
-                            id="phoneNumber"
-                            placeholder="Enter Phone Number"
-                            className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            required
-                            />
-                        </div>
-                      <label className="block text-sm font-medium text-gray-700">Location</label>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex gap-3 items-center mt-2">
-                          <StateSelect
-                              defaultValue={stateId ? { id: stateId, name: stateName } : 0}
-                              countryid={70}
-                              onChange={(e) => {
-                              setStateId(e.id);
-                              setStateName(e.name);
-                              }}
-                              placeHolder="Select Region"
-                          />
-                        </div>
-                        <div className="flex gap-3 items-center mt-2">
-                          <CitySelect
-                              defaultValue={cityId ? { id: cityId, name: cityName } : 0}
-                              countryid={70}
-                              stateid={stateId}
-                              onChange={(e) => {
-                              setCityId(e.id);
-                              setCityName(e.name);
-                              }}
-                              placeHolder="Select City"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    </div>
-                </div>
+    <div className="min-h-screen flex items-center justify-center ">
+      <div className="bg-customGray shadow-md rounded-lg p-8 flex flex-col md:flex-row items-center">
+        {/* Form Section */}
+        <div className="md:w-1/2 w-full p-4">
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">Sign up</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Already have an account?{" "}
+            <a href="/signin" className="text-blue-500 hover:underline">
+              Login here
+            </a>
+          </p>
+          <form className="space-y-4" onSubmit={handleFormSubmit}>
+            {/* Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm text-gray-600">
+                Name:
+              </label>
+              <input
+                type="text"
+                id="name"
+                className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your name"
+              />
             </div>
-            <div className="flex justify-center mt-6">
-                <button
-                    type="submit"
-                    className="w-1/3 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={creatingUser}
-                >
-                    Sign Up
-                </button>
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm text-gray-600">
+                Email:
+              </label>
+              <input
+                type="email"
+                id="email"
+                className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email"
+              />
             </div>
-         <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">Already have an account? <a href="/signin" className="text-blue-600 hover:text-blue-800">Sign In</a></p>
-         </div>
-        </form>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm text-gray-600">
+                Password:
+              </label>
+              <input
+                type="password"
+                id="password"
+                className=" bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your password"
+              />
+            </div>
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phone" className="block text-sm text-gray-600">
+                Phone number:
+              </label>
+              <input
+                type="text"
+                id="phone"
+                className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your phone number"
+              />
+            </div>
+            {/* Address */}
+            <div>
+              <label htmlFor="address" className=" text-sm text-gray-600">
+                Address:
+              </label>
+              <input
+                type="text"
+                id="address"
+                className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your address"
+              />
+            </div>
+            {/* Role */}
+            <div>
+              <label htmlFor="role" className="block text-sm text-gray-600">
+                Role:
+              </label>
+              <input
+                type="text"
+                id="role"
+                className="bg-white w-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your role"
+              />
+            </div>
+            {/* Privacy Checkbox */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="privacy"
+                className="h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300 rounded"
+              />
+              <label htmlFor="privacy" className="text-sm text-gray-600">
+                By signing up you agree to the privacy and policy
+              </label>
+            </div>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
+              disabled={creatingUser}
+            >
+              Submit
+            </button>
+          </form>
+        </div>
+
+        {/* Illustration Section */}
+        <div className="hidden md:block md:w-1/2 w-full p-4">
+          <img
+            src="/images/marketplace-illustration.png"
+            alt="Marketplace Illustration"
+            className="w-full"
+          />
+        </div>
       </div>
     </div>
   );
