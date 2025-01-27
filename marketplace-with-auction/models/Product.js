@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+const DELIVERY_RULE_ENUM = ["flat", "per item", "weight"];
 
 const productSchema = new mongoose.Schema({
     merchantDetail: [
@@ -18,7 +19,8 @@ const productSchema = new mongoose.Schema({
     quantity: { type: Number, required: true },
     description: { type: String, required: true },
     images: [{ type: String }],
-    productLocation: { type: Object },
+    banned: { type: Boolean, default: false },
+    bannedBy: { type: String, default: null },
     review: [
         {
             customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -27,9 +29,23 @@ const productSchema = new mongoose.Schema({
             createdDate: { type: Date, default: Date.now }
         }
     ],
-    delivery: { type: String, enum: ['Standard', 'Express'], required: true },
-    deliveryPrice: { type: Number, required: true }
-});
+    deliveryRule: { type: String, enum: DELIVERY_RULE_ENUM, required: true },
+    deliveryPrice: { type: Number, required: true },
+    isDeleted: { type: Boolean, default: false }, 
+    trashDate: { 
+      type: Date, 
+      default: null, 
+      expires: 30 * 24 * 60 * 60, 
+    },
+    location: { 
+        type: { type: String, enum: ['Point'], required: true },
+        coordinates: { type: [Number], required: true }
+      },
+},
+    { timestamps: true }
+);
 
+// Index for geospatial queries (for location-based searches)
+productSchema.index({ location: "2dsphere" });
 const Product =  mongoose.models.Product || mongoose.model('Product', productSchema);
 export default Product;
