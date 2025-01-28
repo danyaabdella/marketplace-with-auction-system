@@ -1,63 +1,101 @@
 import mongoose from "mongoose";
-import Product from "@/models/Product";
 import User from "@models/User";
 
- let isConnected = false;
-// Middleware to check if the user is a verified merchant
-export const isVerifiedMerchant = async (req, res, next) => {
-    const userId = req.user.id; // Assuming user ID is available in req.user
-    const user = await User.findById(userId);
-    if (!user || !user.isVerified || user.role !== 'merchant') {
-        return res.status(403).json({ message: 'Access denied. User is not a verified merchant.' });
-    }
-    next();
-};
-
-export async function connectToDataBase() {
+// Helper Function: Connect to DB
+let isConnected = false;
+export async function connectToDB() {
     if (isConnected) {
-      console.log("Using existing database connection");
-      return;
+        console.log("Using existing database connection");
+        return;
     }
-  
+
     try {
-      await mongoose.connect(process.env.MONGO_URL);
-  
-      isConnected = true;
-      console.log("Database connected successfully");
+        await mongoose.connect(process.env.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+        isConnected = true;
+        console.log("Database connected successfully");
     } catch (error) {
-      console.error("Database connection failed:", error);
-      throw new Error("Failed to connect to the database");
+        console.error("Database connection failed:", error.message);
+        throw new Error("Failed to connect to the database.");
     }
-  }
-export const createProduct = async (req, res) => {
-    const productData = req.body;
-    const newProduct = new Product(productData);
-    await newProduct.save();
-    res.status(201).json(newProduct);
-};
+}
 
-// GET: Fetch all products
-export const fetchProducts = async (req, res) => {
-    const products = await Product.find({ isDeleted: false });
-    res.status(200).json(products);
-};
+// Helper Function: Fetch User Info
+export async function fetchUserInfo() {
+    const session = await getServerSession(options); // Assumes session handling middleware exists
+    const userEmail = session?.user?.email;
 
-// PUT: Update a product by ID
-export const updateProduct = async (req, res) => {
-    const { id } = req.query;
-    const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
-    if (!updatedProduct) {
-        return res.status(404).json({ message: 'Product not found' });
+    if (!userEmail) {
+        throw new Error("Session invalid or user email not found.");
     }
-    res.status(200).json(updatedProduct);
-};
 
-// DELETE: Delete a product by ID
-export const deleteProduct = async (req, res) => {
-    const { id } = req.query;
-    const deletedProduct = await Product.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
-    if (!deletedProduct) {
-        return res.status(404).json({ message: 'Product not found' });
+    await connectToDB();
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+        throw new Error("User not found in the database.");
     }
-    res.status(200).json({ message: 'Product deleted successfully' });
-};
+
+    return user;
+}
+
+// Helper Function: Check if User is a Seller
+export async function isMerchant() {
+    try {
+        const user = await fetchUserInfo();
+        if (user.role !== "merchant" || user.isMerchant !== true) {
+            return new Response(
+                JSON.stringify({ error: "Unauthorized: Only sellers can perform this operation." }),
+                { status: 403 }
+            );
+        }
+        return null;
+    } catch (error) {
+        console.error("Error in isMerchant:", error.message);
+        return new Response(
+            JSON.stringify({ error: "Failed to verify merchant status." }),
+            { status: 500 }
+        );
+    }
+}
+
+// Helper Function: Check Session
+export async function checkSession(email) {
+    if (!email) {
+        return new Response(
+            JSON.stringify({ error: "User email is required." }),
+            { status: 400 }
+        );
+    }
+
+    try {
+        const session = await getServerSession(options);
+        if (!session || session.user?.email !== email) {
+            return new Response(
+                JSON.stringify({ error: "Unauthorized: Invalid session or mismatched email." }),
+                { status: 403 }
+            );
+        }
+        return null;
+    } catch (error) {
+        console.error("Error in session check:", error.message);
+        return new Response(
+            JSON.stringify({ error: "Internal server error during session validation." }),
+            { status: 500 }
+        );
+    }
+}
+
+// Function: Fetch User Data
+export async function fetchUserData() {
+    try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const user = await response.json();
+        return user || {};
+    } catch (error) {
+        console.error("Error fetching user data:", error.message);
+        return { error: "Failed to fetch user data." };
+    }
+}

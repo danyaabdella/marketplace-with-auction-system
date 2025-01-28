@@ -5,7 +5,16 @@ const productSchema = new mongoose.Schema({
     merchantDetail: [
         {
             merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-            merchantName: { type: String, required: true } 
+            merchantName: { type: String, required: true },
+            merchantEmail:{ 
+                unique: true, 
+                required: true, 
+                type: String, 
+                validate: { 
+                    validator: (v) => /^\S+@\S+\.\S+$/.test(v), 
+                    message: props => props.value + ' is not a valid email!' 
+                } 
+            },
         }
     ],
     productName: { type: String, required: true },
