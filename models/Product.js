@@ -27,6 +27,7 @@ const productSchema = new mongoose.Schema({
             createdDate: { type: Date, default: Date.now }
         }
     ],
+    isPopular: { type: Boolean, default: false },
     delivery: { type: String, enum: ['Standard', 'Express'], required: true },
     deliveryPrice: { type: Number, required: true }
 });

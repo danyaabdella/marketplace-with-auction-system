@@ -7,7 +7,7 @@ const orderSchema = new mongoose.Schema({
             customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             customerName: { type: String, required: true },
             phoneNumber: { type: Number, required: true },
-            address: { type: String, required: true }
+            cityName: { type: String, required: true }
         }
     ],
     merchantDetail: [
@@ -23,9 +23,10 @@ const orderSchema = new mongoose.Schema({
             price: { type: Number, required: true }
         }
     ],
+    kebelaAddress: { type: String, required: true},
     totalPrice: { type: Number, required: true },
-    status: { type: String, enum: ['Pending', 'Processing', 'Completed', 'Cancelled'], required: true },
+    status: { type: String, enum: ['Pending', 'Processing', 'Completed', 'Refunding'], required: true },
     orderDate: { type: Date, default: Date.now }
 });
-const Order = mongoose.models.Order || mongoose.models('Order', orderSchema);
+const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 export default Order;
