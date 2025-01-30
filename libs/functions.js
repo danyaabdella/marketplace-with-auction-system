@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import User from '@/models/User';
+import Product from '@/models/Product';
 import { getServerSession } from 'next-auth';
 import { options } from '@/app/api/auth/[...nextauth]/options';
 
@@ -43,10 +44,10 @@ export async function connectToDB() {
     }
   }
   
-export async function isSeller() {
+export async function isMerchant() {
     const userData = await userInfo();
     console.log("user data: ", userData);
-    if (userData.role !== "seller" || userData.isSeller !== true) {
+    if (userData.role !== "merchant" || userData.isMerchant !== true) {
         console.log("Unauthorized: Only Sellers can perform this operation");
         return new Response(
             JSON.stringify({ error: "Unauthorized: Only sellers can perform this operation" }),
@@ -102,3 +103,31 @@ export async function checkSession(email) {
       return null;
   }
   
+  export async function checkProductAvailability(productId, requestedQuantity = null) {
+    try {
+        await connectToDB();
+
+        // Find product by ID and retrieve only necessary fields
+        const product = await Product.findById(productId).select("quantity");
+
+        if (!product) {
+            return { available: false, message: "Product not found" };
+        }
+
+        // If only productId is provided, check if stock is greater than 0
+        if (requestedQuantity === null) {
+            return product.quantity > 0
+                ? { available: true, message: "Product is in stock" }
+                : { available: false, message: "Product is out of stock" };
+        }
+
+        // If requestedQuantity is provided, check if enough stock is available
+        return requestedQuantity <= product.quantity
+            ? { available: true, message: "Requested quantity is available" }
+            : { available: false, message: "Requested quantity exceeds available stock" };
+
+    } catch (error) {
+        console.error("Error checking product availability:", error.message);
+        return { available: false, message: "Internal server error" };
+    }
+}

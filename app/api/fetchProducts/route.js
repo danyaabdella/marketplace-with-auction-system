@@ -1,3 +1,5 @@
+import Product from "@/models/Product";
+import { connectToDB } from "@/libs/functions";
 export async function GET(req) {
     try {
         const url = new URL(req.url);
