@@ -43,13 +43,13 @@ export async function connectToDB() {
     }
   }
   
-export async function isSeller() {
+export async function isMerchant() {
     const userData = await userInfo();
     console.log("user data: ", userData);
-    if (userData.role !== "seller" || userData.isSeller !== true) {
-        console.log("Unauthorized: Only Sellers can perform this operation");
+    if (userData.role !== "merchant" || userData.isMerchant !== true) {
+        console.log("Unauthorized: Only Merchants can perform this operation");
         return new Response(
-            JSON.stringify({ error: "Unauthorized: Only sellers can perform this operation" }),
+            JSON.stringify({ error: "Unauthorized: Only Merchants can perform this operation" }),
             { status: 403 }
         );
     }

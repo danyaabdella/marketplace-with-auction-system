@@ -1,39 +1,13 @@
+import { checkSession, connectToDB } from "@/libs/functions";
 import User from "@/models/User";
 import argon2 from 'argon2';
-import { checkSession, connectToDB } from "@/libs/functions";
-
-export async function POST(req) {
-    try {
-        const body = await req.json();
-        await connectToDB();
-
-        // Check if the user already exists
-        const existingUser = await User.findOne({ email: body.email });
-        if (existingUser) {
-            return new Response(
-                JSON.stringify({ message: "User already exists" }),
-                { status: 400 }
-            );
-        }
-
-        const hashedPassword = await argon2.hash(body.password);  
-        body.password = hashedPassword;
-        const createdUser = await User.create(body);
-
-        return new Response(JSON.stringify(createdUser), { status: 201 });
-
-    } catch (err) {
-        console.error("Error while creating: ", err.message);
-        return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-    }
-}
 
 export async function GET(req) {
     const url = new URL(req.url);
     const email = url.searchParams.get("email");
     const sessionError = await checkSession(email);
 
-    if (!email && sessionError) {
+    if (!email || sessionError) {
         return new Response(JSON.stringify({ error: "Email is required OR Invalid  email" }), { status: 400 });
     }
 
@@ -67,7 +41,7 @@ export async function PUT(req) {
             return new Response(JSON.stringify({ error: "At least one field to update is required." }), { status: 400 });
         }
 
-        if (!_id && sessionError ) {
+        if (!_id || sessionError ) {
             return new Response(JSON.stringify({ error: "ID is mandatory for Update" }), { status: 400 });
         }
 
@@ -112,7 +86,7 @@ export async function DELETE(req) {
         const url = new URL(req.url);
         const email = url.searchParams.get("email");
 
-// Check session and email
+        // Check session and email
         const sessionError = await checkSession(email);
         if (sessionError) {
             return sessionError; // Return the error response

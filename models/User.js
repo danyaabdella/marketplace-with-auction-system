@@ -7,11 +7,11 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     role: { 
         type: String, 
-        enum: ['buyer', 'seller'],
+        enum: ['buyer', 'merchant'],
         default: 'buyer' 
       },
     image: { type: String, default: " " },
-    isSeller: { type: Boolean, default: false },
+    isMerchant: { type: Boolean, default: false },
     approvedBy: { type: String, required: false },
     bannedBy: { type: String, required: false },
     tinNumber: { type: String, required: false },
