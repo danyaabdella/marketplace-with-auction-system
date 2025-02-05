@@ -31,6 +31,8 @@ const productSchema = new Schema({
         }
     ],
     delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG'], required: true },
+    deliveryPrice: { type: Number, required: true },
+    isBanned: { type: Boolean, default: false},
 
     isDeleted: { type: Boolean, default: false }, 
     trashDate: { 

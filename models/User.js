@@ -7,8 +7,8 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     role: { 
         type: String, 
-        enum: ['buyer', 'merchant'],
-        default: 'buyer' 
+        enum: ['customer', 'merchant'],
+        default: 'customer' 
       },
     image: { type: String, default: " " },
     isMerchant: { type: Boolean, default: false },
@@ -26,7 +26,7 @@ const UserSchema = new Schema(
     trashDate: { 
       type: Date, 
       default: null, 
-      expires: 30 * 60 * 60 * 60, // Automatically delete after 30 days
+      expires: 30 * 60 * 60 * 60, 
     },
   },
   { timestamps: true }

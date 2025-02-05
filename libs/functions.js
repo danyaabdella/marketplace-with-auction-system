@@ -45,7 +45,6 @@ export async function connectToDB() {
   
 export async function isMerchant() {
     const userData = await userInfo();
-    console.log("user data: ", userData);
     if (userData.role !== "merchant" || userData.isMerchant !== true) {
         console.log("Unauthorized: Only Merchants can perform this operation");
         return new Response(
@@ -58,14 +57,12 @@ export async function isMerchant() {
 export async function userInfo() {
     const session = await getServerSession(options)
     const userEmail = session?.user?.email;
-    console.log("User email: ", userEmail);
     if (!userEmail) {
       return false;
     }
     connectToDB();
     let userInfo = await User.findOne({email: userEmail})
 
-    console.log("user info to check role: ", userInfo);
     if(!userInfo) {
       return false;
     }
