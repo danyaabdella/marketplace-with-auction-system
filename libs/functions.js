@@ -1,8 +1,33 @@
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import Product from '@/models/Product';
+import Auction from '@/models/Auction';
+import Bid from '@/models/Bid';
 import { getServerSession } from 'next-auth';
 import { options } from '@/app/api/auth/[...nextauth]/options';
+import { sendEmail } from './sendEmail';
+import { Agenda } from 'agenda';
+
+const agenda = new Agenda({ db: { address: process.env.MONGO_URL } });
+
+// Define a job for auction ending
+agenda.define('end auction', async (job) => {
+    const auctionId = job.attrs.data.auctionId;
+    const auction = await Auction.findById(auctionId);
+    if (auction) {
+        auction.status = 'ended';
+        await auction.save();
+
+        const bidData = await Bid.findOne({ auctionId: auction._id });
+        const bidderEmails = bidData ? bidData.bids.map(b => b.bidderEmail) : [];
+
+        // Send notification and email
+        if (bidderEmails.length > 0) sendEmail(bidderEmails, 'Auction Ended!', `The auction for ${auction._id} has ended. The highest bid was ${bidData?.highestBid}.`);
+
+        // Emit event to notify clients (use socket.io)
+        io.to(auction._id.toString()).emit('auction_ended', { auctionId: auction._id, highestBid: bidData?.highestBid });
+    }
+});
 
 export async function fetchUserData() {
   let data;
@@ -131,3 +156,31 @@ export async function checkSession(email) {
         return { available: false, message: "Internal server error" };
     }
 }
+
+
+  // Schedule the job to run when auction ends
+  export async function scheduleAuctionEnd(auction) {
+      const endTime = new Date(auction.endTime);
+      const delay = endTime - new Date(); // calculate time remaining until auction ends
+
+      if (delay > 0) {
+          await agenda.schedule(new Date(endTime), 'end auction', { auctionId: auction._id });
+      } else {
+          // If endTime is in the past, immediately end the auction
+          await agenda.now('end auction', { auctionId: auction._id });
+      }
+  }
+  export async function Participant() {
+    await connectToDB();
+    const session = await getServerSession(options)
+    const userEmail = session?.user?.email;
+    const participant = await Bid.find({ bidderEmail: userEmail });
+    if (participant && participant.length > 0) {
+        const auctionIds = participant.map(bid => bid.auctionId);
+        return auctionIds;
+    } else {
+        return false;
+    }
+}
+  
+

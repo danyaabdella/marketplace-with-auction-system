@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+// import {io} from 'socket.io-client';
 
 export function useProfile(email) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ const [notify,setNotify] = useState(null);
+  
   useEffect(() => {
+
     if (!email) {
       setError("Email is required");
       setLoading(false);
@@ -33,7 +36,35 @@ export function useProfile(email) {
       .finally(() => {
         setLoading(false);
       });
-  }, [email]); // Only run when email changes
 
-  return { loading, data, error };
+      
+  }, [email]); // Only run when email changes
+  
+  useEffect(()=>{
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('/api/notification'); // Fetch notifications from the API
+        if (!response.ok) {
+          throw new Error('Failed to fetch notifications');
+        }
+        const data = await response.json(); 
+
+        if (Array.isArray(data)) { // Ensure it's an array
+          setNotify(data);
+         console.log('notify',notify);
+        console.log('Notifications:', data); // Handle the fetched data
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+  }
+  ,[])
+  
+  return { 
+    loading, data, error
+  };
+  
 }

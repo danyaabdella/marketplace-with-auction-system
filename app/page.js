@@ -7,7 +7,6 @@ import { useProfile } from '@/components/userProfile';
 export default function Home() {
   const { data: session } = useSession();
   const email = session?.user?.email;
-
   // Only call useProfile if email is available
   const { loading, data, error } = useProfile(email);
 

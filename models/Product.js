@@ -8,12 +8,12 @@ const productSchema = new mongoose.Schema({
         }
     ],
     productName: { type: String, required: true },
-    category: [
+    category: 
         {
             categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
             categoryName: { type: String }
         }
-    ],
+    ,
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
     description: { type: String, required: true },
@@ -28,7 +28,7 @@ const productSchema = new mongoose.Schema({
         }
     ],
     isPopular: { type: Boolean, default: false },
-    delivery: { type: String, enum: ['Standard', 'Express'], required: true },
+    delivery: { type: String, enum: ['PERPIECE', 'FLAT', 'PERKG'], required: true },
     deliveryPrice: { type: Number, required: true }
 });
 

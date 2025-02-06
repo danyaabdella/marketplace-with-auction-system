@@ -1,6 +1,7 @@
 import { checkProductAvailability, connectToDB, userInfo } from "@/libs/functions";
 import Auction from "@/models/Auction";
 import { getToken } from "next-auth/jwt";
+import { scheduleAuctionEnd } from "@/libs/functions";
 
     export async function POST(req) {
         try {
@@ -23,7 +24,7 @@ import { getToken } from "next-auth/jwt";
             }
 
             const newAuction = await Auction.create(auctionData);
-
+            await scheduleAuctionEnd(newAuction);
             return new Response(
                 JSON.stringify({ message: "Auction created successfully", auction: newAuction }),
                 { status: 201 }
@@ -77,6 +78,7 @@ import { getToken } from "next-auth/jwt";
              if(description) auction.description = description;
 
              await auction.save();
+             await scheduleAuctionEnd(auction);
              return new Response(
                 JSON.stringify({ message: "Auction updated successfully" }),
                 { status: 200 }
