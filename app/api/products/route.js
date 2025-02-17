@@ -14,6 +14,10 @@ export async function POST(req) {
     try {
         await connectToDB();
 
+        if (merchantInfo.isBanned || merchantInfo.isDeleted) {
+            return new Response(JSON.stringify("you can not perform this operation temporarily"))
+        }
+
         // Add the seller's information to the merchantDetail field
         const merchantDetail = {
             merchantId: merchantInfo.id,
@@ -23,21 +27,6 @@ export async function POST(req) {
 
         // Add merchantDetail to the product data
         productData.merchantDetail = merchantDetail;
-
-        // Ensure all required fields are present
-        const requiredFields = [
-            'productName', 'category', 'price', 'quantity', 'description',
-            'location', 'delivery', 'deliveryPrice'
-        ];
-
-        for (const field of requiredFields) {
-            if (!productData[field]) {
-                return new Response(
-                    JSON.stringify({ error: `Missing required field: ${field}` }),
-                    { status: 400 }
-                );
-            }
-        }
 
         // Create the product
         const newProduct = await Product.create(productData);
@@ -162,6 +151,11 @@ export async function PUT(req) {
     if (merchantCheckResponse) return merchantCheckResponse;
 
     const merchantInfo = await userInfo();
+
+    if (merchantInfo.isBanned || merchantInfo.isDeleted) {
+        return new Response(JSON.stringify("you can not perform this operation temporarily"))
+    }
+
     const { _id, productName, price, quantity, categoryName, categoryId, description, delivery, deliveryPrice, images, location, isDeleted } = await req.json();
 
     try {

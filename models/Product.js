@@ -30,7 +30,7 @@ const productSchema = new Schema({
             createdDate: { type: Date, default: Date.now }
         }
     ],
-    delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG'], required: true },
+    delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
     deliveryPrice: { type: Number, required: true },
     isBanned: { type: Boolean, default: false},
 
