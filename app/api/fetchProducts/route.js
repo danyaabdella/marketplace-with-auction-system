@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 import Product from "@/models/Product";
 import { connectToDB } from "@/libs/functions";
 
@@ -5,7 +7,7 @@ export async function GET(req) {
     await connectToDB();
 
     const url = new URL(req.url);
-    const radius = url.searchParams.get("radius") || 20000; // Default radius to 20 km if not provided
+    const radius = 20000; // Default: 20km
     const phrase = url.searchParams.get("phrase");
     const center = url.searchParams.get("center"); // Expected format: "lat-lng"
     const categoryId = url.searchParams.get("categoryId");
@@ -27,14 +29,19 @@ export async function GET(req) {
         isDeleted: { $ne: true }
     };
 
-    // Apply filters based on query parameters
     if (phrase) {
-        filter.$or = [
-            { productName: { $regex: phrase, $options: "i" } },
-            { description: { $regex: phrase, $options: "i" } }
-        ];
-    }
-    if (categoryId) filter["category.categoryId"] = categoryId;
+        const words = phrase.split(" "); // Split phrase into words
+        filter.$or = words.flatMap(word => [
+            { productName: { $regex: word, $options: "i" } },
+            { description: { $regex: word, $options: "i" } },
+            { "category.categoryName": { $regex: word, $options: "i" } },
+            { "merchantDetail.merchantName": { $regex: word, $options: "i" } },
+            { delivery: { $regex: word, $options: "i" } } // ✅ Now includes delivery
+        ]);
+    }    
+
+    if (categoryId) filter["category.categoryId"] = new mongoose.Types.ObjectId(categoryId);
+    console.log("Category ID: ", categoryId);
     if (minPrice) filter.price = { $gte: parseFloat(minPrice) };
     if (maxPrice) filter.price = { ...filter.price, $lte: parseFloat(maxPrice) };
     if (delivery) filter.delivery = delivery;
@@ -45,43 +52,61 @@ export async function GET(req) {
     if (maxQuantity) filter.quantity = { $lte: parseInt(maxQuantity) };
     if (minSoldQuantity) filter.soldQuantity = { $gte: parseInt(minSoldQuantity) };
     if (maxSoldQuantity) filter.soldQuantity = { ...filter.soldQuantity, $lte: parseInt(maxSoldQuantity) };
-    if (minAvgReview || maxAvgReview) {
-        filter.averageRating = {};
-        if (minAvgReview) filter.averageRating.$gte = parseFloat(minAvgReview);
-        if (maxAvgReview) filter.averageRating.$lte = parseFloat(maxAvgReview);
-    }
 
     let aggregationSteps = [];
 
-    // Apply average rating calculation if needed
-    if (minAvgReview || maxAvgReview) {
+    if (center) {
+        const coords = center.split("-");
+        const lat = parseFloat(coords[0]);
+        const lng = parseFloat(coords[1]);
+
         aggregationSteps.push({
-            $addFields: {
-                averageRating: { $avg: "$review.rating" } // Calculate average rating
+            $geoNear: {
+                near: { type: "Point", coordinates: [lng, lat] },
+                query: filter,
+                distanceField: "distance",
+                maxDistance: radius,
+                spherical: true
             }
         });
     }
 
-    // Apply filters without location-based check
-    aggregationSteps.push({ $match: filter });
-
-    // Apply location-based filtering at the end if center is provided
-    if (center) {
-        const [lat, lng] = center.split("-").map(coord => parseFloat(coord));
-        if (!isNaN(lat) && !isNaN(lng)) {
-            aggregationSteps.push({
-                $geoNear: {
-                    near: { type: "Point", coordinates: [lng, lat] },
-                    distanceField: "distance",
-                    maxDistance: parseInt(radius), // Apply radius
-                    spherical: true,
-                    query: {} // No additional filters here, as they are already applied
+    if (minAvgReview || maxAvgReview) {
+        aggregationSteps.push(
+            { $unwind: { path: "$review", preserveNullAndEmptyArrays: true } }, // Ensure products with no reviews are included
+            {
+                $group: {
+                    _id: "$_id",
+                    productName: { $first: "$productName" },
+                    merchantDetail: { $first: "$merchantDetail" },
+                    category: { $first: "$category" },
+                    price: { $first: "$price" },
+                    quantity: { $first: "$quantity" },
+                    description: { $first: "$description" },
+                    images: { $first: "$images" },
+                    location: { $first: "$location" },
+                    delivery: { $first: "$delivery" },
+                    deliveryPrice: { $first: "$deliveryPrice" },
+                    soldQuantity: { $first: "$soldQuantity" },
+                    createdAt: { $first: "$createdAt" },
+                    averageRating: { $avg: "$review.rating" }, // Calculate the average rating
+                    totalReviews: { $sum: { $cond: [{ $ifNull: ["$review.rating", false] }, 1, 0] } } // Count reviews properly
                 }
-            });
-        }
+            },
+            { $match: { totalReviews: { $gte: 1 } } }, // Ensure only products with reviews are considered
+            {
+                $match: {
+                    ...(minAvgReview ? { averageRating: { $gte: parseFloat(minAvgReview) } } : {}),
+                    ...(maxAvgReview ? { averageRating: { $lte: parseFloat(maxAvgReview) } } : {})
+                }
+            }
+        );
     }
+    
 
-    // Execute the aggregation pipeline
+    aggregationSteps.push({ $match: filter });
+    aggregationSteps.push({ $sort: { createdAt: -1 } });
+
     const products = await Product.aggregate(aggregationSteps);
 
     return new Response(JSON.stringify({ products }), { status: 200 });

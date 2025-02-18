@@ -5,9 +5,9 @@ export async function GET(req) {
     await connectToDB();
 
     const url = new URL(req.url);
-    const type = url.searchParams.get("type"); // Determines which products to fetch
-    const center = url.searchParams.get("center"); // Expected format: "lat-lng"
-    const radius = 20000; 
+    const type = url.searchParams.get("type");
+    const center = url.searchParams.get("center");
+    const radius = parseInt(url.searchParams.get("radius")) || 10000; // Default to 10KM
 
     let filter = {
         isBanned: { $ne: true },
@@ -18,43 +18,70 @@ export async function GET(req) {
     let limit = 10;
     let aggregationSteps = [];
 
-    // Apply product type filters
     switch (type) {
         case "bestSellers":
             sort = { soldQuantity: -1 };
+            aggregationSteps.push({ $match: filter }, { $sort: sort }, { $limit: limit });
             break;
+
         case "latestProducts":
             sort = { createdAt: -1 };
+            aggregationSteps.push({ $match: filter }, { $sort: sort }, { $limit: limit });
             break;
+
         case "topRated":
-            filter["review.rating"] = { $gte: 4 };
-            sort = { "review.rating": -1 };
+            aggregationSteps.push(
+                { $match: filter },
+                { $unwind: "$review" },
+                {
+                    $group: {
+                        _id: "$_id",
+                        productName: { $first: "$productName" },
+                        merchantDetail: { $first: "$merchantDetail" },
+                        category: { $first: "$category" },
+                        price: { $first: "$price" },
+                        quantity: { $first: "$quantity" },
+                        description: { $first: "$description" },
+                        images: { $first: "$images" },
+                        location: { $first: "$location" },
+                        delivery: { $first: "$delivery" },
+                        deliveryPrice: { $first: "$deliveryPrice" },
+                        soldQuantity: { $first: "$soldQuantity" },
+                        createdAt: { $first: "$createdAt" },
+                        averageRating: { $avg: "$review.rating" },
+                        totalReviews: { $sum: 1 }
+                    }
+                },
+                { $match: { totalReviews: { $gte: 1 }, averageRating: { $gte: 4 } } },
+                { $sort: { averageRating: -1 } },
+                { $limit: limit }
+            );
             break;
+
         default:
             return new Response(JSON.stringify({ error: "Invalid type parameter" }), { status: 400 });
     }
 
-    // Apply location-based filtering if center and radius are provided
     if (center) {
-        console.log("Center: ", center)
-        const [lat, lng] = center.split("-").map(coord => parseFloat(coord));
-        if (!isNaN(lat) && !isNaN(lng)) {
-            aggregationSteps.push({
+        const coords = center.split("-");
+        const lat = parseFloat(coords[0]);
+        const lng = parseFloat(coords[1]);
+    
+        aggregationSteps.unshift(  // Use unshift to add to the beginning
+            {
                 $geoNear: {
                     near: { type: "Point", coordinates: [lng, lat] },
+                    query: filter,
+                    includeLocs: "location",
                     distanceField: "distance",
-                    maxDistance: parseInt(radius), // Use the default 20 km radius if no radius is provided
-                    spherical: true,
-                    query: filter
+                    maxDistance: radius,
+                    spherical: true
                 }
-            });
-        }
-    } else {
-        aggregationSteps.push({ $match: filter });
+            }
+        );
     }
 
-    // Apply sorting based on product type
-    aggregationSteps.push({ $sort: sort }, { $limit: limit });
+    aggregationSteps.push({ $sort: { createdAt: -1 } });
 
     const products = await Product.aggregate(aggregationSteps);
     return new Response(JSON.stringify({ products }), { status: 200 });
