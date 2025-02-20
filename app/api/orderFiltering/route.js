@@ -68,9 +68,15 @@ export async function GET(req) {
 
         // Apply date range filter (startDate, endDate)
         if (startDate || endDate) {
-            filter.orderDate = {};
-            if (startDate) filter.orderDate.$gte = new Date(startDate);
-            if (endDate) filter.orderDate.$lte = new Date(endDate);
+            filter.orderDate = {}; // Ensure we're using an empty object to handle both dates correctly
+            if (startDate) {
+                const start = new Date(startDate);
+                if (!isNaN(start.getTime())) filter.orderDate.$gte = start; // Validate start date
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                if (!isNaN(end.getTime())) filter.orderDate.$lte = end; // Validate end date
+            }
         }
 
         // Apply other filters like delivery, phone number, customer email, etc.
@@ -83,6 +89,7 @@ export async function GET(req) {
         if (orderDate) filter.orderDate = new Date(orderDate);
 
         console.log("Filters: ", filter);
+
         // Fetch orders based on the filter
         const orders = await Order.find(filter);
         console.log("Orders: ", orders);
