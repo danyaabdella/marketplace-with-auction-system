@@ -15,7 +15,11 @@ const orderSchema = new mongoose.Schema({
         merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         merchantName: { type: String, required: true },
         merchantEmail: { type: String, required: true },
-        phoneNumber: { type: String, required: true }
+        phoneNumber: { type: String, required: true },
+        account_name: { type: String, required: true },
+        account_number: { type: String, required: true },
+        merchantRefernce: { type: String, required: false },
+        bank_code: { type: String, required: true },
     },
     products: [
         {
@@ -30,7 +34,12 @@ const orderSchema = new mongoose.Schema({
     totalPrice: { type: Number, required: true },
     status: { 
         type: String, 
-        enum: ['Pending', 'Paid', 'Dispatched', 'Received', 'Pending Refund', 'Refunded'], 
+        enum: ['Pending', 'Dispatched', 'Received'], 
+        default: 'Pending' 
+    },
+    paymentStatus: { 
+        type: String, 
+        enum: ['Pending', 'Paid', 'Paid To Merchant', 'Pending Refund', 'Refunded'], 
         default: 'Pending' 
     },
     transactionRef: { type: String, required: true }, 

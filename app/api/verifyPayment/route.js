@@ -5,7 +5,7 @@ const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY; // Store your Chapa secre
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const tx_ref = searchParams.get('tx_ref'); // Get the transaction reference from query parameters
+        const tx_ref = searchParams.get('tx_ref');
 
         // Validate the transaction reference
         if (!tx_ref) {

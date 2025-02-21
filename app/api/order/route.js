@@ -40,6 +40,7 @@ export async function POST(req) {
             products: body.products,
             totalPrice: body.totalPrice,
             status: body.status || "Pending",
+            paymentStatus: body.paymentStatus || "Pending",
             transactionRef: body.transactionRef,
             orderDate: new Date()
         });
@@ -69,7 +70,7 @@ export async function PUT(req) {
             return NextResponse.json({ error: "Your account is either banned or deleted, and you cannot update an order." }, { status: 400 });
         }
 
-        const { _id, customerDetail, status } = body;
+        const { _id, customerDetail, status, paymentStatus } = body;
 
         if (!_id) {
             return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
@@ -83,13 +84,26 @@ export async function PUT(req) {
         }
 
         // Customer Role - Allow updating customer details & specific statuses
+        const allowedCustomerStatuses = ['Received'];
+
         if (sessionUser.role === "customer") {
             if (order.customerDetail.customerId.toString() !== sessionUser._id.toString()) {
                 return NextResponse.json({ error: "Unauthorized: You can only update your own orders" }, { status: 403 });
             }
 
             // Allowed status updates
-            const allowedCustomerStatuses = ["Paid", "Received", "Pending Refund"];
+            if (status === "Received") {
+                order.status = "Received";
+            }
+            
+            if (paymentStatus === "Paid") {
+                order.paymentStatus = "Paid";
+            }
+            
+            if (paymentStatus === "Pending Refund") {
+                order.paymentStatus = "Pending Refund";
+            }
+
             if (status && !allowedCustomerStatuses.includes(status)) {
                 return NextResponse.json({ error: `Invalid status update. Allowed: ${allowedCustomerStatuses.join(", ")}` }, { status: 400 });
             }
@@ -109,9 +123,9 @@ export async function PUT(req) {
             }
 
             // Update status if provided
-            if (status) {
-                order.status = status;
-            }
+            if (status === "Received") {
+                order.status = "Received";
+            }            
         }
 
         // Merchant Role - Allow updates based on the relationship with customer/merchant
@@ -119,9 +133,20 @@ export async function PUT(req) {
             if (order.customerDetail.customerId.toString() === sessionUser._id.toString()) {
                 // If the merchant ID matches the customer ID, allow updating like a customer
                 // Allow updating customer details & specific statuses
-                const allowedMerchantStatuses = ["Paid", "Received", "Pending Refund"];
-                if (status && !allowedMerchantStatuses.includes(status)) {
-                    return NextResponse.json({ error: `Invalid status update. Allowed: ${allowedMerchantStatuses.join(", ")}` }, { status: 400 });
+                if (status === "Received") {
+                    order.status = "Received";
+                }
+                
+                if (paymentStatus === "Paid") {
+                    order.paymentStatus = "Paid";
+                }
+                
+                if (paymentStatus === "Pending Refund") {
+                    order.paymentStatus = "Pending Refund";
+                }
+    
+                if (status && !allowedCustomerStatuses.includes(status)) {
+                    return NextResponse.json({ error: `Invalid status update. Allowed: ${allowedCustomerStatuses.join(", ")}` }, { status: 400 });
                 }
 
                 // Handle customerDetail update
@@ -138,10 +163,6 @@ export async function PUT(req) {
                     };
                 }
 
-                // Update status if provided
-                if (status) {
-                    order.status = status;
-                }
             } else if (order.merchantDetail.merchantId.toString() === sessionUser._id.toString()) {
                 // If the merchant ID matches the merchant detail, allow only status update to 'Dispatched'
                 if (status !== "Dispatched") {
@@ -163,5 +184,70 @@ export async function PUT(req) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
+// export async function PUT(req) {
+//     try {
+//         const sessionUser = await userInfo();
+//         const body = await req.json();
+
+//         if (!sessionUser) {
+//             return NextResponse.json({ error: "Unauthorized: User not found" }, { status: 401 });
+//         }
+
+//         if (sessionUser.isBanned || sessionUser.isDeleted) {
+//             return NextResponse.json({ error: "Your account is either banned or deleted, and you cannot update an order." }, { status: 400 });
+//         }
+
+//         const { _id, customerDetail, status, paymentStatus } = body;
+
+//         if (!_id) {
+//             return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
+//         }
+
+//         const order = await Order.findById(_id);
+
+//         if (!order) {
+//             return NextResponse.json({ error: "Order not found" }, { status: 404 });
+//         }
+
+//         if (sessionUser.role === "customer" || (sessionUser.role === "merchant" && order.customerDetail.customerId.toString() === sessionUser._id.toString())) {
+//             if (customerDetail) {
+//                 order.customerDetail = {
+//                     ...order.customerDetail,
+//                     customerName: customerDetail.customerName || order.customerDetail.customerName,
+//                     phoneNumber: customerDetail.phoneNumber || order.customerDetail.phoneNumber,
+//                     customerEmail: customerDetail.customerEmail || order.customerDetail.customerEmail,
+//                     address: {
+//                         state: customerDetail.address?.state || order.customerDetail.address.state,
+//                         city: customerDetail.address?.city || order.customerDetail.address.city,
+//                     }
+//                 };
+//             }
+
+//             if (status === "Received") {
+//                 order.status = "Received";
+//             }
+
+//             if (paymentStatus === "Paid") {
+//                 order.paymentStatus = "Paid";
+//             }
+//         } else if (sessionUser.role === "merchant" && order.merchantDetail.merchantId.toString() === sessionUser._id.toString()) {
+//             if (status === "Dispatched") {
+//                 order.status = "Dispatched";
+//             } else {
+//                 return NextResponse.json({ error: "Merchants can only update status to 'Dispatched'" }, { status: 400 });
+//             }
+//         } else {
+//             return NextResponse.json({ error: "Unauthorized: You cannot update this order" }, { status: 403 });
+//         }
+
+//         await order.save();
+
+//         return NextResponse.json({ message: "Order updated successfully", order }, { status: 200 });
+//     } catch (error) {
+//         console.error("Error updating order:", error);
+//         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+//     }
+// }
 
 

@@ -7,10 +7,10 @@ export async function POST(req) {
   try {
     // Parse request body
     const body = await req.json();
-    const { amount, first_name, last_name, phone_number, tx_ref } = body;
+    const { amount, tx_ref } = body;
 
     // Validate required fields
-    if (!amount || !first_name || !last_name || !phone_number || !tx_ref) {
+    if (!amount || !tx_ref) {
       return new Response(
         JSON.stringify({ message: "Missing required fields" }),
         { status: 400 }
@@ -19,7 +19,13 @@ export async function POST(req) {
 
     // Fetch user information
     const user = await userInfo();
-    console.log("User Info:", user);
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ message: "User not authenticated" }),
+        { status: 401 }
+      );
+    }
 
     let email = user?.email ? user.email.toLowerCase() : null;
 
@@ -32,13 +38,24 @@ export async function POST(req) {
       );
     }
 
-    console.log("Using Email:", email);
+    // Extract first name, last name, and phone number from user data
+    const fullName = user.fullName.trim().split(" ");
+    const first_name = fullName[0] || "Unknown";
+    const last_name = fullName.slice(1).join(" ") || "Unknown";
+    const phone_number = user.phoneNumber || "";
+
+    if (!phone_number) {
+      return new Response(
+        JSON.stringify({ message: "User phone number is missing" }),
+        { status: 400 }
+      );
+    }
 
     // Construct request body
     const requestBody = {
       amount,
       currency: "ETB",
-      email: "abdelaziz@gmail.com",
+      email,
       first_name,
       last_name,
       phone_number,
