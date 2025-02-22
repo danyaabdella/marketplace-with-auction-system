@@ -18,7 +18,7 @@ const orderSchema = new mongoose.Schema({
         phoneNumber: { type: String, required: true },
         account_name: { type: String, required: true },
         account_number: { type: String, required: true },
-        merchantRefernce: { type: String, required: false },
+        merchantRefernce: { type: String, required: false, default: null },
         bank_code: { type: String, required: true },
     },
     products: [
@@ -43,7 +43,8 @@ const orderSchema = new mongoose.Schema({
         default: 'Pending' 
     },
     transactionRef: { type: String, required: true }, 
-    orderDate: { type: Date, default: Date.now }
+    orderDate: { type: Date, default: Date.now },
+    refundReason: { type: String, required: false }
 });
 
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);

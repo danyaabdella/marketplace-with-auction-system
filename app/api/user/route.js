@@ -33,7 +33,21 @@ export async function PUT(req) {
     try {
         // Parse request body
         const body = await req.json();
-        const { _id, email, fullName, password, image, stateName, cityName, phoneNumber, tinNumber, nationalId } = body;
+        const { 
+            _id, 
+            email, 
+            fullName, 
+            password, 
+            image, 
+            stateName, 
+            cityName, 
+            phoneNumber, 
+            tinNumber, 
+            nationalId, 
+            account_name, 
+            account_number, 
+            bank_code 
+        } = body;
         const sessionError = await checkSession(email);
 
         if (sessionError) {
@@ -80,6 +94,11 @@ export async function PUT(req) {
                 updateData.isMerchant = false;
             }
         }
+
+        // Add new fields for account details
+        if (account_name) updateData.account_name = account_name;
+        if (account_number) updateData.account_number = account_number;
+        if (bank_code) updateData.bank_code = bank_code;
 
         // Update the user in the database
         const updatedUser = await User.findOneAndUpdate(

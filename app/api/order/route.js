@@ -1,59 +1,58 @@
 import { NextResponse } from "next/server";
 
-import { userInfo } from "@/libs/functions";
 import Order from "@/models/Order";
+import { userInfo } from "@/libs/functions";
+import User from "@/models/User";
 
 export async function POST(req) {
-    try {
-        const sessionUser = await userInfo(); // Get logged-in user details
-        const body = await req.json(); // Parse request body
+  try {
+    const body = await req.json();
+    const { userId } = body; // Extract the user ID
+    const sessionUser = await User.findById(userId);
+    console.log("Body: ", body);
+    console.log("User: ", sessionUser);
 
-        if (!sessionUser) {
-            return NextResponse.json({ error: "Unauthorized: User not found" }, { status: 401 });
-        }
-        // Check if user is banned or deleted
-        if (sessionUser.isBanned || sessionUser.isDeleted) {
-            return NextResponse.json({ error: "Your account is either banned or deleted, and you cannot place an order." }, { status: 400 });
-        }
-
-        // Extract customer details from request, fallback to session user if missing
-        const customerDetail = body.customerDetail || {
-            customerId: sessionUser._id, // Use correct session ID
-            customerName: sessionUser.fullName, // Use correct session name
-            phoneNumber: sessionUser.phoneNumber,
-            customerEmail: sessionUser.email,
-            address: {
-                state: sessionUser.stateName,
-                city: sessionUser.cityName
-            }
-        };
-
-        // Ensure required fields exist
-        if (!customerDetail.customerId || !customerDetail.customerName || !customerDetail.phoneNumber || !customerDetail.customerEmail || !customerDetail.address.state || !customerDetail.address.city) {
-            return NextResponse.json({ error: "Customer details are incomplete" }, { status: 400 });
-        }
-
-        // Create new order
-        const newOrder = new Order({
-            customerDetail,
-            merchantDetail: body.merchantDetail, // Assuming it's passed from client
-            products: body.products,
-            totalPrice: body.totalPrice,
-            status: body.status || "Pending",
-            paymentStatus: body.paymentStatus || "Pending",
-            transactionRef: body.transactionRef,
-            orderDate: new Date()
-        });
-
-        // Save to database
-        await newOrder.save();
-
-        return NextResponse.json({ message: "Order created successfully", order: newOrder }, { status: 201 });
-
-    } catch (error) {
-        console.error("Error creating order:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    if (!sessionUser) {
+      return new Response(JSON.stringify({ error: "Unauthorized: User not found" }), { status: 401 });
     }
+
+    if (sessionUser.isBanned || sessionUser.isDeleted) {
+      return new Response(JSON.stringify({ error: "Your account is either banned or deleted, and you cannot place an order." }), { status: 400 });
+    }
+
+    const customerDetail = body.customerDetail || {
+      customerId: sessionUser._id,
+      customerName: sessionUser.fullName,
+      phoneNumber: sessionUser.phoneNumber,
+      customerEmail: sessionUser.email,
+      address: {
+        state: sessionUser.stateName,
+        city: sessionUser.cityName,
+      },
+    };
+
+    if (!customerDetail.customerId || !customerDetail.customerName || !customerDetail.phoneNumber || !customerDetail.customerEmail || !customerDetail.address.state || !customerDetail.address.city) {
+      return new Response(JSON.stringify({ error: "Customer details are incomplete" }), { status: 400 });
+    }
+
+    const newOrder = new Order({
+      customerDetail,
+      merchantDetail: body.merchantDetail,
+      products: body.products,
+      totalPrice: body.totalPrice,
+      status: body.status || "Pending",
+      paymentStatus: body.paymentStatus || "Pending",
+      transactionRef: body.transactionRef,
+      orderDate: new Date(),
+    });
+
+    await newOrder.save();
+
+    return new Response(JSON.stringify({ message: "Order created successfully", order: newOrder }), { status: 201 });
+  } catch (error) {
+    console.error("Error creating order:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+  }
 }
 
 export async function PUT(req) {
@@ -83,33 +82,32 @@ export async function PUT(req) {
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
 
-        // Customer Role - Allow updating customer details & specific statuses
-        const allowedCustomerStatuses = ['Received'];
-
-        if (sessionUser.role === "customer") {
+        // Function to handle customer-like updates (used for both customers and merchants acting as customers)
+        const handleCustomerUpdates = () => {
             if (order.customerDetail.customerId.toString() !== sessionUser._id.toString()) {
                 return NextResponse.json({ error: "Unauthorized: You can only update your own orders" }, { status: 403 });
+            }
+
+            // Prevent updates if order is dispatched
+            if (customerDetail && order.status === "Dispatched") {
+                return NextResponse.json({ error: "Order already Dispatched. Please contact the Merchant." }, { status: 400 });
             }
 
             // Allowed status updates
             if (status === "Received") {
                 order.status = "Received";
             }
-            
+
             if (paymentStatus === "Paid") {
                 order.paymentStatus = "Paid";
-            }
-            
-            if (paymentStatus === "Pending Refund") {
-                order.paymentStatus = "Pending Refund";
             }
 
             if (status && !allowedCustomerStatuses.includes(status)) {
                 return NextResponse.json({ error: `Invalid status update. Allowed: ${allowedCustomerStatuses.join(", ")}` }, { status: 400 });
             }
 
-            // Handle customerDetail update, retain previous value if not provided
-            if (customerDetail) {
+            // Handle customerDetail update
+            if (customerDetail && order.status === "Pending") {
                 order.customerDetail = {
                     ...order.customerDetail,
                     customerName: customerDetail.customerName || order.customerDetail.customerName,
@@ -122,47 +120,23 @@ export async function PUT(req) {
                 };
             }
 
-            // Update status if provided
-            if (status === "Received") {
-                order.status = "Received";
-            }            
+            return null; // No error, proceed with updates
+        };
+
+        // Customer Role - Allow updating customer details & specific statuses
+        const allowedCustomerStatuses = ['Received'];
+
+        if (sessionUser.role === "customer") {
+            const errorResponse = handleCustomerUpdates();
+            if (errorResponse) return errorResponse;
         }
 
         // Merchant Role - Allow updates based on the relationship with customer/merchant
         else if (sessionUser.role === "merchant") {
             if (order.customerDetail.customerId.toString() === sessionUser._id.toString()) {
                 // If the merchant ID matches the customer ID, allow updating like a customer
-                // Allow updating customer details & specific statuses
-                if (status === "Received") {
-                    order.status = "Received";
-                }
-                
-                if (paymentStatus === "Paid") {
-                    order.paymentStatus = "Paid";
-                }
-                
-                if (paymentStatus === "Pending Refund") {
-                    order.paymentStatus = "Pending Refund";
-                }
-    
-                if (status && !allowedCustomerStatuses.includes(status)) {
-                    return NextResponse.json({ error: `Invalid status update. Allowed: ${allowedCustomerStatuses.join(", ")}` }, { status: 400 });
-                }
-
-                // Handle customerDetail update
-                if (customerDetail) {
-                    order.customerDetail = {
-                        ...order.customerDetail,
-                        customerName: customerDetail.customerName || order.customerDetail.customerName,
-                        phoneNumber: customerDetail.phoneNumber || order.customerDetail.phoneNumber,
-                        customerEmail: customerDetail.customerEmail || order.customerDetail.customerEmail,
-                        address: {
-                            state: customerDetail.address?.state || order.customerDetail.address.state,
-                            city: customerDetail.address?.city || order.customerDetail.address.city,
-                        }
-                    };
-                }
-
+                const errorResponse = handleCustomerUpdates();
+                if (errorResponse) return errorResponse;
             } else if (order.merchantDetail.merchantId.toString() === sessionUser._id.toString()) {
                 // If the merchant ID matches the merchant detail, allow only status update to 'Dispatched'
                 if (status !== "Dispatched") {

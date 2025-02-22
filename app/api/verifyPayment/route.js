@@ -1,3 +1,5 @@
+import { connectToDB } from '@/libs/functions';
+import Order from '@/models/Order';
 import { NextResponse } from 'next/server';
 
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY; // Store your Chapa secret key in environment variables
@@ -25,6 +27,11 @@ export async function GET(req) {
 
         // Handle Chapa's response
         if (result.status === "success") {
+            await connectToDB();
+            const order = await Order.findOne({ transactionRef: tx_ref });
+            order.paymentStatus = "Paid";
+            await order.save();
+            console.log("order: ", order);
             return NextResponse.json({ message: "Payment details", data: result.data }, { status: 200 });
         } else {
             return NextResponse.json({ message: result.message, status: "failed", data: null }, { status: 404 });

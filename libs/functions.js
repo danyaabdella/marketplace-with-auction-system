@@ -55,11 +55,12 @@ export async function isMerchant() {
 }
 
 export async function userInfo() {
-    const session = await getServerSession(options)
-    const userEmail = session?.user?.email;
-    if (!userEmail) {
-      return false;
-    }
+  const session = await getServerSession(options)
+  console.log("email: ",session);
+  const userEmail = session?.user?.email;
+  if (!userEmail) {
+    return false;
+  }
     connectToDB();
     let userInfo = await User.findOne({email: userEmail})
 
