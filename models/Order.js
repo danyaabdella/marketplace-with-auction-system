@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema({
         address: {
             state: { type: String, required: true },
             city: { type: String, required: true }
-        }
+        }       
     },
     merchantDetail: {
         merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -29,8 +29,13 @@ const orderSchema = new mongoose.Schema({
             price: { type: Number, required: true },
             delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
             deliveryPrice: { type: Number, required: true }
-        }
+        },
     ],
+    auction: {
+        auctionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+        delivery: { type: String, enum: ['PAID', 'FREE'], required: true },
+        deliveryPrice: { type: Number, required: true }
+    },
     totalPrice: { type: Number, required: true },
     status: { 
         type: String, 
@@ -46,6 +51,21 @@ const orderSchema = new mongoose.Schema({
     orderDate: { type: Date, default: Date.now },
     refundReason: { type: String, required: false }
 });
+
+// Custom validation to ensure mutual exclusivity
+orderSchema.path('products').validate(function (value) {
+    if (value.length > 0 && this.auction) {
+        return false; // Cannot have both products and auction
+    }
+    return true;
+}, 'Order cannot have both products and auction at the same time.');
+
+orderSchema.path('auction').validate(function (value) {
+    if (value && this.products.length > 0) {
+        return false; // Cannot have both products and auction
+    }
+    return true;
+}, 'Order cannot have both products and auction at the same time.');
 
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 export default Order;
