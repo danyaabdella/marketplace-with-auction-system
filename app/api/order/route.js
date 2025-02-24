@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
 import Order from "@/models/Order";
-import { userInfo } from "@/libs/functions";
 import User from "@/models/User";
+import Product from "@/models/Product";
+
+import { userInfo } from "@/libs/functions";
 
 export async function POST(req) {
   try {
@@ -35,10 +37,40 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Customer details are incomplete" }), { status: 400 });
     }
 
+    // Validate and update product quantities
+    const products = body.products || []; // Ensure products is an array
+    if (products.length === 0 && !body.auction) {
+      return new Response(JSON.stringify({ error: "Order must contain either products or an auction" }), { status: 400 });
+    }
+
+    // Iterate over products to update quantities in the Product collection
+    for (const orderProduct of products) {
+      const { productId, quantity } = orderProduct;
+
+      // Fetch the product from the database
+      const product = await Product.findById(productId);
+      if (!product) {
+        return new Response(JSON.stringify({ error: `Product with ID ${productId} not found` }), { status: 404 });
+      }
+
+      // Check if enough quantity is available
+      if (product.quantity < quantity) {
+        return new Response(JSON.stringify({ error: `Insufficient quantity for product: ${product.productName}. Available: ${product.quantity}, Requested: ${quantity}` }), { status: 400 });
+      }
+
+      // Subtract the ordered quantity and increment soldQuantity
+      product.quantity -= quantity;
+      product.soldQuantity += quantity;
+
+      // Save the updated product
+      await product.save();
+    }
+
     const newOrder = new Order({
       customerDetail,
       merchantDetail: body.merchantDetail,
       products: body.products,
+      auction: body.auction || null, // Handle auction if present
       totalPrice: body.totalPrice,
       status: body.status || "Pending",
       paymentStatus: body.paymentStatus || "Pending",

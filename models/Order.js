@@ -26,6 +26,8 @@ const orderSchema = new mongoose.Schema({
             productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
             productName: { type: String, required: true },
             quantity: { type: Number, required: true },
+            variant: { type: String }, // Optional list of colors
+            size: { type: String }, // Optional list of sizes
             price: { type: Number, required: true },
             delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
             deliveryPrice: { type: Number, required: true }
@@ -35,6 +37,10 @@ const orderSchema = new mongoose.Schema({
         auctionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         delivery: { type: String, enum: ['PAID', 'FREE'], required: true },
         deliveryPrice: { type: Number, required: true }
+    },
+    location: {
+        type: { type: String, default: "Point" },
+        coordinates: { type: [Number], required: true }
     },
     totalPrice: { type: Number, required: true },
     status: { 
