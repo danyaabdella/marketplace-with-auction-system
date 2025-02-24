@@ -1,66 +1,13 @@
-import { Server } from 'socket.io';
 import Bid from '@/models/Bid';
+import Auction from '@/models/Auction';
 import { connectToDB, userInfo } from '@/libs/functions';
 import { sendEmail } from '@/libs/sendEmail';
+import { getIO } from "@/libs/socket";
 
-// POST: Add a new bid or update an existing auction with a new bid
-// let io = io.of('/participant');
-// if (!io) {
-//     io = new Server({ cors: { origin: '*' } });
-//     io.on('connection', (socket) => {
-//         console.log('A user connected');
-        
-//         // Join the auction room based on auctionId
-//         socket.on('joinAuction', (auctionId) => {
-//             socket.join(auctionId);
-//             console.log(`User joined auction room: ${auctionId}`);
-//         });
-
-//         // Leave the auction room when the user disconnects
-//         socket.on('disconnect', () => {
-//             console.log('A user disconnected');
-//         });
-//     });
-// }
-
-// Initialize Socket.IO server
-let io;
-
- if (!io) {
-    io = new Server({ cors: { origin: '*' } });
- }
-    // Create a namespace for participants
-    const participantNamespace = io.of('/participant');
-
-    participantNamespace.on('connection', (socket) => {
-        console.log('A participant connected:', socket.id);
-
-        // Join the room for a specific auction
-        socket.on('joinAuction', (auctionId) => {
-            socket.join(auctionId);
-            console.log(`Participant ${socket.id} joined auction ${auctionId}`);
-        });
-
-        // Handle disconnection
-        socket.on('disconnect', () => {
-            console.log('A participant disconnected:', socket.id);
-        });
-    });
-
-
-// const user = await userInfo();
-
-//         if (!user || !user.email) {
-//             return new Response(
-//                 JSON.stringify({ message: 'User not authenticated' }),
-//                 { status: 401 }
-//             );
-//         }
 export async function POST(req) {
     try {
         await connectToDB();
 
-        
         const { auctionId, bids} = await req.json();
         console.log(auctionId, bids);
     
@@ -68,15 +15,14 @@ export async function POST(req) {
         console.log(bidderEmail, bidderName, bidAmount);
 
         // Validate input
-        if (!auctionId || !bids || bids.lenght==0 ) {
+        if (!auctionId || !bids || bids.length === 0 ) {
             return new Response(JSON.stringify({ message: 'All fields are required' }),
                 { status: 400 }
             );
         }
-        if(!auctionId.status=='active') {
-            return new Response(JSON.stringify({
-                message: 'Auction is not active'
-            }))
+        const auction = await Auction.findById(auctionId);
+        if (!auction || auction.status !== "active") {
+            return new Response(JSON.stringify({ message: 'Auction is not active' }), { status: 400 });
         }
         
         let bid = await Bid.findOne({ auctionId });
@@ -108,15 +54,15 @@ export async function POST(req) {
         if (previousBidders.length > 0) sendEmail(previousBidders, 'New Bid Placed!', `A new bid of ${bidAmount} has been placed by ${bidderName}.`)
         
         
+        const io = getIO(); 
 
-        // Emit real-time update to Socket.IO clients
-        participantNamespace.to(auctionId).emit('newBidIncrement', {
-            description: { auctionId, bidAmount, bidderName }
+        io.to(auctionId).emit("newBidIncrement", {
+            auctionId,
+            bidAmount,
+            bidderName,
+            bidderEmail
         });
 
-        return new Response(JSON.stringify({ message: 'Bid added successfully', bid }),
-            { status: 201 }
-        );
     } catch (error) {
         return new Response(JSON.stringify({ message: 'Failed to add bid', error: error.message }),
             { status: 500 }
@@ -125,11 +71,11 @@ export async function POST(req) {
 }
 
 
-export async function GET(req) {
+export async function GET() {
     try {
         await connectToDB();
 
-
+        const user = userInfo();
         const bidderEmail = user.email;
 
         // Find all bids where the customer has participated
@@ -178,6 +124,7 @@ export async function PUT(req) {
     try {
         await connectToDB();
         
+        const user = userInfo();
         const bidderEmail = user.email;
         const { auctionId, newBidAmount } = await req.json();
 
@@ -197,9 +144,8 @@ export async function PUT(req) {
             );
         }
 
-        
         const userBid = bid.bids.find((bid) => bid.bidderEmail === bidderEmail);
-
+        
         if (!userBid) {
             return new Response(
                 JSON.stringify({ message: 'No bid found for this user' }),
@@ -214,7 +160,6 @@ export async function PUT(req) {
             );
         }
 
-        
         userBid.bidAmount = newBidAmount;
 
         // Update the highest bid if necessary
@@ -226,9 +171,21 @@ export async function PUT(req) {
         // Save the updated bid document
         await bid.save();
 
+        const io = getIO();
+
+        io.to(auctionId).emit("newBidIncrement", {
+         auctionId,
+         newBidAmount,
+         bidderEmail
+         },
+        );
+       
+
         return new Response(JSON.stringify({ message: 'Bid updated successfully', bid }),
         { status: 200 }
         );
+
+        
     } catch (error) {
         return new Response(JSON.stringify({ message: 'Failed to update bid', error: error.message }),
         { status: 500 }
@@ -240,8 +197,8 @@ export async function PUT(req) {
 export async function DELETE(req) {
     try {
         await connectToDB();
-
-        const auctionId = await req.json();
+    
+        const {auctionId} = await req.json();
         const bidderEmail = user.email
 
         if (!auctionId ) {
@@ -252,8 +209,6 @@ export async function DELETE(req) {
 
         // Find the bid document for the auction
         const bid = await Bid.findOne({ auctionId });
-
-        
 
         // Remove the specific bid from the bids array
         bid.bids = bid.bids.filter((bid) => bid.bidderEmail !== bidderEmail);

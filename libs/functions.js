@@ -170,17 +170,43 @@ export async function checkSession(email) {
           await agenda.now('end auction', { auctionId: auction._id });
       }
   }
-  export async function Participant() {
-    await connectToDB();
-    const session = await getServerSession(options)
-    const userEmail = session?.user?.email;
-    const participant = await Bid.find({ bidderEmail: userEmail });
-    if (participant && participant.length > 0) {
-        const auctionIds = participant.map(bid => bid.auctionId);
-        return auctionIds;
-    } else {
-        return false;
-    }
+//   export async function Participant() {
+//     await connectToDB();
+//     const session = await getServerSession(options)
+//     const userEmail = session?.user?.email;
+//     const participant = await Bid.find({ bidderEmail: userEmail });
+//     if (participant && participant.length > 0) {
+//         const auctionIds = participant.map(bid => bid.auctionId);
+//         return auctionIds;
+//     } else {
+//         return false;
+//     }
+// }
+export async function Participant() {
+  await connectToDB();
+  const session = await getServerSession(options);
+
+  if (!session || !session.user || !session.user.email) {
+      console.log("No valid session found.");
+      return []; // Return empty array instead of false
+  }
+
+  const userEmail = session.user.email;
+  console.log("User email:", userEmail);
+
+  const participant = await Bid.find({ 'bids.bidderEmail': userEmail });
+  console.log("Participant bids:", participant);
+
+  if (participant.length > 0) {
+      const auctionIds = participant.map(bid => bid.auctionId);
+      console.log("Auction IDs:", auctionIds);
+      return auctionIds;
+  } else {
+      console.log("No auctions found for this user.");
+      return []; // Return empty array instead of false
+  }
 }
+
+
   
 

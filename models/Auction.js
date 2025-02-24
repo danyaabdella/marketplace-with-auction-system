@@ -5,13 +5,15 @@ const auctionSchema = new mongoose.Schema({
     merchantId: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
     description: String,
     condition: { type: String, enum: [ 'new', 'used']},
-    startTime: {type: Date, default: Date.now, required: true},
+    startTime: {type: Date, required: true},
     endTime: {type: Date, required: true},
     itemImg: [{ type: String }],
     startingPrice: {type: Number, required: true},
-    reservedPrice: {type: Number, required: true},
+    desiredPrice: {type: Number, required: true},
     bidIncrement: Number,
-    status: {type: String, enum: [ 'requested', 'active', 'ended', 'cancelled'], default: 'requested'},
+    status: {type: String, enum: [  'active', 'ended', 'cancelled'], default: 'requested'},
+    adminApproval: {type: String, enum: [ 'pending', 'approved', 'rejected'], default: 'pending'},
+    paymentduration: { type: Date },
     quantity: {type: Number, default: 1},
 
 })
