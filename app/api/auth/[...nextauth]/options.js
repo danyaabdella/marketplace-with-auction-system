@@ -17,6 +17,7 @@ export const options = {
         password: { label: 'Password:', type: 'password', placeholder: 'your-secure-password' },
       },
       async authorize(credentials) {
+        console.log("Mongo URI: ", process.env.MONGO_URL);
         await mongoose.connect(process.env.MONGO_URL);
 
         // Check for Admin or SuperAdmin
@@ -26,7 +27,9 @@ export const options = {
           throw new Error('No user found with this email');
         }
 
+
         const isPasswordValid = await argon2.verify( user.password, credentials.password);
+
 
         if (!isPasswordValid) {
           throw new Error('Invalid email or password');
