@@ -18,8 +18,16 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Unauthorized: User not found" }), { status: 401 });
     }
 
-    if (sessionUser.isBanned || sessionUser.isDeleted) {
-      return new Response(JSON.stringify({ error: "Your account is either banned or deleted, and you cannot place an order." }), { status: 400 });
+    if (sessionUser.isBanned) {
+      return new Response(JSON.stringify({ error: "Your account is banned, and you cannot place an order." }), { status: 400 });
+    }
+
+    if (sessionUser.isDeleted) {
+      return new Response(JSON.stringify({ error: "Your account is deleted, and you cannot place an order." }), { status: 400 });
+    }
+
+    if (!sessionUser.isEmailVerified) {
+      return new Response(JSON.stringify({ error: "Your email is not verified, and you cannot place an order." }), { status: 400 });
     }
 
     const customerDetail = body.customerDetail || {
@@ -66,6 +74,16 @@ export async function POST(req) {
       await product.save();
     }
 
+    // Add location with coordinates from the request body
+    const location = {
+      type: "Point",
+      coordinates: body.location?.coordinates || [] // Expect coordinates from request
+    };
+
+    if (!location.coordinates.length) {
+      return new Response(JSON.stringify({ error: "Location coordinates are required" }), { status: 400 });
+    }
+
     const newOrder = new Order({
       customerDetail,
       merchantDetail: body.merchantDetail,
@@ -76,6 +94,7 @@ export async function POST(req) {
       paymentStatus: body.paymentStatus || "Pending",
       transactionRef: body.transactionRef,
       orderDate: new Date(),
+      location
     });
 
     await newOrder.save();
@@ -96,9 +115,17 @@ export async function PUT(req) {
             return NextResponse.json({ error: "Unauthorized: User not found" }, { status: 401 });
         }
 
-        // Check if user is banned or deleted
-        if (sessionUser.isBanned || sessionUser.isDeleted) {
-            return NextResponse.json({ error: "Your account is either banned or deleted, and you cannot update an order." }, { status: 400 });
+        // Check if user is banned, deleted, or email not verified
+        if (sessionUser.isBanned) {
+          return NextResponse.json({ error: "Your account is banned, and you cannot update an order." }, { status: 400 });
+        }
+
+        if (sessionUser.isDeleted) {
+          return NextResponse.json({ error: "Your account is deleted, and you cannot update an order." }, { status: 400 });
+        }
+
+        if (!sessionUser.isEmailVerified) {
+          return NextResponse.json({ error: "Your email is not verified, and you cannot update an order." }, { status: 400 });
         }
 
         const { _id, customerDetail, status, paymentStatus } = body;
@@ -152,7 +179,7 @@ export async function PUT(req) {
                 };
             }
 
-            return null; // No error, proceed with updates
+            return null; 
         };
 
         // Customer Role - Allow updating customer details & specific statuses
