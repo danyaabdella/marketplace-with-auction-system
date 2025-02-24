@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
 import Order from "@/models/Order";
-import { userInfo } from "@/libs/functions";
 import User from "@/models/User";
+import Product from "@/models/Product";
+
+import { userInfo } from "@/libs/functions";
 
 export async function POST(req) {
   try {
@@ -16,8 +18,16 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Unauthorized: User not found" }), { status: 401 });
     }
 
-    if (sessionUser.isBanned || sessionUser.isDeleted) {
-      return new Response(JSON.stringify({ error: "Your account is either banned or deleted, and you cannot place an order." }), { status: 400 });
+    if (sessionUser.isBanned) {
+      return new Response(JSON.stringify({ error: "Your account is banned, and you cannot place an order." }), { status: 400 });
+    }
+
+    if (sessionUser.isDeleted) {
+      return new Response(JSON.stringify({ error: "Your account is deleted, and you cannot place an order." }), { status: 400 });
+    }
+
+    if (!sessionUser.isEmailVerified) {
+      return new Response(JSON.stringify({ error: "Your email is not verified, and you cannot place an order." }), { status: 400 });
     }
 
     const customerDetail = body.customerDetail || {
@@ -35,15 +45,56 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Customer details are incomplete" }), { status: 400 });
     }
 
+    // Validate and update product quantities
+    const products = body.products || []; // Ensure products is an array
+    if (products.length === 0 && !body.auction) {
+      return new Response(JSON.stringify({ error: "Order must contain either products or an auction" }), { status: 400 });
+    }
+
+    // Iterate over products to update quantities in the Product collection
+    for (const orderProduct of products) {
+      const { productId, quantity } = orderProduct;
+
+      // Fetch the product from the database
+      const product = await Product.findById(productId);
+      if (!product) {
+        return new Response(JSON.stringify({ error: `Product with ID ${productId} not found` }), { status: 404 });
+      }
+
+      // Check if enough quantity is available
+      if (product.quantity < quantity) {
+        return new Response(JSON.stringify({ error: `Insufficient quantity for product: ${product.productName}. Available: ${product.quantity}, Requested: ${quantity}` }), { status: 400 });
+      }
+
+      // Subtract the ordered quantity and increment soldQuantity
+      product.quantity -= quantity;
+      product.soldQuantity += quantity;
+
+      // Save the updated product
+      await product.save();
+    }
+
+    // Add location with coordinates from the request body
+    const location = {
+      type: "Point",
+      coordinates: body.location?.coordinates || [] // Expect coordinates from request
+    };
+
+    if (!location.coordinates.length) {
+      return new Response(JSON.stringify({ error: "Location coordinates are required" }), { status: 400 });
+    }
+
     const newOrder = new Order({
       customerDetail,
       merchantDetail: body.merchantDetail,
       products: body.products,
+      auction: body.auction || null, // Handle auction if present
       totalPrice: body.totalPrice,
       status: body.status || "Pending",
       paymentStatus: body.paymentStatus || "Pending",
       transactionRef: body.transactionRef,
       orderDate: new Date(),
+      location
     });
 
     await newOrder.save();
@@ -64,9 +115,17 @@ export async function PUT(req) {
             return NextResponse.json({ error: "Unauthorized: User not found" }, { status: 401 });
         }
 
-        // Check if user is banned or deleted
-        if (sessionUser.isBanned || sessionUser.isDeleted) {
-            return NextResponse.json({ error: "Your account is either banned or deleted, and you cannot update an order." }, { status: 400 });
+        // Check if user is banned, deleted, or email not verified
+        if (sessionUser.isBanned) {
+          return NextResponse.json({ error: "Your account is banned, and you cannot update an order." }, { status: 400 });
+        }
+
+        if (sessionUser.isDeleted) {
+          return NextResponse.json({ error: "Your account is deleted, and you cannot update an order." }, { status: 400 });
+        }
+
+        if (!sessionUser.isEmailVerified) {
+          return NextResponse.json({ error: "Your email is not verified, and you cannot update an order." }, { status: 400 });
         }
 
         const { _id, customerDetail, status, paymentStatus } = body;
@@ -120,7 +179,7 @@ export async function PUT(req) {
                 };
             }
 
-            return null; // No error, proceed with updates
+            return null; 
         };
 
         // Customer Role - Allow updating customer details & specific statuses

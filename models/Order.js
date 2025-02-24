@@ -29,12 +29,29 @@ const orderSchema = new mongoose.Schema({
             price: { type: Number, required: true },
             delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
             deliveryPrice: { type: Number, required: true }
-        },
+        }
     ],
     auction: {
-        auctionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-        delivery: { type: String, enum: ['PAID', 'FREE'], required: true },
-        deliveryPrice: { type: Number, required: true }
+        auctionId: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'Product',
+            required: function() {
+                return !(this.products && this.products.length > 0); // Required if products is empty
+            }
+        },
+        delivery: { 
+            type: String, 
+            enum: ['PAID', 'FREE'],
+            required: function() {
+                return this.auction && this.auction.auctionId; // Required if auctionId exists
+            }
+        },
+        deliveryPrice: { 
+            type: Number,
+            required: function() {
+                return this.auction && this.auction.auctionId; // Required if auctionId exists
+            }
+        }
     },
     totalPrice: { type: Number, required: true },
     status: { 
@@ -47,25 +64,37 @@ const orderSchema = new mongoose.Schema({
         enum: ['Pending', 'Paid', 'Paid To Merchant', 'Pending Refund', 'Refunded'], 
         default: 'Pending' 
     },
+    location: {
+        type: { type: String, default: "Point" }, 
+        coordinates: { type: [Number], required: true }
+    },
     transactionRef: { type: String, required: true }, 
     orderDate: { type: Date, default: Date.now },
     refundReason: { type: String, required: false }
 });
 
-// Custom validation to ensure mutual exclusivity
-orderSchema.path('products').validate(function (value) {
-    if (value.length > 0 && this.auction) {
-        return false; // Cannot have both products and auction
-    }
-    return true;
-}, 'Order cannot have both products and auction at the same time.');
+// Custom validation to ensure at least one of products or auction exists
+orderSchema.pre('validate', function(next) {
+    const hasProducts = this.products && this.products.length > 0;
+    const hasAuction = this.auction && this.auction.auctionId;
 
-orderSchema.path('auction').validate(function (value) {
-    if (value && this.products.length > 0) {
-        return false; // Cannot have both products and auction
+    if (!hasProducts && !hasAuction) {
+        return next(new Error('Order must contain either products or an auction.'));
+    }
+    next();
+});
+
+// Ensure products array is not required unless auction is absent
+orderSchema.path('products').validate(function(value) {
+    const hasAuction = this.auction && this.auction.auctionId;
+    const hasProducts = value && value.length > 0;
+
+    // If no auction, products must exist
+    if (!hasAuction && !hasProducts) {
+        return false;
     }
     return true;
-}, 'Order cannot have both products and auction at the same time.');
+}, 'Products are required when no auction is present.');
 
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 export default Order;
