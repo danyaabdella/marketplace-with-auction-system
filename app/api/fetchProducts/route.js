@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 import Product from "@/models/Product";
@@ -111,3 +112,4 @@ export async function GET(req) {
 
     return new Response(JSON.stringify({ products }), { status: 200 });
 }
+

@@ -27,7 +27,9 @@ export const options = {
           throw new Error('No user found with this email');
         }
 
-        const isPasswordValid = await argon2.verify(user.password, credentials.password);
+
+        const isPasswordValid = await argon2.verify( user.password, credentials.password);
+
 
         if (!isPasswordValid) {
           throw new Error('Invalid email or password');

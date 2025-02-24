@@ -25,6 +25,7 @@ export async function POST(req) {
             merchantEmail: merchantInfo.email,
         };
 
+
         // Add merchantDetail to the product data
         productData.merchantDetail = merchantDetail;
 
@@ -43,6 +44,7 @@ export async function POST(req) {
         );
     }
 }
+
 
 export async function GET(req) {
     const merchantCheckResponse = await isMerchant(); 
@@ -192,11 +194,13 @@ export async function PUT(req) {
         return new Response( JSON.stringify({ message: "Product updated successfully", product }), { status: 200 });
     } catch (error) { 
         return new Response( JSON.stringify({ error: "Failed to update product" }),{ status: 500 });
+
     }
 }
 
 export async function DELETE(req) {
     try {
+
         const { _id } = await req.json();
 
         if (!_id) return new Response( JSON.stringify({ error: "Product ID is required." }), { status: 400 });
@@ -216,6 +220,7 @@ export async function DELETE(req) {
         // Perform a soft delete
         product.isDeleted = true;
         product.trashDate = new Date();
+
         await product.save();
 
         return new Response(

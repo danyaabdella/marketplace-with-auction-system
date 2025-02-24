@@ -7,10 +7,12 @@ const productSchema = new Schema({
         merchantEmail: { type: String, required: true },
     }, 
     productName: { type: String, required: true },
+
     category: {
         categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
         categoryName: { type: String, required: true }
     },
+
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
     soldQuantity: { type: Number, default: 0 },
@@ -31,6 +33,7 @@ const productSchema = new Schema({
             createdDate: { type: Date, default: Date.now }
         }
     ],
+
     delivery: { type: String, enum: ['FLAT', 'PERPIECE', 'PERKG', 'FREE'], required: true },
     deliveryPrice: { type: Number, required: true },
     isBanned: { type: Boolean, default: false },
@@ -45,6 +48,7 @@ const productSchema = new Schema({
 
 // Ensure the schema has a 2dsphere index for geospatial queries
 productSchema.index({ location: "2dsphere" });
+
 
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 export default Product;

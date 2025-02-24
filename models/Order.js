@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
+
     customerDetail: {
         customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         customerName: { type: String, required: true },
@@ -21,6 +22,7 @@ const orderSchema = new mongoose.Schema({
         merchantRefernce: { type: String, required: false, default: null },
         bank_code: { type: String, required: true },
     },
+
     products: [
         {
             productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -31,6 +33,7 @@ const orderSchema = new mongoose.Schema({
             deliveryPrice: { type: Number, required: true }
         }
     ],
+
     auction: {
         auctionId: { 
             type: mongoose.Schema.Types.ObjectId, 
@@ -95,6 +98,7 @@ orderSchema.path('products').validate(function(value) {
     }
     return true;
 }, 'Products are required when no auction is present.');
+
 
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
 export default Order;
