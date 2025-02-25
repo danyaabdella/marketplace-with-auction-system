@@ -3,18 +3,16 @@
 import { useSession } from 'next-auth/react';
 import React from 'react'
 import { useProfile } from '@/components/userProfile';
-import  AuctionPage  from '@/components/AuctionPage';
-import { useBidNotifications } from '@/components/UserNotifications';
+
 
 export default function Home() {
   const { data: session } = useSession();
   const email = session?.user?.email;
   // Only call useProfile if email is available
-  //const notify = useSocket();
- // const { loading, data, error } = useProfile(email);
- if(email) {
-  return ( <AuctionPage auctionId="679bb003c65b3ee8ff5b08c9"/>)
- }
+  const { loading, data, error } = useProfile(email);
+//  if(email) {
+//   return ( <AuctionPage auctionId="679bb003c65b3ee8ff5b08c9"/>)
+//  }
  
 {/* <useBidNotifications/> */}
   if (!email) {
