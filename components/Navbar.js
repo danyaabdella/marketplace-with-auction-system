@@ -19,10 +19,11 @@ const Navbar = () => {
           </button>
           <button
             className="bg-red-400 p-4 rounded-md py-2"
-            onClick={() => signOut()}
+            onClick={() => signOut({callbackUrl: '/signin'})}
           >
             Logout
           </button>
+          
         </>
       ) : (
         <>

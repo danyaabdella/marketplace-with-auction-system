@@ -2,22 +2,39 @@
   "name": "marketplace-with-auction",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbo",
+    "dev:socket": "NODE_OPTIONS='--trace-warnings' node server.mjs next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "agenda": "^5.0.0",
+    "argon2": "^0.41.1",
+    "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "firebase": "^11.1.0",
+
+    "lru-cache": "^11.0.2",
+    "mongodb": "^4.17.2",
+
     "mongoose": "^8.8.4",
     "next": "15.1.0",
     "next-auth": "^4.24.11",
+    "nodemailer": "^6.10.0",
+
+    "nodemon": "^3.1.9",
+    "object-hash": "^3.0.0",
+    "openid-client": "^6.3.1",
+
     "react": "^19.0.0",
     "react-country-state-city": "^1.1.7",
     "react-dom": "^19.0.0",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
