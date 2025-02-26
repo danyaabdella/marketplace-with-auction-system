@@ -46,5 +46,23 @@ const productSchema = new Schema({
 // Ensure the schema has a 2dsphere index for geospatial queries
 productSchema.index({ location: "2dsphere" });
 
+// Add text index for weighted search on relevant fields
+productSchema.index({
+    productName: "text",
+    description: "text",
+    "category.categoryName": "text",
+    "merchantDetail.merchantName": "text",
+    delivery: "text"
+}, {
+    weights: {
+        productName: 10,            // Higher weight for productName
+        description: 5,             // Medium weight for description
+        "category.categoryName": 3, // Lower weight for category name
+        "merchantDetail.merchantName": 2, // Lower weight for merchant name
+        delivery: 1                 // Lowest weight for delivery
+    },
+    name: "productTextIndex"        // Optional: name the index for reference
+});
+
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 export default Product;
