@@ -5,6 +5,7 @@ import ContextProvider from "@/components/commons/ContextProvider";
 import Container from "@/components/commons/Container";
 import { NavBar } from "@/components/nav-bar";
 import { CartProvider } from "@/components/cart-provider";
+import ChatBot from "@/components/commons/ChatBot";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({ children }) {
             <main className="flex-1 max-w-7xl mx-auto py-4 px-[10px] overflow-y-hidden">
               {children}
             </main>
+            <ChatBot /> {/* Add the chatbot here */}
           </ContextProvider>
         </CartProvider>
       </body>

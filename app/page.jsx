@@ -6,6 +6,7 @@ import { ProductSlider } from "@/components/product-slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import ChatBot from "@/components/commons/ChatBot";
 
 export default function Home() {
   // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
@@ -273,6 +274,7 @@ export default function Home() {
             <ChevronUp className="h-4 w-4" />
           </Button>
         </div>
+        <ChatBot />
       </div>
     </div>
   );
