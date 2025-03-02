@@ -19,6 +19,8 @@ import { useCart } from "./cart-provider";
 import { SignInDialog } from "./sign-in-dialogue";
 import { SignUpDialog } from "./sign-up-dialogue";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationPopover } from "@/components/notification-popover"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -136,6 +138,8 @@ export function NavBar() {
                 )}
               </Button>
             </Link>
+            <NotificationPopover />
+            <ThemeToggle />
 
             {/* Authentication Section */}
             <div className="flex items-center space-x-4 relative">
@@ -172,18 +176,12 @@ export function NavBar() {
                     </DropdownMenuItem>
                     {user.role === "merchant" && (
                       <>
+                      <Link href="/dashboard">
                         <DropdownMenuItem>
                           <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>Dashboard</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Package className="mr-2 h-4 w-4" />
-                          <span>My Products</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Users className="mr-2 h-4 w-4" />
-                          <span>My Customers</span>
-                        </DropdownMenuItem>
+                        </Link>
                       </>
                     )}
                     <DropdownMenuSeparator />
