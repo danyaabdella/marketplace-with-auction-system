@@ -24,6 +24,6 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-, "app/products/page.jsx", "app/page.jsx", "components/footer.jsx", "components/commons/Navbar.jsx", "components/MobileNav.jsx", "app/layout.jsx", "components/sign-in-dialogue.jsx", "components/commons/ChatBot.jsx"  ],
+, "app/products/page.jsx", "app/page.jsx", "components/footer.jsx", "components/commons/Navbar.jsx", "components/MobileNav.jsx", "app/layout.jsx", "components/sign-in-dialogue.jsx", "components/commons/ChatBot.jsx", "components/sign-up-dialogue.jsx"  ],
   "exclude": ["node_modules"]
 }

@@ -6,6 +6,7 @@ import Container from "@/components/commons/Container";
 import { NavBar } from "@/components/nav-bar";
 import { CartProvider } from "@/components/cart-provider";
 import ChatBot from "@/components/commons/ChatBot";
+import { Footer } from "@/components/footer";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -16,7 +17,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth overflow-x-hidden">
+    <html lang="en" className="scroll-smooth overflow-x-hidden mt-8">
       <body className={`${roboto.className} flex min-h-screen flex-col`}>
         <CartProvider>
           <ContextProvider>
@@ -25,7 +26,8 @@ export default function RootLayout({ children }) {
             <main className="flex-1 max-w-7xl mx-auto py-4 px-[10px] overflow-y-hidden">
               {children}
             </main>
-            <ChatBot /> {/* Add the chatbot here */}
+            <ChatBot />
+            <Footer />
           </ContextProvider>
         </CartProvider>
       </body>

@@ -1,63 +1,57 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Menu,
-  ShoppingCart,
-  Package,
-  Heart,
-  LayoutDashboard,
-  Users,
-  Settings,
-  LogOut,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useCart } from "./cart-provider";
-import { SignInDialog } from "./sign-in-dialogue";
-import { SignUpDialog } from "./sign-up-dialogue";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter, usePathname } from "next/navigation"
+import { Menu, ShoppingCart, Package, Heart, LayoutDashboard, Users, Settings, LogOut } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useCart } from "./cart-provider"
+import { SignInDialog } from "./sign-in-dialogue"
+import { SignUpDialog } from "./sign-up-dialogue"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
+import { NotificationPopover } from "./notification-popover"
+import { ThemeToggle } from "./ui/theme-toogle";
 
 export function NavBar() {
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const router = useRouter();
-  const { cartCount } = useCart();
+  const [showSignIn, setShowSignIn] = useState(false)
+  const [showSignUp, setShowSignUp] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const router = useRouter()
+  const { cartCount } = useCart()
+  const pathname = usePathname()
 
   useEffect(() => {
     // Simulate authentication (replace with real auth logic)
     const checkAuth = async () => {
-      setIsAuthenticated(true);
+      setIsAuthenticated(true)
       setUser({
         name: "John Doe",
         email: "john@example.com",
         image: "/placeholder.svg",
         role: "merchant",
-      });
-    };
-    checkAuth();
-  }, []);
+      })
+    }
+    checkAuth()
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
+      setIsScrolled(window.scrollY > 50)
+    }
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   return (
     <header
@@ -65,7 +59,7 @@ export function NavBar() {
         isScrolled ? "shadow-md" : ""
       } transition-all`}
     >
-      <div className="py-4 px-[20px]">
+      <div className="py-4 px-[20px ]">
         <div className="flex items-center justify-between">
           {/* Left Section: Mobile Menu and Logo */}
           <div className="flex items-center gap-4">
@@ -81,19 +75,54 @@ export function NavBar() {
                   <Link href="/" className="text-lg font-bold">
                     QuickCart
                   </Link>
-                  <Link href="/products" className="text-sm">
+                  <Link
+                    href="/products"
+                    className={`text-sm transition-colors px-3 py-2 rounded-lg ${
+                      pathname === "/products"
+                        ? "bg-[#A1887F] text-primary-foreground"
+                        : "hover:bg-[#A1887F]/10 hover:text-primary"
+                    }`}
+                  >
                     Products
                   </Link>
-                  <Link href="/auctions" className="text-sm">
+                  <Link
+                    href="/auctions"
+                    className={`text-sm transition-colors px-3 py-2 rounded-lg ${
+                      pathname === "/auctions"
+                        ? "bg-[#A1887F] text-primary-foreground"
+                        : "hover:bg-[#A1887F]/10 hover:text-primary"
+                    }`}
+                  >
                     Auctions
                   </Link>
-                  <Link href="/categories" className="text-sm">
+                  <Link
+                    href="/categories"
+                    className={`text-sm transition-colors px-3 py-2 rounded-lg ${
+                      pathname === "/categories"
+                        ? "bg-[#A1887F] text-primary-foreground"
+                        : "hover:bg-[#A1887F]/10 hover:text-primary"
+                    }`}
+                  >
                     Categories
                   </Link>
-                  <Link href="/about" className="text-sm">
+                  <Link
+                    href="/about"
+                    className={`text-sm transition-colors px-3 py-2 rounded-lg ${
+                      pathname === "/about"
+                        ? "bg-[#A1887F] text-primary-foreground"
+                        : "hover:bg-[#A1887F]/10 hover:text-primary"
+                    }`}
+                  >
                     About
                   </Link>
-                  <Link href="/contact" className="text-sm">
+                  <Link
+                    href="/contact"
+                    className={`text-sm transition-colors px-3 py-2 rounded-lg ${
+                      pathname === "/contact"
+                        ? "bg-[#A1887F] text-primary-foreground"
+                        : "hover:bg-[#A1887F]/10 hover:text-primary"
+                    }`}
+                  >
                     Contact
                   </Link>
                 </nav>
@@ -106,25 +135,60 @@ export function NavBar() {
 
           {/* Center Section: Navigation Links */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/products" className="text-sm font-medium hover:underline">
+            <Link
+              href="/products"
+              className={`text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/products"
+                  ? "bg-[#A1887F] text-primary-foreground"
+                  : "hover:bg-[#A1887F]/10 hover:text-primary"
+              }`}
+            >
               Products
             </Link>
-            <Link href="/auctions" className="text-sm font-medium hover:underline">
+            <Link
+              href="/auctions"
+              className={`text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/auctions"
+                  ? "bg-[#A1887F] text-primary-foreground"
+                  : "hover:bg-[#A1887F]/10 hover:text-primary"
+              }`}
+            >
               Auctions
             </Link>
-            <Link href="/categories" className="text-sm font-medium hover:underline">
+            <Link
+              href="/categories"
+              className={`text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/categories"
+                  ? "bg-[#A1887F] text-primary-foreground"
+                  : "hover:bg-[#A1887F]/10 hover:text-primary"
+              }`}
+            >
               Categories
             </Link>
-            <Link href="/about" className="text-sm font-medium hover:underline">
+            <Link
+              href="/about"
+              className={`text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/about"
+                  ? "bg-[#A1887F] text-primary-foreground"
+                  : "hover:bg-[#A1887F]/10 hover:text-primary"
+              }`}
+            >
               About
             </Link>
-            <Link href="/contact" className="text-sm font-medium hover:underline">
+            <Link
+              href="/contact"
+              className={`text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/contact"
+                  ? "bg-[#A1887F] text-primary-foreground"
+                  : "hover:bg-[#A1887F]/10 hover:text-primary"
+              }`}
+            >
               Contact
             </Link>
           </nav>
 
           {/* Right Section: Cart & Authentication */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Cart Button */}
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">
@@ -136,6 +200,8 @@ export function NavBar() {
                 )}
               </Button>
             </Link>
+            <NotificationPopover />
+            <ThemeToggle />
 
             {/* Authentication Section */}
             <div className="flex items-center space-x-4 relative">
@@ -214,5 +280,6 @@ export function NavBar() {
       <SignInDialog open={showSignIn} onOpenChange={setShowSignIn} />
       <SignUpDialog open={showSignUp} onOpenChange={setShowSignUp} />
     </header>
-  );
+  )
 }
+

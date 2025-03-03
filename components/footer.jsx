@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { FaFacebook, FaTwitter, FaLinkedin, FaYoutube, FaInstagram } from "react-icons/fa";
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input";
 
 export function Footer() {
   return (
@@ -190,9 +190,9 @@ export function Footer() {
   )
 }
 
-import { Facebook, Instagram, Twitter, Youtube } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+// import { Facebook, Instagram, Twitter, Youtube } from "lucide-react"
+// import { Input } from "@/components/ui/input"
+// import { Button } from "@/components/ui/button"
 
 // export function Footer() {
 //   return (
