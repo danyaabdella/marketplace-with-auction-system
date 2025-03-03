@@ -126,7 +126,7 @@ export function NavBar() {
           </nav>
 
           {/* Right Section: Cart & Authentication */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Cart Button */}
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">

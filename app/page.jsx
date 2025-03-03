@@ -176,8 +176,9 @@ export default function Home() {
   const totalCategoriesPages = Math.ceil(categories.length / itemsPerPage);
 
   return (
-    <div>
-      <div className="container mx-auto px-4 py-8 mt-8">
+    <div className="container mx-auto px-4 py-8 mt-8 justify-between">
+     <div className="grid grid-cols-1 gap-6">
+      
         {/* Search Form */}
         <div className="mb-8">
           <form className="flex gap-4 max-w-2xl w-full mx-auto">
@@ -190,7 +191,7 @@ export default function Home() {
 
         {/* Special Categories Navigation */}
         <nav className="my-8">
-          <div className="flex overflow-x-auto gap-4 mb-4 justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 overflow-x-auto gap-4 mb-4 ">
             {["Popular", "Best Seller", "Top Rated", "Latest"].map((type) => {
               // Map display text to the corresponding ref key
               const sectionKeys = {
@@ -274,7 +275,7 @@ export default function Home() {
             <ChevronUp className="h-4 w-4" />
           </Button>
         </div>
-        <ChatBot />
+        {/* <ChatBot /> */}
       </div>
     </div>
   );
