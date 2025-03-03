@@ -72,27 +72,27 @@ export async function connectToDB() {
   
 export async function isMerchant() {
     const userData = await userInfo();
-    console.log("user data: ", userData);
+
     if (userData.role !== "merchant" || userData.isMerchant !== true) {
-        console.log("Unauthorized: Only Sellers can perform this operation");
+        console.log("Unauthorized: Only Merchants can perform this operation");
+
         return new Response(
-            JSON.stringify({ error: "Unauthorized: Only sellers can perform this operation" }),
+            JSON.stringify({ error: "Unauthorized: Only Merchants can perform this operation" }),
             { status: 403 }
         );
     }
 }
 
 export async function userInfo() {
-    const session = await getServerSession(options)
-    const userEmail = session?.user?.email;
-    console.log("User email: ", userEmail);
-    if (!userEmail) {
-      return false;
-    }
+  const session = await getServerSession(options)
+  console.log("email: ",session);
+  const userEmail = session?.user?.email;
+  if (!userEmail) {
+    return false;
+  }
     connectToDB();
     let userInfo = await User.findOne({email: userEmail})
 
-    console.log("user info to check role: ", userInfo);
     if(!userInfo) {
       return false;
     }

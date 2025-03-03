@@ -1,15 +1,9 @@
 /** @type {import('next').NextConfig} */
-
 const nextConfig = {
-    // webpack: (config) => {
-    //   config.resolve.fallback = {
-    //     dns: false,
-    //     fs: false,
-    //     net: false,
-    //     tls: false
-    //   };
-    //   return config;
-    // }
+    images: {
+      domains: ["hebbkx1anhila5yf.public.blob.vercel-storage.com"], // Add your image domain
+    },
   };
-export default nextConfig;
- 
+  
+  export default nextConfig;
+  

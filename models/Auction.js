@@ -11,8 +11,8 @@ const auctionSchema = new mongoose.Schema({
     startingPrice: {type: Number, required: true},
     reservedPrice: {type: Number, required: true},
     bidIncrement: Number,
-    status: {type: String, enum: [  'active', 'ended', 'cancelled' ]},
-    adminApproval: {type: String, enum: [ 'pending', 'approved', 'rejected' ], default: 'pending'},
+    status: {type: String, enum: [  'active', 'ended', 'cancelled']},
+    adminApproval: {type: String, enum: [ 'pending', 'approved', 'rejected'], default: 'pending'},
     paymentduration: { type: Date },
     quantity: {type: Number, default: 1},
 

@@ -1,39 +1,16 @@
+
+import { checkSession, connectToDB } from "@/libs/functions";
 import User from "@/models/User";
 import argon2 from 'argon2';
-import { checkSession, connectToDB } from "@/libs/functions";
-
-export async function POST(req) {
-    try {
-        const body = await req.json();
-        await connectToDB();
-
-        // Check if the user already exists
-        const existingUser = await User.findOne({ email: body.email });
-        if (existingUser) {
-            return new Response(
-                JSON.stringify({ message: "User already exists" }),
-                { status: 400 }
-            );
-        }
-
-        const hashedPassword = await argon2.hash(body.password);  
-        body.password = hashedPassword;
-        const createdUser = await User.create(body);
-
-        return new Response(JSON.stringify(createdUser), { status: 201 });
-
-    } catch (err) {
-        console.error("Error while creating: ", err.message);
-        return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-    }
-}
 
 export async function GET(req) {
     const url = new URL(req.url);
     const email = url.searchParams.get("email");
     const sessionError = await checkSession(email);
 
-    if (!email && sessionError) {
+
+    if (!email || sessionError) {
+
         return new Response(JSON.stringify({ error: "Email is required OR Invalid  email" }), { status: 400 });
     }
 
@@ -59,22 +36,45 @@ export async function PUT(req) {
     try {
         // Parse request body
         const body = await req.json();
-        const { _id, email, fullName, password, image, stateName, cityName, phoneNumber } = body;
+
+        const { 
+            _id, 
+            email, 
+            fullName, 
+            password, 
+            image, 
+            stateName, 
+            cityName, 
+            phoneNumber, 
+            tinNumber, 
+            nationalId, 
+            account_name, 
+            account_number, 
+            bank_code 
+        } = body;
         const sessionError = await checkSession(email);
 
-        // Validate required fields
-        if (!fullName && !password && !image && !stateName && !cityName && !phoneNumber) {
-            return new Response(JSON.stringify({ error: "At least one field to update is required." }), { status: 400 });
+        if (sessionError) {
+            return new Response(JSON.stringify({ error: "You are not logged in." }), { status: 400 });
         }
 
-        if (!_id && sessionError ) {
-            return new Response(JSON.stringify({ error: "ID is mandatory for Update" }), { status: 400 });
+        if (!_id) {
+            return new Response(JSON.stringify({ error: "ID is mandatory for update." }), { status: 400 });
+
         }
 
         await connectToDB();
 
-        // Prepare the update data
+        // Fetch user from DB
+        const existingUser = await User.findById(_id);
+        if (!existingUser) {
+            return new Response(JSON.stringify({ error: "User not found." }), { status: 404 });
+        }
+
         const updateData = {};
+
+        // Allow updates to profile fields
+
         if (fullName) updateData.fullName = fullName;
         if (password) updateData.password = await argon2.hash(password);  
         if (image) updateData.image = image;
@@ -82,7 +82,33 @@ export async function PUT(req) {
         if (cityName) updateData.cityName = cityName;
         if (phoneNumber) updateData.phoneNumber = phoneNumber;
 
-        // Update the user in the database using the _id
+
+        // Prevent merchants from updating tinNumber and nationalId
+        if (existingUser.role === "merchant" && (tinNumber || nationalId)) {
+            return new Response(JSON.stringify({ error: "Merchants cannot update tinNumber or nationalId." }), { status: 400 });
+        }
+
+        // Check if the user is a customer and wants to promote to merchant
+        if (existingUser.role === "customer") {
+            if ((tinNumber && !nationalId) || (!tinNumber && nationalId)) {
+                return new Response(JSON.stringify({ error: "You must provide both TIN number and National ID to be approved as a merchant." }), { status: 400 });
+            }
+            
+            if (tinNumber && nationalId) {
+                updateData.role = "merchant"; 
+                updateData.tinNumber = tinNumber;
+                updateData.nationalId = nationalId;
+                updateData.isMerchant = false;
+            }
+        }
+
+        // Add new fields for account details
+        if (account_name) updateData.account_name = account_name;
+        if (account_number) updateData.account_number = account_number;
+        if (bank_code) updateData.bank_code = bank_code;
+
+        // Update the user in the database
+
         const updatedUser = await User.findOneAndUpdate(
             { _id: _id }, // Find user by _id
             { $set: updateData }, // Update specified fields
@@ -90,14 +116,15 @@ export async function PUT(req) {
         );
 
         if (!updatedUser) {
-            return new Response(JSON.stringify({ error: "User not found." }), { status: 404 });
+
+            return new Response(JSON.stringify({ error: "Failed to update user." }), { status: 400 });
         }
 
-        // Return the updated user data
         return new Response(JSON.stringify(updatedUser), {
             status: 200,
             headers: { "Content-Type": "application/json" },
         });
+
     } catch (err) {
         console.error("Error in PUT handler: ", err.message);
         return new Response(
@@ -112,7 +139,8 @@ export async function DELETE(req) {
         const url = new URL(req.url);
         const email = url.searchParams.get("email");
 
-// Check session and email
+        // Check session and email
+
         const sessionError = await checkSession(email);
         if (sessionError) {
             return sessionError; // Return the error response

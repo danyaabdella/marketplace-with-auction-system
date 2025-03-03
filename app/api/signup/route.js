@@ -1,6 +1,6 @@
 import User from "@/models/User";
 import argon2 from 'argon2';
-import { checkSession, connectToDB, isSeller } from "@/libs/functions";
+import { connectToDB } from "@/libs/functions";
 
 export async function POST(req) {
     try {
@@ -16,9 +16,15 @@ export async function POST(req) {
             );
         }
 
-        const hashedPassword = await argon2.hash(body.password);  
+        // Hash password
+        const hashedPassword = await argon2.hash(body.password);
         body.password = hashedPassword;
-        const createdUser = await User.create(body);
+
+        // Create user without sending OTP
+        const createdUser = await User.create({ 
+            ...body, 
+            isEmailVerified: false 
+        });
 
         return new Response(JSON.stringify(createdUser), { status: 201 });
 
@@ -27,6 +33,7 @@ export async function POST(req) {
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
     }
 }
+
 
 // export async function GET(req) {
 //     const url = new URL(req.url);
