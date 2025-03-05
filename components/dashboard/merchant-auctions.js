@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {CreateAuctionDialog} from "./create-auction";
@@ -15,49 +16,113 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/libs/utils";
 import { Edit, MoreHorizontal, Plus, Trash } from "lucide-react";
+import { useToast } from "../ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { EditAuctionForm } from "./editAuctionForm";
 
 const auctions = [
   {
     id: "1",
-    name: "Vintage Polaroid Camera",
-    status: "Active",
-    currentBid: 120.0,
+    productId: "prod1",
+    productName: "Vintage Polaroid Camera",
+    merchantId: "merch1",
+    description: "Original Polaroid camera from the 1970s in excellent condition.",
+    condition: "used",
+    startTime: "2024-03-10T10:00:00Z",
+    endTime: "2024-03-15T10:00:00Z",
+    itemImg: ["/placeholder.svg"],
+    startingPrice: 120.0,
+    reservedPrice: 200.0,
+    bidIncrement: 10.0,
+    status: "active",
+    adminApproval: "approved",
+    paymentduration: "2024-03-17T10:00:00Z",
+    quantity: 1,
+    currentBid: 150.0,
     bids: 8,
-    endDate: "2024-03-15",
-    image: "/placeholder.svg",
   },
   {
     id: "2",
-    name: "Antique Wooden Desk",
-    status: "Ending Soon",
-    currentBid: 350.0,
+    productId: "prod2",
+    productName: "Antique Wooden Desk",
+    merchantId: "merch1",
+    description: "Beautiful oak desk from the early 20th century.",
+    condition: "used",
+    startTime: "2024-03-05T10:00:00Z",
+    endTime: "2024-03-10T10:00:00Z",
+    itemImg: ["/placeholder.svg"],
+    startingPrice: 350.0,
+    reservedPrice: 500.0,
+    bidIncrement: 25.0,
+    status: "ended",
+    adminApproval: "approved",
+    paymentduration: "2024-03-12T10:00:00Z",
+    quantity: 1,
+    currentBid: 525.0,
     bids: 12,
-    endDate: "2024-03-10",
-    image: "/placeholder.svg",
   },
   {
     id: "3",
-    name: "Limited Edition Vinyl",
-    status: "Completed",
+    productId: "prod3",
+    productName: "Limited Edition Vinyl",
+    merchantId: "merch1",
+    description: "Rare first pressing of a classic album, still sealed.",
+    condition: "new",
+    startTime: "2024-03-15T10:00:00Z",
+    endTime: "2024-03-20T10:00:00Z",
+    itemImg: ["/placeholder.svg"],
+    startingPrice: 75.0,
+    reservedPrice: 150.0,
+    bidIncrement: 5.0,
+    status: "active",
+    adminApproval: "pending",
+    paymentduration: null,
+    quantity: 1,
     currentBid: 75.0,
-    bids: 5,
-    endDate: "2024-03-05",
-    image: "/placeholder.svg",
+    bids: 0,
   },
   {
     id: "4",
-    name: "Art Deco Lamp",
-    status: "Scheduled",
-    currentBid: 220.0,
+    productId: "prod4",
+    productName: "Art Deco Lamp",
+    merchantId: "merch1",
+    description: "Original Art Deco lamp with stained glass shade.",
+    condition: "used",
+    startTime: "2024-03-20T10:00:00Z",
+    endTime: "2024-03-25T10:00:00Z",
+    itemImg: ["/placeholder.svg"],
+    startingPrice: 220.0,
+    reservedPrice: 300.0,
+    bidIncrement: 15.0,
+    status: "active",
+    adminApproval: "rejected",
+    paymentduration: null,
+    quantity: 1,
+    currentBid: 0,
     bids: 0,
-    endDate: "2024-03-20",
-    image: "/placeholder.svg",
   },
 ];
 
 export function MerchantAuctions() {
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState("asc");
+  const router = useRouter()
+  const { toast } = useToast()
+  const [sortColumn, setSortColumn] = useState(null)
+  const [sortDirection, setSortDirection] = useState("asc")
+  const [isCreateAuctionOpen, setIsCreateAuctionOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedAuction, setSelectedAuction] = useState(null)
+  const [isEditAuctionOpen, setIsEditAuctionOpen] = useState(false)
+  const [auctionToEdit, setAuctionToEdit] = useState(null)
+  
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -67,92 +132,218 @@ export function MerchantAuctions() {
       setSortDirection("asc");
     }
   };
+  const handleAuctionClick = (auction) => {
+    router.push(`/dashboard/auctions/${auction.id}`)
+  }
+
+  // const handleCreateAuction = () => {
+  //   setIsCreateAuctionOpen(true)
+  // }
+
+  const handleDeleteAuction = (auction, e) => {
+    e.stopPropagation() // Prevent navigation to auction details
+    setSelectedAuction(auction)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    // Here you would call your API to delete the auction
+    toast({
+      title: "Auction deleted",
+      description: `${selectedAuction.productName} auction has been deleted successfully.`,
+    })
+    setIsDeleteDialogOpen(false)
+  }
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "active":
+        return "bg-success/10 text-success"
+      case "ended":
+        return "bg-muted"
+      case "cancelled":
+        return "bg-destructive/10 text-destructive"
+      default:
+        return "bg-muted"
+    }
+  }
+
+  const getApprovalBadgeClass = (approval) => {
+    switch (approval) {
+      case "approved":
+        return "bg-success/10 text-success"
+      case "pending":
+        return "bg-warning/10 text-warning"
+      case "rejected":
+        return "bg-destructive/10 text-destructive"
+      default:
+        return "bg-muted"
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    return new Date(dateString).toLocaleDateString()
+  }
 
   return (
-    <div className="rounded-xl border bg-card">
-      <div className="flex items-center justify-between p-6">
-        <div>
-          <h3 className="text-xl font-semibold">Auctions</h3>
-          <p className="text-sm text-muted-foreground">Manage your active and upcoming auctions</p>
+    <div className="scroll-smooth overflow-x-hidden mt-8">
+    <div className="rounded-xl border bg-card p-4 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-center sm:text-left">
+          <h3 className="text-lg sm:text-xl font-semibold">Auctions</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Manage your active and upcoming auctions
+          </p>
         </div>
-        <CreateAuctionDialog />
+        <CreateAuctionDialog className="w-full md:w-auto"/>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Item</TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-              Status
-            </TableHead>
-            <TableHead className="cursor-pointer text-right" onClick={() => handleSort("currentBid")}>
-              Current Bid
-            </TableHead>
-            <TableHead className="cursor-pointer text-right" onClick={() => handleSort("bids")}>
-              Bids
-            </TableHead>
-            <TableHead className="cursor-pointer text-right" onClick={() => handleSort("endDate")}>
-              End Date
-            </TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {auctions.map((auction) => (
-            <TableRow key={auction.id}>
-              <TableCell>
-                <div className="flex items-center gap-4">
-                  <Image
-                    src={auction.image || "/placeholder.svg"}
-                    alt={auction.name}
-                    width={40}
-                    height={40}
-                    className="rounded-lg object-cover"
-                  />
-                  <span className="font-medium">{auction.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    auction.status === "Active" && "bg-success/10 text-success",
-                    auction.status === "Ending Soon" && "bg-warning/10 text-warning",
-                    auction.status === "Completed" && "bg-muted",
-                    auction.status === "Scheduled" && "bg-primary/10 text-primary"
-                  )}
-                >
-                  {auction.status}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">${auction.currentBid.toFixed(2)}</TableCell>
-              <TableCell className="text-right">{auction.bids}</TableCell>
-              <TableCell className="text-right">{new Date(auction.endDate).toLocaleDateString()}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Actions</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Auction
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
-                      <Trash className="mr-2 h-4 w-4" />
-                      Cancel Auction
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+
+      {/* Responsive Table Container */}
+      <div className="w-full overflow-x-auto">
+        <Table className="min-w-[600px] w-full">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-sm">Item</TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("condition")}>
+                Condition
+              </TableHead>
+              <TableHead className="cursor-pointer text-sm" onClick={() => handleSort("status")}>
+                Status
+              </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("adminApproval")}>
+                Approval
+              </TableHead>  
+              <TableHead className="cursor-pointer text-right text-sm" onClick={() => handleSort("currentBid")}>
+                Current Bid
+              </TableHead>
+              <TableHead className="cursor-pointer text-right text-sm" onClick={() => handleSort("bids")}>
+                Bids
+              </TableHead>
+              <TableHead className="cursor-pointer text-right text-sm" onClick={() => handleSort("endDate")}>
+                End Date
+              </TableHead>
+              <TableHead className="text-right text-sm">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
+          </TableHeader>
+
+          <TableBody>
+            {auctions.map((auction) => (
+              <TableRow 
+                key={auction.id}
+                onClick={() => handleAuctionClick(auction)}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <Image
+                      src={auction.image || "/placeholder.svg"}
+                      alt={auction.name}
+                      width={40}
+                      height={40}
+                      className="rounded-lg object-cover"
+                    />
+                    <span className="font-medium text-sm sm:text-base">{auction.condition}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium",
+                      auction.status === "Active" && "bg-success/10 text-success",
+                      auction.status === "Cancelled" && "bg-warning/10 text-warning",
+                      auction.status === "ended" && "bg-muted",
+                    )}
+                  >
+                    {auction.status}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium",
+                      auction.adminApproval === "approved" && "bg-success/10 text-success",
+                      auction.adminApproval === "rejected" && "bg-warning/10 text-warning",
+                      auction.adminApproval === "pending" && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    {auction.adminApproval}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right text-sm sm:text-base">
+                  {auction.currentBid > 0 ? `$${auction.currentBid.toFixed(2)}` : "No bids"}
+                </TableCell>
+                <TableCell className="text-right text-sm sm:text-base">{auction.bids}</TableCell>
+                <TableCell className="text-right text-sm sm:text-base">
+                  {new Date(auction.endDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setAuctionToEdit(auction)
+                          setIsEditAuctionOpen(true)
+                        }}
+                        disabled={auction.adminApproval === "approved"}
+                        className={auction.adminApproval === "approved" ? "opacity-50 cursor-not-allowed" : ""}
+                        >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Auction
+                      </DropdownMenuItem>
+                      <DropdownMenuItem   
+                        className="text-destructive"
+                        onClick={(e) => handleDeleteAuction(auction, e )}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Cancel Auction
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+          {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to cancel this auction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently cancel the auction for "{selectedAuction?.productName}
+              " and notify any bidders.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Edit Auction Form Dialog */}
+      {auctionToEdit && (
+        <EditAuctionForm open={isEditAuctionOpen} onOpenChange={setIsEditAuctionOpen} auction={auctionToEdit} />
+      )}
+      
+
+  </div>
+  </div>
+    );}
+

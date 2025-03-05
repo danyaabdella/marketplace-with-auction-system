@@ -176,7 +176,7 @@ export default function Home() {
   const totalCategoriesPages = Math.ceil(categories.length / itemsPerPage);
 
   return (
-    <div className="container mx-auto px-4 py-8 mt-8 justify-between">
+    <div className="container mx-auto px-4 py-8 justify-between">
      <div className="grid grid-cols-1 gap-6">
       
         {/* Search Form */}

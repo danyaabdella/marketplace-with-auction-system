@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
 
 export function NotificationPopover() {
   const [notifications, setNotifications] = useState([
@@ -34,7 +35,7 @@ export function NotificationPopover() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:text-primary">
+        <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
@@ -85,7 +86,7 @@ export function NotificationPopover() {
         </Tabs>
         <div className="border-t p-2">
           <Button variant="ghost" size="sm" className="w-full justify-center text-primary hover:text-primary/80 hover:bg-primary/5" asChild>
-            <a href="/notifications">View all notifications</a>
+            <Link href="/notifications">View all notifications</Link>
           </Button>
         </div>
       </PopoverContent>

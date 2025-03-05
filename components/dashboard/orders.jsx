@@ -36,7 +36,7 @@ const orders = [
   },
 ]
 
-export default function OrdersPage() {
+export function OrdersPage() {
   return (
     <div className="container p-6">
       <div className="mb-8">

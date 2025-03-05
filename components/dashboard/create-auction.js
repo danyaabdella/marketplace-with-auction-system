@@ -91,7 +91,7 @@ export function CreateAuctionDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gradient-bg border-0">Create Auction</Button>
+        <Button className="gradient-bg border-0 w-full md:w-auto">Create Auction</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
