@@ -272,7 +272,7 @@ export function NavBar() {
         </div>
 
         {/* Center section - Main navigation */}
-        <div className="hidden md:flex flex-1 items-center justify-center">
+        <div className="hidden lg:flex flex-1 items-center justify-center">
           <nav className="flex items-center space-x-1 text-sm font-medium justify-between">
             <Link
               href="/"

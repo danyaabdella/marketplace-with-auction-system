@@ -1,5 +1,9 @@
+'use client'
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
+import { FilterBar } from "../filterBar"
 
 const orders = [
   {
@@ -36,14 +40,47 @@ const orders = [
   },
 ]
 
+
 export function OrdersPage() {
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.product.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      filter === "all" || order.status.toLowerCase() === filter.toLowerCase();
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  const handleFilterChange = (value) => {
+    setFilter(value);
+  };
+
+  const filters = [
+    { value: "all", label: "All Orders" },
+    { value: "pending", label: "Pending Orders" },
+    { value: "shipped", label: "Shipped Orders" },
+    { value: "completed", label: "Completed Orders" },
+  ];
   return (
     <div className="container p-6">
       <div className="mb-8">
         <h2 className="text-2xl font-bold tracking-tight">Orders</h2>
         <p className="text-muted-foreground">Manage your customer orders</p>
       </div>
-
+      <FilterBar
+        placeholder="Search orders..."
+        filters={filters}
+        onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
+      />
       <div className="rounded-xl border bg-card">
         <Table>
           <TableHeader>
@@ -57,8 +94,11 @@ export function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order.id}>
+            {filteredOrders.map((order) => (
+              <TableRow 
+                key={order.id}
+                onClick={() => router.push(`/dashboard/orders/${order.id}`)}
+                className="cursor-pointer">
                 <TableCell className="font-medium">{order.id}</TableCell>
                 <TableCell>{order.customer}</TableCell>
                 <TableCell>{order.product}</TableCell>

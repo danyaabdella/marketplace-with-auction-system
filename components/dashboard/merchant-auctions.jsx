@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {CreateAuctionDialog} from "./create-auction";
+import { FilterBar } from "../filterBar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,8 +124,44 @@ export function MerchantAuctions() {
   const [selectedAuction, setSelectedAuction] = useState(null)
   const [isEditAuctionOpen, setIsEditAuctionOpen] = useState(false)
   const [auctionToEdit, setAuctionToEdit] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [approvalFilter, setApprovalFilter] = useState("all");
   
 
+  const filteredAuctions = auctions.filter((auction) => {
+    const matchesSearch = auction.productName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || auction.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesApproval =
+      approvalFilter === "all" || auction.adminApproval.toLowerCase() === approvalFilter.toLowerCase();
+    return matchesSearch && matchesStatus && matchesApproval;
+  });
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+  };
+  const handleApprovalFilterChange = (value) => {
+    setApprovalFilter(value);
+  };
+
+  const statusFilters = [
+    { value: "all", label: "All Statuses" },
+    { value: "active", label: "Active" },
+    { value: "cancelled", label: "Cancelled" },
+    { value: "ended", label: "Ended" },
+  ];
+
+  const approvalFilters = [
+    { value: "all", label: "All" },
+    { value: "pending", label: "Pending" },
+    { value: "rejected", label: "Rejected" },
+    { value: "approved", label: "Approved" },
+  ];
   const handleSort = (column) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -187,21 +225,28 @@ export function MerchantAuctions() {
   }
 
   return (
-    <div className="scroll-smooth overflow-x-hidden mt-8">
+    <div className="container p-6">
+      <div className="mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Auctions</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">Manage your upcoming and active auctions</p>
+      </div>
+
+      <FilterBar
+        placeholder="Search auctions..."
+        filters={statusFilters}
+        approvalFilters={approvalFilters}
+        onSearch={handleSearch}
+        onFilterChange={handleStatusFilterChange}
+        onApprovalFilterChange={handleApprovalFilterChange}
+      />
     <div className="rounded-xl border bg-card p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="text-center sm:text-left">
-          <h3 className="text-lg sm:text-xl font-semibold">Auctions</h3>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage your active and upcoming auctions
-          </p>
-        </div>
-        <CreateAuctionDialog className="w-full md:w-auto"/>
+      <div className=" flex sm:flex-row items-center justify-end mb-2">
+        <CreateAuctionDialog />
       </div>
 
       {/* Responsive Table Container */}
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto sm:overflow-visible">
         <Table className="min-w-[600px] w-full">
           <TableHeader>
             <TableRow>
@@ -229,7 +274,7 @@ export function MerchantAuctions() {
           </TableHeader>
 
           <TableBody>
-            {auctions.map((auction) => (
+            {filteredAuctions.map((auction) => (
               <TableRow 
                 key={auction.id}
                 onClick={() => handleAuctionClick(auction)}
@@ -243,7 +288,14 @@ export function MerchantAuctions() {
                       height={40}
                       className="rounded-lg object-cover"
                     />
-                    <span className="font-medium text-sm sm:text-base">{auction.condition}</span>
+                    <span className="font-medium text-sm sm:text-base">{auction.productName}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                <div
+                    className="text-right text-sm sm:text-base"
+                  >
+                    {auction.condition}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -314,6 +366,7 @@ export function MerchantAuctions() {
             ))}
           </TableBody>
         </Table>
+        
       </div>
 
           {/* Delete Confirmation Dialog */}

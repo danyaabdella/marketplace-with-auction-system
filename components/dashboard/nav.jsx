@@ -23,13 +23,13 @@ export function DashboardNav({ currentView, setCurrentView }) {
   const [open, setOpen] = useState(false)
 
   const NavItems = () => (
-    <>
+    <div className="w-64 h-auto fixed left-0 top-20 shadow-lg z-10">
       <div className="flex h-14 items-center px-4 border-b">
         <Link href="/" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full gradient-bg flex items-center justify-center">
             <span className="text-primary-foreground font-bold">A</span>
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent gradient-bg">AuctionHub</span>
+          <span className="text-xl font-bold bg-clip-text text-primary-foreground gradient-bg rounded-lg px-3 py-2">AuctionHub</span>
         </Link>
       </div>
       <div className="flex-1 space-y-1 p-2">
@@ -59,20 +59,20 @@ export function DashboardNav({ currentView, setCurrentView }) {
           Back to Store
         </Link>
       </div>
-    </>
+    </div>
   )
 
   return (
     <>
       {/* Mobile Navigation */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild className="lg:hidden absolute left-4 top-3 z-50">
+        <SheetTrigger asChild className="lg:hidden absolute left-4 top-24 z-50">
           <Button variant="ghost" size="icon">
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[240px] p-0">
+        <SheetContent side="left" className="w-[320px] p-0 mt-4 bg-white/90 backdrop-blur-lg h-full">
           <NavItems />
         </SheetContent>
       </Sheet>

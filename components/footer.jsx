@@ -197,7 +197,7 @@ import { Button } from "@/components/ui/button"
 
 export function Footer() {
   return (
-    <footer className="border-t pattern-bg">
+    <footer className="grid md:grid-cols-1 pattern-bg">
       <div className="container px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>

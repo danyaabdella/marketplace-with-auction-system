@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { FilterBar } from "../filterBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -168,6 +169,8 @@ export function MerchantProducts() {
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
 
   // Ensure sorting logic is deterministic
   const sortedProducts = React.useMemo(() => {
@@ -221,51 +224,87 @@ export function MerchantProducts() {
     if (product.quantity <= 2) return "Low Stock";
     return "In Stock";
   };
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    // Implement search logic here
+  };
+
+  const handleFilterChange = (value) => {
+    setFilter(value);
+    // Implement filter logic here
+  };
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.productName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "banned" && product.status === "Banned") ||
+      (filter === "out-of-stock" && product.quantity === 0) ||
+      (filter === "available" && product.quantity > 0);
+    return matchesSearch && matchesFilter;
+  });
+
+  const filters = [
+    { value: "all", label: "All Products" },
+    { value: "banned", label: "Banned Products" },
+    { value: "out-of-stock", label: "Out of Stock" },
+    { value: "available", label: "Available Products" },
+  ];
 
   return (
-    <div className="scroll-smooth overflow-x-hidden mt-8">
-      <div className="rounded-xl border bg-card">
-        <div className="flex items-center justify-between p-6">
-          <div>
-            <h3 className="text-xl font-semibold">Products</h3>
-            <p className="text-sm text-muted-foreground">Manage your products and inventory</p>
-          </div>
-          <Button className="gradient-bg border-0" onClick={handleAddProduct}>
+    <div className="container p-6">
+      <div className="mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Products</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">Manage your products and inventory</p>
+      </div>
+       <FilterBar
+        placeholder="Search products..."
+        filters={filters}
+        onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
+      />
+      <div className="rounded-xl border bg-card p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-end ">
+          {/* <div className="text-center sm:text-left">
+            <h3 className="text-lg sm:text-xl font-semibold">Products</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage your products and inventory</p>
+          </div> */}
+          <Button className="gradient-bg border-0 w-full md:w-auto" onClick={handleAddProduct}>
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>
         </div>
-        <Table>
+        <div className="w-full overflow-x-auto">
+        <Table className="min-w-[600px] w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort("category")}>
+              <TableHead  >Product</TableHead>
+              <TableHead className="cursor-pointer" OnClick={() => handleSort("category")}>
                 Category
               </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+              <TableHead className="cursor-pointer" OnClick={() => handleSort("status")}>
                 Status
               </TableHead>
-              <TableHead className="cursor-pointer text-right" onClick={() => handleSort("price")}>
+              <TableHead className="cursor-pointer" OnClick={() => handleSort("price")}>
                 Price
               </TableHead>
-              <TableHead className="cursor-pointer text-right" onClick={() => handleSort("quantity")}>
+              <TableHead className="cursor-pointer" OnClick={() => handleSort("quantity")}>
                 Available
               </TableHead>
-              <TableHead className="cursor-pointer text-right" onClick={() => handleSort("soldQuantity")}>
+              <TableHead className="cursor-pointer" OnClick={() => handleSort("soldQuantity")}>
                 Sold
               </TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedProducts.map((product) => (
+            {filteredProducts.map((product) => (
               <TableRow
                 key={product.id}
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleProductClick(product)}
               >
                 <TableCell>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4">
                     <Image
                       src={product.images[0] || "/placeholder.svg"}
                       alt={product.productName}
@@ -273,14 +312,14 @@ export function MerchantProducts() {
                       height={40}
                       className="rounded-lg object-cover"
                     />
-                    <span className="font-medium">{product.productName}</span>
+                    <span className=" text-sm sm:text-base">{product.productName}</span>
                   </div>
                 </TableCell>
-                <TableCell>{product.category.categoryName}</TableCell>
+                <TableCell className="text-right text-sm">{product.category.categoryName}</TableCell>
                 <TableCell>
                   <div
                     className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs text-right sm:text-sm font-medium",
                       getProductStatus(product) === "In Stock" && "bg-success/10 text-success",
                       getProductStatus(product) === "Low Stock" && "bg-warning/10 text-warning",
                       getProductStatus(product) === "Out of Stock" && "bg-destructive/10 text-destructive",
@@ -289,10 +328,10 @@ export function MerchantProducts() {
                     {getProductStatus(product)}
                   </div>
                 </TableCell>
-                <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
-                <TableCell className="text-right">{product.quantity}</TableCell>
-                <TableCell className="text-right">{product.soldQuantity}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-sm sm:text-base">${product.price.toFixed(2)}</TableCell>
+                <TableCell className="text-center text-sm sm:text-base">{product.quantity}</TableCell>
+                <TableCell className=" text-center text-sm sm:text-base">{product.soldQuantity}</TableCell>
+                <TableCell className="text-sm sm:text-base">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon">
@@ -321,6 +360,7 @@ export function MerchantProducts() {
             ))}
           </TableBody>
         </Table>
+        </div>
 
         {/* Add Product Form Dialog */}
         <AddEditProductForm open={isAddProductOpen} onOpenChange={setIsAddProductOpen} product={null} mode="add" />

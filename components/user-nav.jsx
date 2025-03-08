@@ -44,7 +44,7 @@ export function UserNav() {
               <span>Dashboard</span>
             </DropdownMenuItem>
           </Link>
-          <Link href="/my-auctions">
+          <Link href="/auctions/my_auctions">
             <DropdownMenuItem className="cursor-pointer hover:text-primary">
               <CreditCard className="mr-2 h-4 w-4" />
               <span>My Auctions</span>

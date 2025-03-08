@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -91,7 +92,10 @@ export function CreateAuctionDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gradient-bg border-0 w-full md:w-auto">Create Auction</Button>
+        <Button className="gradient-bg border-0 w-full md:w-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          Create Auction
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>

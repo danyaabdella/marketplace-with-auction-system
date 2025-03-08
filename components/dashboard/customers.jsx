@@ -1,6 +1,9 @@
+'use client'
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { FilterBar } from "../filterBar"
 
 const customers = [
   {
@@ -46,13 +49,49 @@ const customers = [
 ]
 
 export function CustomersPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesSearch =
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "high-spenders" && customer.totalSpent > 1000) ||
+      (filter === "frequent-buyers" && customer.orders > 5) ||
+      (filter === "inactive" && customer.status === "Inactive");
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  const handleFilterChange = (value) => {
+    setFilter(value);
+  };
+
+  const filters = [
+    { value: "all", label: "All Customers" },
+    { value: "high-spenders", label: "High Spenders" },
+    { value: "frequent-buyers", label: "Frequent Buyers" },
+    { value: "inactive", label: "Inactive Customers" },
+  ];
+
   return (
     <div className="container p-4 sm:p-6">
+       
       <div className="mb-6">
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Customers</h2>
         <p className="text-sm sm:text-base text-muted-foreground">Manage your customer relationships</p>
       </div>
-
+      <FilterBar
+        placeholder="Search customers..."
+        filters={filters}
+        onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
+      /> 
       <div className="rounded-xl border bg-card overflow-hidden">
         {/* Enable horizontal scrolling on small screens */}
         <div className="overflow-x-auto">
@@ -67,7 +106,7 @@ export function CustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.map((customer) => (
+              {filteredCustomers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">

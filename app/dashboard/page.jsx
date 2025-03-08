@@ -31,17 +31,17 @@ export default function DashboardPage() {
   const CurrentComponent = viewComponents[currentView];
 
   return (
-    <div className="flex mt-4">
+    <div className="flex mt-4 min-h-screen">
       {/* Pass currentView and setCurrentView to DashboardNav */}
-      <div className="fixed z-100 left-0">
+      <div>
         <DashboardNav currentView={currentView} setCurrentView={setCurrentView} />
       </div>
       
       <div className="flex-1">
-        <div className="border-b">
+        {/* <div className="border-b">
           <div className="flex h-16 items-center px-4">
             <div className="relative w-full flex-1 md:max-w-sm items-center">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search products..."
@@ -49,12 +49,11 @@ export default function DashboardPage() {
               />
             </div>
           </div>
-        </div>
-        <div className="p-6">
-          <div className="">
+        </div> */}
+        <div className={`flex-1 p-4 grid grid-cols-1 transition-all ${open ? "" : "blur-md"}`}>
             {/* Render the current component, or a fallback if invalid */}
             {CurrentComponent ? <CurrentComponent /> : <p>Invalid view selected</p>}
-          </div>
+          
         </div>
       </div>
     </div>
