@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
+import { ProductSlider } from "@/components/product-slider"
 
 const deliveryTypes = ["FLAT", "PERPIECE", "PERKG", "FREE"]
 
@@ -48,14 +49,18 @@ export default function ProductsPage() {
   }, [])
 
   return (
-    <div className="container py-8 mt-8 max-w-6xl">
+    <div className="container py-8 max-w-6xl">
       {/* Search Form */}
-              <div className="mb-8">
-                <form className="flex gap-4 max-w-2xl w-full mx-auto">
-                  <Input type="search" placeholder="Search products..." className="flex-1" />
-                  <Button type="submit">Search</Button>
-                </form>
-              </div>
+      <div className="mb-8">
+        <form className="flex gap-4 max-w-2xl w-full mx-auto">
+          <Input type="search" placeholder="Search products..." className="flex-1" />
+          <Button type="submit">Search</Button>
+        </form>
+      </div>
+      <div className="mb-8">
+        <ProductSlider />
+      </div>
+              
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Section */}
         <div className="w-full lg:w-64">

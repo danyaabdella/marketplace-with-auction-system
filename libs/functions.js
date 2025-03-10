@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 import { options } from '@/app/api/auth/[...nextauth]/options';
 import { sendEmail } from './sendEmail';
 import { Agenda } from 'agenda';
+import { getIO } from './socket';
 
 const agenda = new Agenda({ db: { address: process.env.MONGO_URL } });
 
@@ -24,7 +25,7 @@ agenda.define('end auction', async (job) => {
         // Send notification and email
         if (bidderEmails.length > 0) sendEmail(bidderEmails, 'Auction Ended!', `The auction for ${auction._id} has ended. The highest bid was ${bidData?.highestBid}.`);
 
-        // Emit event to notify clients (use socket.io)
+        const io = getIO();
         io.to(auction._id.toString()).emit('auction_ended', { auctionId: auction._id, highestBid: bidData?.highestBid });
     }
 });

@@ -55,7 +55,7 @@ export default function ChatBot() {
   }, [messages]);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen sm:min-h-1">
       {/* Chat Icon */}
       <AnimatePresence>
         {showChatIcon && (
@@ -64,7 +64,7 @@ export default function ChatBot() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-4 right-16 z-50" // Changed from right-4 to right-16
+            className="fixed bottom-4 right-4 sm:right-16 z-50" // Adjusted for mobile
           >
             <Button
               ref={chatIconRef}
@@ -90,7 +90,7 @@ export default function ChatBot() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-4 z-50 w-[95%] md:w-[500px]"
+            className="fixed bottom-20 right-4 sm:right-16 z-50 w-[95%] sm:w-[400px] md:w-[500px]" // Adjusted for mobile
           >
             <Card className="border-2">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -109,7 +109,7 @@ export default function ChatBot() {
               </CardHeader>
 
               <CardContent>
-                <ScrollArea className="h-[300px] pr-4">
+                <ScrollArea className="h-[300px] sm:h-[400px] pr-4"> {/* Adjusted height for mobile */}
                   {messages?.length === 0 && (
                     <div className="w-full mt-32 text-gray-500 items-center justify-center flex gap-3">
                       No messages yet!

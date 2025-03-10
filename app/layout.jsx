@@ -1,4 +1,5 @@
 import { Roboto } from "next/font/google";
+//import { Toaster } from "react-hot-toast";
 import { Toaster } from "@/components/ui/toaster"
 import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
@@ -18,23 +19,23 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth overflow-x-hidden">
-      <body className={`${roboto.className} flex min-h-screen flex-col`}>
-        <CartProvider>
-          <ContextProvider>
-            <NavBar />
-            
-            
-            <main className="flex-1 max-w-7xl mx-auto py-4 px-[10px] overflow-y-hidden">
-              {children}
-            </main>
-            <ChatBot /> {/* Add the chatbot here */}
-            <Footer />
-            <Toaster />
-            <ThemeProvider />
-          </ContextProvider>
-        </CartProvider>
-      </body>
-    </html>
+      <html lang="en" className="scroll-smooth overflow-x-hidden mt-8">
+        <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <CartProvider>
+              <ContextProvider>
+                <NavBar />
+                <Toaster position="bottom-right" />
+                <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
+                  {children}
+                </main>
+                <ChatBot />
+                <Footer />
+              </ContextProvider>
+            </CartProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    
   );
 }
