@@ -11,14 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const demoCategories = [
   {
     id: "1",
-    name: "Electronics",
+    name: "art",
     description: "Latest gadgets and electronic devices",
     createdBy: "Admin",
     productCount: 150,
   },
   {
     id: "2",
-    name: "Fashion",
+    name: "art",
     description: "Trendy clothing and accessories",
     createdBy: "Admin",
     productCount: 300,
@@ -34,7 +34,7 @@ const demoCategories = [
   })),
 )
 
-export default function CategoriesPage() {
+export default function CategoriesPage({params}) {
   const [categories, setCategories] = useState(demoCategories)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)

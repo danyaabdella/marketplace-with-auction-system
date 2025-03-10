@@ -264,10 +264,6 @@ export function MerchantProducts() {
       />
       <div className="rounded-xl border bg-card p-4 md:p-6">
         <div className="flex flex-col sm:flex-row items-center justify-end ">
-          {/* <div className="text-center sm:text-left">
-            <h3 className="text-lg sm:text-xl font-semibold">Products</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">Manage your products and inventory</p>
-          </div> */}
           <Button className="gradient-bg border-0 w-full md:w-auto" onClick={handleAddProduct}>
             <Plus className="mr-2 h-4 w-4" />
             Add Product

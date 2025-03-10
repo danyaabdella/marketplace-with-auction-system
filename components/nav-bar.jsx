@@ -308,7 +308,7 @@ export function NavBar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[220px] p-2">
                 <DropdownMenuItem asChild>
-                  <Link href="/auctions" className="flex items-center gap-2 cursor-pointer">
+                  <Link href="/auctions/allAuctions" className="flex items-center gap-2 cursor-pointer">
                     <Gavel className="h-4 w-4" />
                     <span>All Auctions</span>
                   </Link>
@@ -319,12 +319,12 @@ export function NavBar() {
                     <span>Ending Soon</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                {/* <DropdownMenuItem asChild>
                   <Link href="/auctions/featured" className="flex items-center gap-2 cursor-pointer">
                     <Heart className="h-4 w-4" />
                     <span>Featured Items</span>
                   </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -344,7 +344,7 @@ export function NavBar() {
               <DropdownMenuContent align="start" className="w-[220px] p-2">
                 {categories.map((category) => (
                   <DropdownMenuItem key={category.name} asChild>
-                    <Link href={category.href} className="cursor-pointer">
+                    <Link href={`/categories/${category.name}`} className="cursor-pointer">
                       {category.name}
                     </Link>
                   </DropdownMenuItem>

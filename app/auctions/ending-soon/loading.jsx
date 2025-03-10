@@ -1,7 +1,3 @@
-// export default function Loading() {
-//     return null
-//   }
-  
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
@@ -29,4 +25,3 @@ export default function Loading() {
   )
 }
 
- 

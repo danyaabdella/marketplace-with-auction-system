@@ -14,6 +14,7 @@ export function AuctionGrid() {
         name: "Camera Collector",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "high"
     },
     {
       id: "2",
@@ -27,6 +28,7 @@ export function AuctionGrid() {
         name: "Vintage Furniture",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "low",
     },
     {
       id: "3",
@@ -40,6 +42,7 @@ export function AuctionGrid() {
         name: "Music Enthusiast",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "low",
     },
     {
       id: "4",
@@ -53,6 +56,7 @@ export function AuctionGrid() {
         name: "Leather Artisan",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "medium",
     },
     {
       id: "5",
@@ -66,6 +70,7 @@ export function AuctionGrid() {
         name: "Watch Collector",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "high"
     },
     {
       id: "6",
@@ -79,6 +84,7 @@ export function AuctionGrid() {
         name: "Vintage Lighting",
         avatar: "/placeholder.svg?height=40&width=40",
       },
+      urgent: "medium"
     },
   ]
 
