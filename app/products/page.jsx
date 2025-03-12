@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
 import { ProductSlider } from "@/components/product-slider"
-import { useRouter } from "next/navigation"
 
 const deliveryTypes = ["FLAT", "PERPIECE", "PERKG", "FREE"]
 
@@ -15,7 +14,6 @@ export default function ProductsPage() {
   const searchParams = useSearchParams()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
-  const [phrase, setPhrase] = useState();
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     category: "",
@@ -50,22 +48,19 @@ export default function ProductsPage() {
     fetchProducts()
   }, [])
 
-  function handleProductSearch() {
-    const router = useRouter();
-    console.log("Phrase: ", phrase);
-    router.push(`/products?${phrase}`)
-  }
-
   return (
-    <div className="container mx-auto px-4 mt-8">
+    <div className="container py-8 max-w-6xl">
       {/* Search Form */}
       <div className="mb-8">
-        <form onSubmit={handleProductSearch} className="flex gap-4 max-w-2xl w-full mx-auto">
-          <Input onChange={() => setPhrase(value)} type="search" placeholder="Search products..." className="flex-1" />
+        <form className="flex gap-4 max-w-2xl w-full mx-auto">
+          <Input type="search" placeholder="Search products..." className="flex-1" />
           <Button type="submit">Search</Button>
         </form>
       </div>
-      <ProductSlider />    
+      <div className="mb-8">
+        <ProductSlider />
+      </div>
+              
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Section */}
         <div className="w-full lg:w-64">
@@ -204,7 +199,7 @@ export default function ProductsPage() {
 
         {/* Products Grid */}
         <div className="flex-1">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -214,4 +209,3 @@ export default function ProductsPage() {
     </div>
   )
 }
-

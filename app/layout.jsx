@@ -1,12 +1,14 @@
 import { Roboto } from "next/font/google";
-import { Toaster } from "react-hot-toast";
-import "@/app/globals.css";
+//import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/toaster"
+import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
 import Container from "@/components/commons/Container";
 import { NavBar } from "@/components/nav-bar";
 import { CartProvider } from "@/components/cart-provider";
 import ChatBot from "@/components/commons/ChatBot";
 import { Footer } from "@/components/footer";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -17,20 +19,23 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth overflow-x-hidden mt-8">
-      <body className={`${roboto.className} flex min-h-screen flex-col`}>
-        <CartProvider>
-          <ContextProvider>
-            <NavBar />
-            <Toaster position="bottom-right" />
-            <main className="flex-1 max-w-7xl mx-auto py-4 px-[10px] overflow-y-hidden">
-              {children}
-            </main>
-            <ChatBot />
-            <Footer />
-          </ContextProvider>
-        </CartProvider>
-      </body>
-    </html>
+      <html lang="en" className="scroll-smooth overflow-x-hidden mt-8">
+        <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <CartProvider>
+              <ContextProvider>
+                <NavBar />
+                <Toaster position="bottom-right" />
+                <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
+                  {children}
+                </main>
+                <ChatBot />
+                <Footer />
+              </ContextProvider>
+            </CartProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    
   );
 }

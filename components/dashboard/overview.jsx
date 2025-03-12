@@ -1,331 +1,122 @@
+
 "use client"
 
-import { useState } from "react"
-import {
-  Bar,
-  BarChart,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-  Cell,
-  RadialBarChart,
-  RadialBar,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-// import { CalendarDateRangePicker } from "@/components/ui/date-range-picker"
-import { DollarSign, Users, Gavel, Activity, ArrowUp, ArrowDown } from "lucide-react"
-// import { Progress } from "@/components/ui/progress"
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from "recharts"
+import { ArrowUpRight, ArrowDownRight, Users, Package, DollarSign, TrendingUp } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { RecentSales } from "./recent-sales"
 
-// Sample data - Replace with real API data
-const revenueData = [
-  { name: "Jan", total: 4500, auctions: 2500, direct: 2000, customers: 120 },
-  { name: "Feb", total: 3500, auctions: 1800, direct: 1700, customers: 150 },
-  { name: "Mar", total: 6000, auctions: 3500, direct: 2500, customers: 180 },
-  { name: "Apr", total: 5200, auctions: 2800, direct: 2400, customers: 200 },
-  { name: "May", total: 7800, auctions: 4200, direct: 3600, customers: 220 },
-  { name: "Jun", total: 8200, auctions: 4500, direct: 3700, customers: 250 },
-  { name: "Jul", total: 7000, auctions: 3800, direct: 3200, customers: 280 },
-  { name: "Aug", total: 9200, auctions: 5000, direct: 4200, customers: 310 },
-  { name: "Sep", total: 8500, auctions: 4600, direct: 3900, customers: 340 },
-  { name: "Oct", total: 7800, auctions: 4200, direct: 3600, customers: 360 },
-  { name: "Nov", total: 8900, auctions: 4800, direct: 4100, customers: 390 },
-  { name: "Dec", total: 9500, auctions: 5200, direct: 4300, customers: 420 },
-]
+const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+  name: new Date(0, i).toLocaleString("default", { month: "short" }),
+  total: Math.floor(Math.random() * 5000) + 1000,
+}))
 
 const categoryData = [
-  { name: "Electronics", value: 35, revenue: 15000, growth: 25 },
-  { name: "Fashion", value: 25, revenue: 12000, growth: 15 },
-  { name: "Home", value: 20, revenue: 9000, growth: 20 },
-  { name: "Sports", value: 15, revenue: 7000, growth: 10 },
-  { name: "Others", value: 5, revenue: 2000, growth: 5 },
+  { name: "Art & Collectibles", value: 35 },
+  { name: "Electronics", value: 25 },
+  { name: "Fashion", value: 15 },
+  { name: "Home & Garden", value: 10 },
+  { name: "Jewelry", value: 15 },
 ]
 
-const geographicData = [
-  { name: "North", value: 32 },
-  { name: "South", value: 28 },
-  { name: "East", value: 22 },
-  { name: "West", value: 18 },
-]
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"]
+const totalRevenue = monthlyData.reduce((sum, item) => sum + item.total, 0)
 
-const auctionMetrics = [
-  { name: "Success Rate", value: 85 },
-  { name: "Participation", value: 72 },
-  { name: "Repeat Bidders", value: 63 },
-  { name: "New Bidders", value: 45 },
-]
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"]
-
-export function DashboardOverview() {
-  const [timeframe, setTimeframe] = useState("year")
+export function Overview() {
+  const metrics = [
+    { title: "Total Customers", value: "3,842", change: "+12.5%", trend: "up", icon: Users },
+    { title: "Active Auctions", value: "1,249", change: "+8.2%", trend: "up", icon: Package },
+    { title: "Avg. Order Value", value: "$285", change: "-3.1%", trend: "down", icon: DollarSign },
+    { title: "Conversion Rate", value: "3.2%", change: "+0.5%", trend: "up", icon: TrendingUp },
+  ]
 
   return (
-    <div className="flex-1 space-y-6 p-8">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Merchant Dashboard</h2>
-          <p className="text-muted-foreground">Comprehensive overview of your business performance</p>
+    <div className="p-4 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+        {metrics.map((metric, index) => (
+          <Card key={index}>
+            <CardContent className="p-4 flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">{metric.title}</p>
+                <p className="text-2xl font-bold mt-1">{metric.value}</p>
+                <div className="flex items-center mt-1">
+                  {metric.trend === "up" ? (
+                    <ArrowUpRight className="h-4 w-4 text-success mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-4 w-4 text-destructive mr-1" />
+                  )}
+                  <span className={metric.trend === "up" ? "text-success text-sm" : "text-destructive text-sm"}>
+                    {metric.change}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-primary/10 p-3 rounded-full">
+                <metric.icon className="h-5 w-5 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <RecentSales />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-xl border bg-card p-4">
+          <h3 className="text-lg font-semibold">Revenue Overview</h3>
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <p>Monthly revenue from all sales channels</p>
+            <p className="text-lg font-bold">${totalRevenue.toLocaleString()}</p>
+          </div>
+          <div className="h-52 mt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData}>
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                <Tooltip />
+                <Bar dataKey="total" fill="#8884d8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <Tabs defaultValue={timeframe} onValueChange={setTimeframe}>
-            <TabsList>
-              <TabsTrigger value="week">Week</TabsTrigger>
-              <TabsTrigger value="month">Month</TabsTrigger>
-              <TabsTrigger value="year">Year</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {/* <CalendarDateRangePicker /> */}
-          <Button>Export Report</Button>
+        <div className="rounded-xl border bg-card p-4">
+          <h3 className="text-lg font-semibold">Sales by Category</h3>
+          <p className="text-sm text-muted-foreground">Distribution of sales across product categories</p>
+          <div className="h-52 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart className="my-4">
+                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value">
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-
-      {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline space-x-3">
-              <div className="text-2xl font-bold">$86,431.89</div>
-              <div className="flex items-center text-sm text-green-500">
-                <ArrowUp className="h-4 w-4" />
-                20.1%
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">+$12,311 from last month</p>
-            <div className="mt-4 h-[60px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
-                  <Line type="monotone" dataKey="total" stroke="#0ea5e9" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground">Top Selling Item</h4>
+            <p className="text-lg font-semibold mt-1">Vintage Polaroid Camera</p>
+            <p className="text-sm text-muted-foreground mt-1">142 units sold this month</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Auctions</CardTitle>
-            <Gavel className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline space-x-3">
-              <div className="text-2xl font-bold">573</div>
-              <div className="flex items-center text-sm text-green-500">
-                <ArrowUp className="h-4 w-4" />
-                12.5%
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">201 ending in 24 hours</p>
-            <div className="mt-4 h-[60px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <Area type="monotone" dataKey="auctions" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground">Highest Bid</h4>
+            <p className="text-lg font-semibold mt-1">Antique Gold Watch</p>
+            <p className="text-sm text-muted-foreground mt-1">$4,250 current bid</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customer Growth</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline space-x-3">
-              <div className="text-2xl font-bold">2,350</div>
-              <div className="flex items-center text-sm text-green-500">
-                <ArrowUp className="h-4 w-4" />
-                18.2%
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">+180 new this month</p>
-            <div className="mt-4 h-[60px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueData.slice(-6)}>
-                  <Bar dataKey="customers" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Auction Success Rate</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline space-x-3">
-              <div className="text-2xl font-bold">85.7%</div>
-              <div className="flex items-center text-sm text-red-500">
-                <ArrowDown className="h-4 w-4" />
-                2.1%
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">-1.2% from last week</p>
-            <div className="mt-4">
-              {/* <Progress value={85.7} className="h-2" /> */}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detailed Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Revenue Breakdown */}
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Revenue Breakdown</CardTitle>
-            <CardDescription>Comparison of auction and direct sales revenue over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="auctions" stackId="revenue" fill="#0ea5e9" name="Auction Sales" />
-                  <Bar dataKey="direct" stackId="revenue" fill="#8b5cf6" name="Direct Sales" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Category Performance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Category Performance</CardTitle>
-            <CardDescription>Revenue distribution by product category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart outerRadius={90} data={categoryData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="name" />
-                  <PolarRadiusAxis angle={30} domain={[0, 40]} />
-                  <Radar name="Value" dataKey="value" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.6} />
-                  <Radar name="Growth" dataKey="growth" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Geographic Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Geographic Distribution</CardTitle>
-            <CardDescription>Sales distribution by region</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={geographicData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {geographicData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Auction Metrics */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Auction Performance Metrics</CardTitle>
-            <CardDescription>Key auction success indicators</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadialBarChart innerRadius="10%" outerRadius="80%" data={auctionMetrics} startAngle={180} endAngle={0}>
-                  <RadialBar
-                    minAngle={15}
-                    label={{ fill: "#666", position: "insideStart" }}
-                    background
-                    clockWise={true}
-                    dataKey="value"
-                  />
-                  <Legend
-                    iconSize={10}
-                    width={120}
-                    height={140}
-                    layout="vertical"
-                    verticalAlign="middle"
-                    align="right"
-                  />
-                  <Tooltip />
-                </RadialBarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Monthly Trends */}
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Monthly Performance Trends</CardTitle>
-            <CardDescription>Revenue and customer growth over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="total" stroke="#0ea5e9" name="Total Revenue" />
-                  <Line yAxisId="right" type="monotone" dataKey="customers" stroke="#10b981" name="Customer Growth" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent className="p-4">
+            <h4 className="text-sm font-medium text-muted-foreground">Customer Satisfaction</h4>
+            <p className="text-lg font-semibold mt-1">4.8/5.0</p>
+            <p className="text-sm text-muted-foreground mt-1">Based on 1,248 reviews</p>
           </CardContent>
         </Card>
       </div>
     </div>
   )
 }
-

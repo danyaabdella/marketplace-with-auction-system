@@ -160,13 +160,13 @@ export default function Home() {
 
   const renderPagination = (current, total, onChange) => (
     <div className="flex justify-center mt-4 gap-2">
-      <Button size="sm" onClick={() => onChange(Math.max(1, current - 1))} disabled={current === 1}>
+      <Button variant="outline" size="sm" onClick={() => onChange(Math.max(1, current - 1))} disabled={current === 1}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="flex items-center px-2">
         Page {current} of {total}
       </span>
-      <Button size="sm" onClick={() => onChange(Math.min(total, current + 1))} disabled={current === total}>
+      <Button variant="outline" size="sm" onClick={() => onChange(Math.min(total, current + 1))} disabled={current === total}>
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
@@ -176,8 +176,9 @@ export default function Home() {
   const totalCategoriesPages = Math.ceil(categories.length / itemsPerPage);
 
   return (
-    <div>
-      <div className="container mx-auto px-4 mt-8">
+    <div className="container mx-auto px-4 py-8 justify-between">
+     <div className="grid grid-cols-1 gap-6">
+      
         {/* Search Form */}
         <div className="mb-8">
           <form className="flex gap-4 max-w-2xl w-full mx-auto">
@@ -190,7 +191,7 @@ export default function Home() {
 
         {/* Special Categories Navigation */}
         <nav className="my-8">
-          <div className="flex overflow-x-auto gap-4 mb-4 justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 overflow-x-auto gap-4 mb-4 ">
             {["Popular", "Best Seller", "Top Rated", "Latest"].map((type) => {
               // Map display text to the corresponding ref key
               const sectionKeys = {
@@ -200,7 +201,7 @@ export default function Home() {
                 "Latest": "latest",
               };
               return (
-                <Button key={type} onClick={() => scrollToSection(sectionKeys[type])}>
+                <Button key={type} variant="outline" onClick={() => scrollToSection(sectionKeys[type])}>
                   {type}
                 </Button>
               );
@@ -210,7 +211,7 @@ export default function Home() {
           {/* All Categories Navigation */}
           <div className="flex overflow-x-auto gap-4 justify-between">
             {displayedCategories.map((category) => (
-              <Button key={category.id} onClick={() => scrollToSection(category.id)}>
+              <Button key={category.id} variant="outline" onClick={() => scrollToSection(category.id)}>
                 {category.name}
               </Button>
             ))}
@@ -250,7 +251,7 @@ export default function Home() {
               <section key={category.id} ref={sectionRefs.current[category.id]} className="scroll-mt-[90px]">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                   <h2 className="text-xl md:text-2xl font-bold">{category.name}</h2>
-                  <Button className="mt-2 md:mt-0" onClick={() => (window.location.href = `/products?category=${category.id}`)}>
+                  <Button variant="outline" className="mt-2 md:mt-0" onClick={() => (window.location.href = `/products?category=${category.id}`)}>
                     See More
                   </Button>
                 </div>
@@ -269,12 +270,12 @@ export default function Home() {
         </div>
 
         {/* Scroll to Top Button */}
-        <div className="fixed bottom-4 right-4 z-50 mb-2">
-          <Button size="icon" onClick={scrollToTop}>
-            <ChevronUp className="h-4 w-4 text-white" />
+        <div className="fixed bottom-4 right-4 z-50">
+          <Button variant="outline" size="icon" onClick={scrollToTop}>
+            <ChevronUp className="h-4 w-4" />
           </Button>
         </div>
-        <ChatBot />
+        {/* <ChatBot /> */}
       </div>
     </div>
   );

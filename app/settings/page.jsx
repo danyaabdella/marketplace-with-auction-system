@@ -2,344 +2,863 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Edit2, Lock, Loader2, Check, X } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { useToast } from "@/components/ui/use-toast"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import toast from "react-hot-toast"
+import { SettingsSidebar } from "@/components/settings/settings-sidebar"
+import { AlertCircle, Check, Eye, EyeOff, Loader2, Upload } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-// Demo user data
-const demoUser = {
-  id: "1",
+// Mock user data based on the schema
+const userData = {
   fullName: "John Doe",
-  email: "john@example.com",
+  email: "john.doe@example.com",
   role: "merchant",
-  image: "/placeholder.svg",
-  phoneNumber: "+1234567890",
-  stateName: "California",
-  cityName: "Los Angeles",
+  image: "/placeholder.svg?height=100&width=100",
   isMerchant: true,
-  tinNumber: "TIN123456",
-  nationalId: "ID123456",
-  account_name: "John's Store",
+  approvedBy: "Admin",
+  bannedBy: null,
+  tinNumber: "123456789",
+  nationalId: "AB123456",
+  isBanned: false,
+  isEmailVerified: true,
+  stateName: "New York",
+  cityName: "New York City",
+  phoneNumber: "+1 (555) 123-4567",
+  isDeleted: false,
+  account_name: "John Doe",
   account_number: "1234567890",
-  bank_code: "001",
+  bank_code: "ABCDEF",
 }
 
-export default function SettingsPage() {
-  const [user, setUser] = useState(demoUser)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [editedUser, setEditedUser] = useState(demoUser)
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
-  const [passwordForm, setPasswordForm] = useState({
-    oldPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+// Form schemas
+const profileFormSchema = z.object({
+  fullName: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  phoneNumber: z.string().optional(),
+  stateName: z.string().optional(),
+  cityName: z.string().optional(),
+})
+
+const passwordFormSchema = z
+  .object({
+    currentPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    confirmPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
   })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+
+const merchantFormSchema = z.object({
+  tinNumber: z.string().min(1, { message: "Tax ID Number is required." }),
+  nationalId: z.string().min(1, { message: "National ID is required." }),
+  account_name: z.string().min(1, { message: "Account name is required." }),
+  account_number: z.string().min(1, { message: "Account number is required." }),
+  bank_code: z.string().min(1, { message: "Bank code is required." }),
+})
+
+export default function SettingsPage() {
+  const { toast } = useToast()
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState("profile")
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  })
+  const [isUploading, setIsUploading] = useState(false)
+  const [isDeactivating, setIsDeactivating] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
+  // Profile form
+  const profileForm = useForm({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      fullName: userData.fullName,
+      email: userData.email,
+      phoneNumber: userData.phoneNumber || "",
+      stateName: userData.stateName || "",
+      cityName: userData.cityName || "",
+    },
+  })
 
-    try {
-      // Replace with actual API call
-      // await fetch('/api/user/settings', {
-      //   method: 'PUT',
-      //   body: JSON.stringify(editedUser)
-      // })
+  // Password form
+  const passwordForm = useForm({
+    resolver: zodResolver(passwordFormSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  })
 
-      setUser(editedUser)
-      setIsEditing(false)
-      toast.success("Profile updated successfully")
-    } catch (error) {
-      toast.error("Failed to update profile")
-    } finally {
-      setIsLoading(false)
-    }
+  // Merchant form
+  const merchantForm = useForm({
+    resolver: zodResolver(merchantFormSchema),
+    defaultValues: {
+      tinNumber: userData.tinNumber || "",
+      nationalId: userData.nationalId || "",
+      account_name: userData.account_name || "",
+      account_number: userData.account_number || "",
+      bank_code: userData.bank_code || "",
+    },
+  })
+
+  // Form submission handlers
+  function onProfileSubmit(values) {
+    toast({
+      title: "Profile updated",
+      description: "Your profile information has been updated successfully.",
+    })
+    console.log(values)
   }
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault()
+  function onPasswordSubmit(values) {
+    toast({
+      title: "Password updated",
+      description: "Your password has been changed successfully.",
+    })
+    console.log(values)
+    passwordForm.reset({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    })
+  }
 
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("New passwords do not match")
-      return
-    }
+  function onMerchantSubmit(values) {
+    toast({
+      title: "Merchant details updated",
+      description: "Your merchant information has been updated successfully.",
+    })
+    console.log(values)
+  }
 
-    setIsLoading(true)
-
-    try {
-      // Replace with actual API call
-      // await fetch('/api/user/change-password', {
-      //   method: 'PUT',
-      //   body: JSON.stringify(passwordForm)
-      // })
-
-      setShowPasswordDialog(false)
-      setPasswordForm({
-        oldPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+  function handleProfilePictureUpload() {
+    setIsUploading(true)
+    // Simulate upload delay
+    setTimeout(() => {
+      setIsUploading(false)
+      toast({
+        title: "Profile picture updated",
+        description: "Your profile picture has been updated successfully.",
       })
-      toast.success("Password changed successfully")
-    } catch (error) {
-      toast.error("Failed to change password")
-    } finally {
-      setIsLoading(false)
-    }
+    }, 1500)
   }
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Replace with actual image upload logic
-      setEditedUser((prev) => ({
-        ...prev,
-        image: URL.createObjectURL(file),
-      }))
-    }
+  function handleDeactivateAccount() {
+    setIsDeactivating(true)
+    // Simulate deactivation delay
+    setTimeout(() => {
+      setIsDeactivating(false)
+      toast({
+        title: "Account deactivated",
+        description: "Your account has been deactivated. You will be logged out.",
+        variant: "destructive",
+      })
+      // Redirect to home page after deactivation
+      setTimeout(() => router.push("/"), 2000)
+    }, 1500)
+  }
+
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }))
   }
 
   return (
-    <div className="container max-w-4xl py-8">
-      <Card>
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl">Account Settings</CardTitle>
-              <CardDescription>Manage your account settings and preferences</CardDescription>
-            </div>
-            {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit Profile
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false)
-                    setEditedUser(user)
-                  }}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                  Save Changes
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={isEditing ? editedUser.image : user.image} alt={user.fullName} />
-              <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
-            </Avatar>
-            {isEditing && (
-              <div>
-                <Label
-                  htmlFor="image"
-                  className="cursor-pointer inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/90"
-                >
-                  <Camera className="h-4 w-4" />
-                  Change photo
-                </Label>
-                <Input id="image" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                <p className="text-sm text-muted-foreground mt-1">JPG, GIF or PNG. Max size of 2MB.</p>
-              </div>
-            )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Settings Sidebar */}
+        <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Main Content */}
+        <div className="flex-1">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold">Account Settings</h1>
+            <p className="text-muted-foreground mt-1">Manage your account settings and preferences</p>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Full Name</Label>
-                {isEditing ? (
-                  <Input
-                    value={editedUser.fullName}
-                    onChange={(e) => setEditedUser({ ...editedUser, fullName: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.fullName}</p>
-                )}
-              </div>
-
-              <div>
-                <Label>Email</Label>
-                <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.email}</p>
-              </div>
-
-              <div>
-                <Label>Phone Number</Label>
-                {isEditing ? (
-                  <Input
-                    value={editedUser.phoneNumber}
-                    onChange={(e) => setEditedUser({ ...editedUser, phoneNumber: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.phoneNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <Label>Role</Label>
-                <p className="text-sm mt-1 p-2 border rounded-md bg-muted capitalize">{user.role}</p>
-              </div>
-
-              <div>
-                <Label>State</Label>
-                {isEditing ? (
-                  <Input
-                    value={editedUser.stateName}
-                    onChange={(e) => setEditedUser({ ...editedUser, stateName: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.stateName}</p>
-                )}
-              </div>
-
-              <div>
-                <Label>City</Label>
-                {isEditing ? (
-                  <Input
-                    value={editedUser.cityName}
-                    onChange={(e) => setEditedUser({ ...editedUser, cityName: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.cityName}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
-              <div>
-                <h3 className="font-semibold">Password</h3>
-                <p className="text-sm text-muted-foreground">Change your password to keep your account secure</p>
-              </div>
-              <Button variant="outline" onClick={() => setShowPasswordDialog(true)} className="gap-2">
-                <Lock className="h-4 w-4" />
-                Change Password
-              </Button>
-            </div>
-
-            {user.role === "merchant" && (
-              <>
-                <Separator className="my-6" />
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Merchant Information</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label>Account Name</Label>
-                      {isEditing ? (
-                        <Input
-                          value={editedUser.account_name}
-                          onChange={(e) => setEditedUser({ ...editedUser, account_name: e.target.value })}
-                        />
-                      ) : (
-                        <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.account_name}</p>
-                      )}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Update your personal information and contact details</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row gap-8">
+                    {/* Profile Picture */}
+                    <div className="flex flex-col items-center gap-4">
+                      <Avatar className="h-32 w-32 border-2 border-border">
+                        <AvatarImage src={userData.image} alt={userData.fullName} />
+                        <AvatarFallback className="text-2xl">{userData.fullName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <Button
+                        variant="outline"
+                        className="flex gap-2"
+                        onClick={handleProfilePictureUpload}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            Change Photo
+                          </>
+                        )}
+                      </Button>
                     </div>
 
-                    <div>
-                      <Label>Account Number</Label>
-                      {isEditing ? (
-                        <Input
-                          value={editedUser.account_number}
-                          onChange={(e) => setEditedUser({ ...editedUser, account_number: e.target.value })}
-                        />
-                      ) : (
-                        <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.account_number}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>Bank Code</Label>
-                      {isEditing ? (
-                        <Input
-                          value={editedUser.bank_code}
-                          onChange={(e) => setEditedUser({ ...editedUser, bank_code: e.target.value })}
-                        />
-                      ) : (
-                        <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.bank_code}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>TIN Number</Label>
-                      <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.tinNumber}</p>
-                    </div>
-
-                    <div>
-                      <Label>National ID</Label>
-                      <p className="text-sm mt-1 p-2 border rounded-md bg-muted">{user.nationalId}</p>
+                    {/* Profile Form */}
+                    <div className="flex-1">
+                      <Form {...profileForm}>
+                        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                          <FormField
+                            control={profileForm.control}
+                            name="fullName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your full name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input placeholder="Your email address" {...field} />
+                                    {userData.isEmailVerified && (
+                                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-xs text-success">
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Verified
+                                      </div>
+                                    )}
+                                  </div>
+                                </FormControl>
+                                {!userData.isEmailVerified && (
+                                  <div className="flex items-center text-xs text-warning mt-1">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Not verified.{" "}
+                                    <Button variant="link" className="h-auto p-0 text-xs">
+                                      Resend verification
+                                    </Button>
+                                  </div>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="phoneNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your phone number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={profileForm.control}
+                              name="stateName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>State</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Your state" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={profileForm.control}
+                              name="cityName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>City</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Your city" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <Button type="submit" className="gradient-bg border-0">
+                              Save Changes
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
 
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="oldPassword">Current Password</Label>
-              <Input
-                id="oldPassword"
-                type="password"
-                value={passwordForm.oldPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowPasswordDialog(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Change Password"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Type</CardTitle>
+                  <CardDescription>Your current account type and status</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Account Type</p>
+                        <p className="text-sm text-muted-foreground capitalize">{userData.role}</p>
+                      </div>
+                      <div className="flex items-center">
+                        {userData.role === "merchant" && (
+                          <div className="flex items-center text-xs bg-success/10 text-success px-2 py-1 rounded-full">
+                            <Check className="h-3 w-3 mr-1" />
+                            Approved
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {userData.role === "customer" && (
+                      <div>
+                        <Button variant="outline" className="w-full sm:w-auto">
+                          Upgrade to Merchant Account
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Change Password</CardTitle>
+                  <CardDescription>Update your password to keep your account secure</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...passwordForm}>
+                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                      <FormField
+                        control={passwordForm.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.current ? "text" : "password"}
+                                  placeholder="Enter your current password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("current")}
+                                >
+                                  {showPassword.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.current ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.new ? "text" : "password"}
+                                  placeholder="Enter your new password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("new")}
+                                >
+                                  {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.new ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormDescription>Password must be at least 8 characters long.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm New Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.confirm ? "text" : "password"}
+                                  placeholder="Confirm your new password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("confirm")}
+                                >
+                                  {showPassword.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.confirm ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end">
+                        <Button type="submit" className="gradient-bg border-0">
+                          Update Password
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Two-Factor Authentication</CardTitle>
+                  <CardDescription>Add an extra layer of security to your account</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="2fa">Two-factor authentication</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Receive a verification code via SMS when signing in
+                        </p>
+                      </div>
+                      <Switch id="2fa" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Login Sessions</CardTitle>
+                  <CardDescription>Manage your active login sessions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="rounded-md border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Current Session</p>
+                          <p className="text-sm text-muted-foreground">
+                            Chrome on Windows • New York, USA • IP: 192.168.1.1
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Last active: Just now</p>
+                        </div>
+                        <div className="flex items-center text-xs bg-success/10 text-success px-2 py-1 rounded-full">
+                          <Check className="h-3 w-3 mr-1" />
+                          Current
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      Log Out of All Other Sessions
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notification Preferences</CardTitle>
+                  <CardDescription>Choose how you want to be notified</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Email Notifications</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="email-bids">New bids on your auctions</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive notifications when someone bids on your auction
+                            </p>
+                          </div>
+                          <Switch id="email-bids" defaultChecked />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="email-outbid">Outbid notifications</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive notifications when someone outbids you
+                            </p>
+                          </div>
+                          <Switch id="email-outbid" defaultChecked />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="email-ending">Auction ending soon</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive notifications when auctions you're watching are ending soon
+                            </p>
+                          </div>
+                          <Switch id="email-ending" defaultChecked />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="email-marketing">Marketing emails</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive emails about new features and special offers
+                            </p>
+                          </div>
+                          <Switch id="email-marketing" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Push Notifications</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="push-all">Enable push notifications</Label>
+                            <p className="text-sm text-muted-foreground">Allow browser push notifications</p>
+                          </div>
+                          <Switch id="push-all" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end">
+                  <Button className="gradient-bg border-0">Save Preferences</Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+
+            {/* Merchant Tab */}
+            {userData.role === "merchant" && (
+              <TabsContent value="merchant" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Merchant Information</CardTitle>
+                    <CardDescription>Update your merchant details and payment information</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...merchantForm}>
+                      <form onSubmit={merchantForm.handleSubmit(onMerchantSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={merchantForm.control}
+                            name="tinNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tax ID Number (TIN)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your tax ID number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={merchantForm.control}
+                            name="nationalId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>National ID</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your national ID" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="pt-4">
+                          <h3 className="text-lg font-medium mb-4">Payment Information</h3>
+                          <div className="space-y-4">
+                            <FormField
+                              control={merchantForm.control}
+                              name="account_name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Account Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Bank account name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField
+                                control={merchantForm.control}
+                                name="account_number"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Account Number</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="Bank account number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={merchantForm.control}
+                                name="bank_code"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Bank Code</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select your bank" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="ABCDEF">ABC Bank</SelectItem>
+                                        <SelectItem value="DEFGHI">DEF Bank</SelectItem>
+                                        <SelectItem value="GHIJKL">GHI Bank</SelectItem>
+                                        <SelectItem value="JKLMNO">JKL Bank</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button type="submit" className="gradient-bg border-0">
+                            Save Merchant Details
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Merchant Verification Status</CardTitle>
+                    <CardDescription>Your current verification status and documents</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Verification Status</p>
+                          <p className="text-sm text-muted-foreground">Your merchant account is verified</p>
+                        </div>
+                        <div className="flex items-center text-xs bg-success/10 text-success px-2 py-1 rounded-full">
+                          <Check className="h-3 w-3 mr-1" />
+                          Verified
+                        </div>
+                      </div>
+                      <Separator />
+                      <div>
+                        <p className="font-medium">Verification Documents</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                          <div className="flex items-center p-3 border rounded-md">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Business License</p>
+                              <p className="text-xs text-muted-foreground">Uploaded on Jan 15, 2024</p>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              View
+                            </Button>
+                          </div>
+                          <div className="flex items-center p-3 border rounded-md">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Tax Certificate</p>
+                              <p className="text-xs text-muted-foreground">Uploaded on Jan 15, 2024</p>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                        <Button variant="outline" className="mt-4">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload New Document
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Account Tab */}
+            <TabsContent value="account" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Management</CardTitle>
+                  <CardDescription>Manage your account status and data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Data & Privacy</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Download Your Data</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Get a copy of all the data we have about you
+                            </p>
+                          </div>
+                          <Button variant="outline">Download Data</Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h3 className="text-lg font-medium mb-4 text-destructive">Danger Zone</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Deactivate Account</Label>
+                            <p className="text-sm text-muted-foreground">Temporarily disable your account</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                          >
+                            Deactivate
+                          </Button>
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label>Delete Account</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Permanently delete your account and all your data
+                            </p>
+                          </div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive">Delete Account</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete your account and remove all
+                                  your data from our servers.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleDeactivateAccount}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  disabled={isDeactivating}
+                                >
+                                  {isDeactivating ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Deleting...
+                                    </>
+                                  ) : (
+                                    "Delete Account"
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   )
 }
-
