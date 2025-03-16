@@ -23,6 +23,8 @@ export const options = {
         // Check for Admin or SuperAdmin
         let user = await User.findOne({ email: credentials?.email });
 
+        console.log("user: ", user);
+
         if (!user) {
           throw new Error('No user found with this email');
         }

@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { signIn } from "next-auth/react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "react-hot-toast"
-import { Eye, EyeOff } from 'lucide-react'
-
+import { Eye, EyeOff } from "lucide-react"
 
 export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [formData, setFormData] = useState({
@@ -18,35 +18,34 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [isLoading, setIsLoading] = useState(false)
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-
+    e.preventDefault();
+    setIsLoading(true);
+  
     try {
-      // Add your sign in logic here
-      // const response = await fetch('/api/auth/signin', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // })
-      // const data = await response.json()
-      
-      // if (!response.ok) throw new Error(data.message)
+      const res = await signIn("credentials", {
+        redirect: false, // Prevent full page reload
+        email: formData.email,
+        password: formData.password,
+      });
 
-      toast.success("Successfully signed in!")
-      onOpenChange(false)
+      console.log("respoonse: ", res);
+  
+      if (res.error) throw new Error(res.error);
+  
+      toast.success("Successfully signed in!");
+      onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in")
+      toast.error(error.message || "Failed to sign in");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     try {
-      // Add your Google sign in logic here
+      await signIn("google", { callbackUrl: "/" }) // Redirect to home after sign-in
       toast.success("Successfully signed in with Google!")
-      onOpenChange(false)
     } catch (error) {
       toast.error("Failed to sign in with Google")
     } finally {

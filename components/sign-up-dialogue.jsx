@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "react-hot-toast"
 import { Eye, EyeOff } from "lucide-react"
@@ -35,6 +34,7 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
     account_name: "",
     account_number: "",
     bank_code: "",
+    acct_length: null, // Added to store the selected bank's account length
   })
   const [isLoading, setIsLoading] = useState(false)
 
@@ -56,14 +56,15 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
     // Fetch bank accounts from API
     const fetchBankAccounts = async () => {
       try {
-        const response = await fetch("/api/bank-accounts")
+        const response = await fetch("/api/bankList")
         const data = await response.json()
-        setBankAccounts(data)
+        console.log("Bank list: ", data.data);
+        setBankAccounts(data.data)
         // You can set the bank code here based on the selected account
         if (data.length > 0) {
           setFormData((prev) => ({
             ...prev,
-            bank_code: data[0].code, // Set default bank code
+            bank_code: data[0].code, 
           }))
         }
       } catch (error) {
@@ -90,9 +91,10 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
   }
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-
+    e.preventDefault();
+    console.log("Form submission triggered");
+    setIsLoading(true);
+  
     // Validation
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match")
@@ -110,8 +112,14 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
         setIsLoading(false)
         return
       }
+      if (formData.acct_length && formData.account_number.length !== formData.acct_length) {
+        toast.error(`Account number must be exactly ${formData.acct_length} digits`)
+        setIsLoading(false)
+        return
+      }
     }
-
+  
+    // Rest of the submission logic remains unchanged
     try {
       const formDataToSend = new FormData()
       formDataToSend.append("fullName", formData.fullName)
@@ -130,15 +138,22 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
         formDataToSend.append("bank_code", formData.bank_code)
       }
 
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        body: formDataToSend,
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.message || "Sign up failed")
+      console.log("Sign up data:");
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`${key}: ${value instanceof File ? value.name : value}`);
       }
 
+      const response = await fetch("/api/signup", {
+        method: "POST",
+        body: formDataToSend,
+      });
+      console.log("Response status:", response.status);
+      const data = await response.json();
+      console.log("Response data:", data);
+      if (!response.ok) {
+        throw new Error(data.message || "Sign up failed");
+      }
+  
       toast.success("Account created successfully! Please verify your email.")
       setShowVerifyEmail(true)
       onOpenChange(false)
@@ -362,7 +377,9 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
                             setFormData({
                               ...formData,
                               account_name: value,
-                              bank_code: selectedAccount?.code || "",
+                              account_number: "", // Clear account number when bank changes
+                              bank_code: selectedAccount?.code || "", // Set bank_code to the bank's code
+                              acct_length: selectedAccount?.acct_length || null, // Set acct_length
                             })
                           }}
                         >
@@ -378,14 +395,20 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="account_number">Account Number *</Label>
-                        <Input
-                          id="account_number"
-                          value={formData.account_number}
-                          onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                        />
-                      </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="account_number">Account Number *</Label>
+                            <Input
+                              id="account_number"
+                              value={formData.account_number}
+                              onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                              maxLength={formData.acct_length || undefined} // Set max length based on selected bank
+                            />
+                            {formData.acct_length && (
+                              <p className="text-sm text-muted-foreground">
+                                Must be exactly {formData.acct_length} digits
+                              </p>
+                            )}
+                          </div>
                       {/* Bank code field is hidden and automatically populated */}
                       <input type="hidden" name="bank_code" value={formData.bank_code} />
                     </div>
