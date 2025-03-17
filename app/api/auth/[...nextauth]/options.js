@@ -6,10 +6,6 @@ import User from '@/models/User';
 
 export const options = {
   providers: [
-    // GitHubProvider({
-    //   clientId: process.env.GITHUB_ID,
-    //   clientSecret: process.env.GITHUB_SECRET,
-    // }),
     CredentialsProvider({
       name: 'Email and Password',
       credentials: {
@@ -23,19 +19,25 @@ export const options = {
         // Check for Admin or SuperAdmin
         let user = await User.findOne({ email: credentials?.email });
 
+        console.log("user: ", user);
+
         if (!user) {
           throw new Error('No user found with this email');
         }
 
-
-        const isPasswordValid = await argon2.verify( user.password, credentials.password);
-
+        const isPasswordValid = await argon2.verify(user.password, credentials.password);
+        const isEmailVerified = await user.isEmailVerified;
 
         if (!isPasswordValid) {
           throw new Error('Invalid email or password');
         }
 
-        // Return the user object with role
+        // If email is not verified, throw an error
+        if (!isEmailVerified) {
+          throw new Error('Email not verified');
+        }
+
+        // Return the user object with role if email is verified
         return { id: user._id, email: user.email, role: user.role || null };
       },
     }),

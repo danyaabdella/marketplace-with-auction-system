@@ -5,6 +5,7 @@ import { connectToDB } from "@/libs/functions";
 export async function POST(req) {
     try {
         const body = await req.json();
+        console.log("Body: ", body);
         await connectToDB();
 
         // Check if the user already exists

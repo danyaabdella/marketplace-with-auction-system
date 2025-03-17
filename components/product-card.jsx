@@ -1,11 +1,57 @@
-import { ShoppingCart } from "lucide-react"
+"use client"
+
+import { useState } from "react"
+import { ShoppingCart, Heart } from 'lucide-react'
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+// import { useToast } from "@/components/ui/use-toast"
 
 export function ProductCard({ product }) {
+  const [isFavorite, setIsFavorite] = useState(false)
+  // const { toast } = useToast()
+
+  const toggleFavorite = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      // Replace with actual API call
+      // await fetch(`/api/wishlist/${product.id}`, {
+      //   method: isFavorite ? 'DELETE' : 'POST',
+      // })
+      
+      setIsFavorite(!isFavorite)
+      // toast({
+      //   title: isFavorite ? "Removed from wishlist" : "Added to wishlist",
+      //   description: isFavorite 
+      //     ? "The item has been removed from your wishlist"
+      //     : "The item has been added to your wishlist",
+      // })
+    } catch (error) {
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to update wishlist",
+      //   variant: "destructive",
+      // })
+    }
+  }
+
   return (
     <div className="group relative rounded-lg border p-4 hover:shadow-lg">
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute right-6 top-6 z-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
+        onClick={toggleFavorite}
+      >
+        <Heart 
+          className={`h-5 w-5 transition-colors ${
+            isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"
+          }`} 
+        />
+      </Button>
+      
       <Link href={`/products/${product.id}`}>
         <div className="aspect-square overflow-hidden rounded-lg">
           <Image
@@ -39,12 +85,14 @@ export function ProductCard({ product }) {
             <div>
               <p className="text-lg font-bold">${product.price.toFixed(2)}</p>
               {product.originalPrice && (
-                <p className="text-sm text-muted-foreground line-through">${product.originalPrice.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground line-through">
+                  ${product.originalPrice.toFixed(2)}
+                </p>
               )}
             </div>
             <Button
               size="icon"
-              className="rounded-full h-10 w-10 bg-primary hover:bg-primary/90"
+              className="rounded-full h-10 w-10 hover:bg-primary/90 " 
               onClick={(e) => {
                 e.preventDefault()
                 // Add to cart logic here
@@ -58,4 +106,3 @@ export function ProductCard({ product }) {
     </div>
   )
 }
-
