@@ -33,11 +33,12 @@ const UserSchema = new Schema(
       default: 'pending',
       required: function() { return this.role === "merchant"; } 
     },
-    approvedBy: { 
+    approvedBy: { type: String },
+    tinNumber: { 
       type: String, 
       required: function() { return this.role === "merchant"; } 
     },
-    tinNumber: { 
+    uniqueTinNumber: { 
       type: String, 
       required: function() { return this.role === "merchant"; } 
     },
@@ -45,7 +46,7 @@ const UserSchema = new Schema(
       type: String, 
       required: function() { return this.role === "merchant"; } 
     },
-    account_name: { 
+    account_name: {
       type: String, 
       required: function() { return this.role === "merchant"; } 
     },

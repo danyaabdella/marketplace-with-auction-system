@@ -1,9 +1,7 @@
 import { Roboto } from "next/font/google";
-//import { Toaster } from "react-hot-toast";
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "react-hot-toast";
 import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
-import Container from "@/components/commons/Container";
 import { NavBar } from "@/components/nav-bar";
 import { CartProvider } from "@/components/cart-provider";
 import ChatBot from "@/components/commons/ChatBot";

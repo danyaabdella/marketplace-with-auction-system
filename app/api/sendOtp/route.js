@@ -31,6 +31,8 @@ export async function POST(req) {
         user.otpExpires = otpExpires;
         await user.save();
 
+        console.log("User to be verified: ", user);
+
         // Send OTP via email based on type
         if (type === "verify") {
             await sendOtpEmail(email, otp, 'Email Verification OTP', 'Your OTP for email verification is:');

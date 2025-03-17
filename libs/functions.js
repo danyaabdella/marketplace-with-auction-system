@@ -30,27 +30,6 @@ agenda.define('end auction', async (job) => {
     }
 });
 
-export async function fetchUserData() {
-  let data;
-    try {
-      const response = await fetch('/api/users');
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const user = await response.json(); 
-
-      if (user) {
-        data = user;
-        return data;
-      } else {
-        return {}; 
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  }
-
   let isConnected = false;
   
 export async function connectToDB() {
@@ -158,7 +137,6 @@ export async function checkSession(email) {
     }
 }
 
-
   // Schedule the job to run when auction ends
   export async function scheduleAuctionEnd(auction) {
       const endTime = new Date(auction.endTime);
@@ -208,6 +186,22 @@ export async function Participant() {
   }
 }
 
+// Function to send OTP
+export async function sendOtp(email) {
+  try {
+      const otpResponse = await fetch(`/api/sendOtp?type=verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+      });
 
+      const otpData = await otpResponse.json();
+      if (!otpResponse.ok) throw new Error(otpData.message || "Failed to send OTP");
+
+      toast.success("OTP sent to your email");
+  } catch (error) {
+      toast.error(error.message || "Failed to send OTP");
+  }
+};
   
 

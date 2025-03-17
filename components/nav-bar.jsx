@@ -21,7 +21,6 @@ export function NavBar() {
   const [showSignUp, setShowSignUp] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { data: session, status } = useSession()
-  const router = useRouter()
   const { cartCount } = useCart()
   const pathname = usePathname()
 
@@ -199,7 +198,11 @@ export function NavBar() {
 
       {/* Authentication Dialogs */}
       <SignInDialog open={showSignIn} onOpenChange={setShowSignIn} />
-      <SignUpDialog open={showSignUp} onOpenChange={setShowSignUp} />
+      <SignUpDialog
+        open={showSignUp}
+        onOpenChange={setShowSignUp}
+        onSignIn={() => setShowSignIn(true)} // Opens the sign-in dialog
+      />
     </header>
   )
 }
