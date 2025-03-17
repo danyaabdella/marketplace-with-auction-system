@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,6 +14,15 @@ import {
 import { CreditCard, LayoutDashboard, LogOut, Settings, User } from "lucide-react"
 
 export function UserNav() {
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false }); // Sign out without automatic redirect
+      //router.push("/auth/signin"); // Redirect to the sign-in page
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -58,7 +68,10 @@ export function UserNav() {
           </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer text-destructive hover:text-destructive/90">
+        <DropdownMenuItem 
+          className="cursor-pointer text-destructive hover:text-destructive/90"
+          onClick={handleLogout}
+          >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

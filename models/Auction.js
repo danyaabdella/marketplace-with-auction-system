@@ -14,8 +14,20 @@ const auctionSchema = new mongoose.Schema({
     status: {type: String, enum: [  'active', 'ended', 'cancelled']},
     adminApproval: {type: String, enum: [ 'pending', 'approved', 'rejected'], default: 'pending'},
     paymentduration: { type: Date },
-    quantity: {type: Number, default: 1},
+    totalQuantity: {type: Number, default: 1},
+    remainingQuantity: { type: Number },  // Remaining quantity available
+    buyByParts: { type: Boolean, default: false },  // If true, allow partial bidding
 
-})
+}, {timestamps: true})
+
+
+auctionSchema.pre('save', function(next) {
+    if (this.isNew) {
+        this.remainingQuantity = this.totalQuantity;  // Initialize remaining quantity
+    }
+    next();
+});
+
+auctionSchema.index({ merchantId: 1, startTime: 1 }); 
 const Auction = mongoose.models.Auction || mongoose.model('Auction', auctionSchema);
 export default Auction;

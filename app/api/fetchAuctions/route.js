@@ -9,13 +9,13 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const type = searchParams.get("type");
 
-        const userData = await userInfo(); // Get logged-in user
-        if (!userData) {
-            return new Response(
-                JSON.stringify({ error: "Unauthorized: Please log in" }),
-                { status: 401 }
-            );
-        }
+        // const userData = await userInfo(); // Get logged-in user
+        // if (!userData) {
+        //     return new Response(
+        //         JSON.stringify({ error: "Unauthorized: Please log in" }),
+        //         { status: 401 }
+        //     );
+        // }
 
         if (type === "all-active") {
             // 1. Fetch all active auctions

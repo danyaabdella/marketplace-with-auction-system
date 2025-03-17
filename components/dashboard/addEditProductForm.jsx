@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -37,29 +36,16 @@ const formSchema = z.object({
   longitude: z.string().optional(),
 })
 
-// Mock categories for the dropdown
-const categories = [
-  { id: "cat1", name: "Electronics" },
-  { id: "cat2", name: "Furniture" },
-  { id: "cat3", name: "Music" },
-  { id: "cat4", name: "Home Decor" },
-  { id: "cat5", name: "Clothing" },
-  { id: "cat6", name: "Jewelry" },
-  { id: "cat7", name: "Art" },
-]
 
-export function AddEditProductForm({
-  open,
-  onOpenChange,
-  product,
-  mode,
-}) {
+
+export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const { toast } = useToast()
   const [variants, setVariants] = useState([])
   const [newVariant, setNewVariant] = useState("")
   const [sizes, setSizes] = useState([])
   const [newSize, setNewSize] = useState("")
   const [images, setImages] = useState([])
+  const [categories, setCategories] = useState([]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -114,29 +100,22 @@ export function AddEditProductForm({
       setImages([])
     }
   }, [form, mode, product])
+  console.log("Category ID:", form.getValues("categoryId"));
 
-  function onSubmit(values) {
-    // Here you would typically send the data to your API
-    const productData = {
-      ...values,
-      variant: variants,
-      size: sizes,
-      images: images,
-      location: {
-        type: "Point",
-        coordinates: [Number.parseFloat(values.latitude || "0"), Number.parseFloat(values.longitude || "0")],
-      },
-    }
-
-    console.log(productData)
-
-    toast({
-      title: mode === "add" ? "Product added" : "Product updated",
-      description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
-    })
-
-    onOpenChange(false)
-  }
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories"); // Adjust the endpoint if necessary
+        if (!response.ok) throw new Error("Failed to fetch categories");
+        
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error("Error fetching categories:", error.message);
+      } 
+    };
+    fetchCategories();
+  }, []);
 
   const handleAddVariant = () => {
     if (newVariant && !variants.includes(newVariant)) {
@@ -172,6 +151,56 @@ export function AddEditProductForm({
     setImages(images.filter((_, i) => i !== index))
   }
 
+  // Handle form submission
+  const onSubmit = async (values) => {
+    const productData = {
+      ...values,
+      variant: variants,
+      size: sizes,
+      images: images,
+      location: {
+        type: "Point",
+        coordinates: [Number.parseFloat(values.latitude || "0"), Number.parseFloat(values.longitude || "0")],
+      },
+    }
+
+    try {
+      const response = await fetch(
+        mode === "add" ? "/api/products" : `/api/products/${product.id}`,
+        {
+          method: mode === "add" ? "POST" : "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(productData),
+        }
+      )
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: mode === "add" ? "Product added" : "Product updated",
+          description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
+        })
+        onOpenChange(false)
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Something went wrong. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -205,7 +234,7 @@ export function AddEditProductForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -213,7 +242,7 @@ export function AddEditProductForm({
                     </FormControl>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category._id} value={category._id}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -223,7 +252,6 @@ export function AddEditProductForm({
                 </FormItem>
               )}
             />
-
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}

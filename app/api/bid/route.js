@@ -1,5 +1,6 @@
 import Bid from '@/models/Bid';
 import Auction from '@/models/Auction';
+import GroupBid from '@/models/GroupBid';
 import { connectToDB, userInfo } from '@/libs/functions';
 import { sendEmail } from '@/libs/sendEmail';
 import { getIO } from "@/libs/socket";
@@ -8,11 +9,11 @@ export async function POST(req) {
     try {
         await connectToDB();
 
-        const { auctionId, bids} = await req.json();
+        const { auctionId, bids } = await req.json();
         console.log(auctionId, bids);
     
-        const { bidderEmail, bidderName, bidAmount } = bids[0]; 
-        console.log(bidderEmail, bidderName, bidAmount);
+        const { bidderEmail, bidderName, bidAmount, quantity, groupBidId } = bids[0]; 
+        console.log(bidderEmail, bidderName, bidAmount, quantity);
 
         // Validate input
         if (!auctionId || !bids || bids.length === 0 ) {
@@ -25,28 +26,62 @@ export async function POST(req) {
             return new Response(JSON.stringify({ message: 'Auction is not active' }), { status: 400 });
         }
         
+         
+
         let bid = await Bid.findOne({ auctionId });
 
         if (!bid) {
             bid = new Bid({
                 auctionId,
-                bids: [{ bidderEmail, bidderName, bidAmount }],
-                highestBid: bidAmount,
-                highestBidderEmail: bidderEmail,
+                bids: [{ bidderEmail, bidderName, bidAmount, quantity,
+                        isGroupBid: !!groupBidId,
+                        groupBidId: groupBidId || null
+                 }],
+                // highestBid: bidAmount,
+                // highestBidderEmail: bidderEmail,
             });
         } else {
-            // If the auction is running, check if the new bid is higher than the highest bid
-            if ( bidAmount <= bid.highestBid) {
-                return new Response(JSON.stringify( { message: 'Bid amount must be higher than the current highest bid' }),
-                    { status: 400 }
-                );
+            const existingBid = bid.bids.find((b) => b.quantity === quantity)
+            if(existingBid ) {
+                if (bidAmount <= existingBid.bidAmount) {
+                    return new Response(
+                        JSON.stringify({ message: 'Bid amount must be higher than the current bid for this quantity' }),
+                        { status: 400 }
+                    );
+                }
+                bid.bids.push({ bidderEmail, bidderName, bidAmount, quantity,
+                                isGroupBid: !!groupBidId,
+                                groupBidId: groupBidId || null
+                 });
+
+                // bid.highestBid = bidAmount;
+                // bid.highestBidderEmail = bidderEmail;
+
+            } else {
+                if(auction.buyByParts && quantity > auction.remainingQuantity) {
+                    return new Response(
+                            JSON.stringify({ message: 'Bid quantity exceeds remaining quantity' }),
+                            { status: 400 }
+                        );
+                }
+                bid = new Bid({
+                    auctionId,
+                    bids: [{ bidderEmail, bidderName, bidAmount, quantity,
+                            isGroupBid: !!groupBidId,
+                            groupBidId: groupBidId || null
+                     }],
+                    // highestBid: bidAmount,
+                    // highestBidderEmail: bidderEmail,
+                });
+                auction.remainingQuantity-= quantity
+                await auction.save();
+
             }
-
-            // Add the new bid to the bids array
-            bid.bids.push({ bidderEmail, bidderName, bidAmount });
-
-            bid.highestBid = bidAmount;
-            bid.highestBidderEmail = bidderEmail;
+        }
+        
+        if (groupBidId) {
+            // If it's a group bid, mark the group as participating
+            await GroupBid.findByIdAndUpdate(groupBidId, { status: 'active' });
         }
 
         await bid.save();
@@ -125,8 +160,8 @@ export async function PUT(req) {
         await connectToDB();
         
         const user = userInfo();
-        const bidderEmail = user.email;
-        const { auctionId, newBidAmount } = await req.json();
+        //const bidderEmail = user.email;
+        const { auctionId, newBidAmount, bidderEmail } = await req.json();
 
         // Validate input
         if (!auctionId || !bidderEmail || !newBidAmount) {
