@@ -6,11 +6,38 @@ import { ProductSlider } from "@/components/product-slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { fetchUserData } from "../libs/ui_functions";
 import ChatBot from "@/components/commons/ChatBot";
 
 export default function Home() {
-  // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const { data: session, status } = useSession();
+  const [loggedUser, setLoggedUser] = useState(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(false); // New loading state
+
+   // Fetch user data when session changes
+   useEffect(() => {
+    const fetchUser = async () => {
+      if (session?.user?.email) {
+        setIsLoadingUser(true); // Start loading
+        console.log("Session: ", session.user.email);
+        try {
+          const user = await fetchUserData(session.user.email);
+          console.log("User: ", user);
+          setLoggedUser(user);
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        } finally {
+          setIsLoadingUser(false); // Stop loading
+        }
+      }
+    };
+
+    fetchUser();
+  }, [session]);
+  
+  // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
   useEffect(() => {
     const updateItemsPerPage = () => {
       if (window.innerWidth < 1024) {

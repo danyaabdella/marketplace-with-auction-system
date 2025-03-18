@@ -1,29 +1,30 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { NotificationPopover } from "@/components/notification-popover"
 import { UserNav } from "@/components/user-nav"
 import { MobileNav } from "@/components/mobile-nav"
-import { SignInDialog } from "./sign-in-dialogue"
-import { SignUpDialog } from "./sign-up-dialogue"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ShoppingCart, Gavel, Heart, TrendingUp, ChevronDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/libs/utils"
+import { SignInDialog } from "./sign-in-dialogue"
+import { SignUpDialog } from "./sign-up-dialogue"
+import { useCart } from "./cart-provider"
+import { useSession } from "next-auth/react"
 
 export function NavBar() {
-  const pathname = usePathname()
+  const [showSignIn, setShowSignIn] = useState(false)
+  const [showSignUp, setShowSignUp] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [searchFocused, setSearchFocused] = useState(false)
-  const [categories, setCategories] = useState([])
-  const [isSignedIn, setIsSignedIn] = useState(true); // State to track authentication status
-  const [signInOpen, setSignInOpen] = useState(false); // State to control SignInDialog visibility
-  const [signUpOpen, setSignUpOpen] = useState(false);
+  const { data: session, status } = useSession()
+  const { cartCount } = useCart()
+  const pathname = usePathname()
 
+  // Handle scroll effect for header styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10)
@@ -31,42 +32,21 @@ export function NavBar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-  // Check session on component mount
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await fetch("/api/auth/session");
-        if (!response.ok) throw new Error("Failed to fetch session");
 
-        const data = await response.json();
-        setIsSignedIn(data.isSignedIn); // Update isSignedIn state
-      } catch (error) {
-        console.error("Error checking session:", error.message);
-      }
-    };
-    checkSession();
-  }, []);
-
-  useEffect(() => {
-      const fetchCategories = async () => {
-        try {
-          const response = await fetch("/api/categories"); // Adjust the endpoint if necessary
-          if (!response.ok) throw new Error("Failed to fetch categories");
-          
-          const data = await response.json();
-          setCategories(data);
-        } catch (error) {
-          console.error("Error fetching categories:", error.message);
-        } 
-      };
-      fetchCategories();
-    }, []);
+  const categories = [
+    { name: "Art & Collectibles", href: "/categories/art" },
+    { name: "Electronics", href: "/categories/electronics" },
+    { name: "Fashion", href: "/categories/fashion" },
+    { name: "Home & Garden", href: "/categories/home" },
+    { name: "Jewelry & Watches", href: "/categories/jewelry" },
+    { name: "Vintage & Antiques", href: "/categories/vintage" },
+  ]
 
   return (
     <header
       className={cn(
         "fixed top-0 z-50 w-full transition-all duration-300 pt-4",
-        scrolled ? "border-b bg-background/95 backdrop-blur-lg shadow-sm" : "bg-transparent backdrop-blur-sm",
+        scrolled ? "border-b bg-background/95 backdrop-blur-lg shadow-sm" : "bg-transparent backdrop-blur-sm"
       )}
     >
       <div className="container flex h-10 items-center px-4 pb-4">
@@ -85,7 +65,7 @@ export function NavBar() {
               href="/"
               className={cn(
                 "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/" && "text-primary font-semibold",
+                pathname === "/" && "text-primary font-semibold"
               )}
             >
               Home
@@ -94,7 +74,7 @@ export function NavBar() {
               href="/products"
               className={cn(
                 "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname.startsWith("/products") && "text-primary font-semibold",
+                pathname.startsWith("/products") && "text-primary font-semibold"
               )}
             >
               Products
@@ -106,7 +86,7 @@ export function NavBar() {
                   variant="ghost"
                   className={cn(
                     "px-3 py-2 h-auto flex items-center gap-1 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                    pathname.startsWith("/auctions") && "text-primary font-semibold",
+                    pathname.startsWith("/auctions") && "text-primary font-semibold"
                   )}
                 >
                   Auctions
@@ -135,7 +115,7 @@ export function NavBar() {
                   variant="ghost"
                   className={cn(
                     "px-3 py-2 h-auto flex items-center gap-1 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                    pathname.startsWith("/categories") && "text-primary font-semibold",
+                    pathname.startsWith("/categories") && "text-primary font-semibold"
                   )}
                 >
                   Categories
@@ -144,8 +124,8 @@ export function NavBar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[220px] p-2">
                 {categories.map((category) => (
-                  <DropdownMenuItem key={category._id} asChild>
-                    <Link href={`/categories/${category.name}`} className="cursor-pointer">
+                  <DropdownMenuItem key={category.name} asChild>
+                    <Link href={category.href} className="cursor-pointer">
                       {category.name}
                     </Link>
                   </DropdownMenuItem>
@@ -157,7 +137,7 @@ export function NavBar() {
               href="/about"
               className={cn(
                 "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/about" && "text-primary font-semibold",
+                pathname === "/about" && "text-primary font-semibold"
               )}
             >
               About
@@ -167,7 +147,7 @@ export function NavBar() {
               href="/contact"
               className={cn(
                 "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/contact" && "text-primary font-semibold",
+                pathname === "/contact" && "text-primary font-semibold"
               )}
             >
               Contact
@@ -177,7 +157,6 @@ export function NavBar() {
 
         {/* Right section - User actions */}
         <div className="fixed right-0 flex items-center gap-2 pr-4">
-
           <Button
             variant="ghost"
             size="icon"
@@ -193,43 +172,37 @@ export function NavBar() {
           <NotificationPopover />
           <ThemeToggle />
 
-          {/* Conditional rendering based on authentication status */}
-          {isSignedIn ? (
-            <div className="sm:block">
-              <UserNav />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setSignInOpen(true)}>
-                Sign In
-              </Button>
-              <Button onClick={() => setSignUpOpen(true)}>Sign Up</Button>
-            </div>
-          )}
+          <div className="flex items-center space-x-4 relative">
+            {status === "authenticated" ? (
+              <UserNav user={session.user} />
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowSignIn(true)}
+                  disabled={status === "loading"}
+                >
+                  Log in
+                </Button>
+                <Button
+                  onClick={() => setShowSignUp(true)}
+                  disabled={status === "loading"}
+                >
+                  Sign up
+                </Button>
+              </>
+            )}
           </div>
         </div>
-        
-          {/* SignIn Dialog */}
-      <SignInDialog
-        open={signInOpen}
-        onOpenChange={setSignInOpen}
-        onSignUp={() => {
-          setSignInOpen(false);
-          setSignUpOpen(true);
-        }}
-      />
+      </div>
 
-      {/* SignUp Dialog */}
+      {/* Authentication Dialogs */}
+      <SignInDialog open={showSignIn} onOpenChange={setShowSignIn} />
       <SignUpDialog
-        open={signUpOpen}
-        onOpenChange={setSignUpOpen}
-        onSignIn={() => {
-          setSignUpOpen(false);
-          setSignInOpen(true);
-        }}
+        open={showSignUp}
+        onOpenChange={setShowSignUp}
+        onSignIn={() => setShowSignIn(true)} // Opens the sign-in dialog
       />
-
     </header>
   )
 }
-

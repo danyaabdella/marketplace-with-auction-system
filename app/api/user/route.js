@@ -1,16 +1,13 @@
-
 import { checkSession, connectToDB } from "@/libs/functions";
 import User from "@/models/User";
 import argon2 from 'argon2';
 
 export async function GET(req) {
-    const url = new URL(req.url);
-    const email = url.searchParams.get("email");
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
     const sessionError = await checkSession(email);
 
-
     if (!email || sessionError) {
-
         return new Response(JSON.stringify({ error: "Email is required OR Invalid  email" }), { status: 400 });
     }
 
@@ -36,7 +33,6 @@ export async function PUT(req) {
     try {
         // Parse request body
         const body = await req.json();
-
         const { 
             _id, 
             email, 
@@ -60,7 +56,6 @@ export async function PUT(req) {
 
         if (!_id) {
             return new Response(JSON.stringify({ error: "ID is mandatory for update." }), { status: 400 });
-
         }
 
         await connectToDB();
@@ -74,14 +69,12 @@ export async function PUT(req) {
         const updateData = {};
 
         // Allow updates to profile fields
-
         if (fullName) updateData.fullName = fullName;
         if (password) updateData.password = await argon2.hash(password);  
         if (image) updateData.image = image;
         if (stateName) updateData.stateName = stateName;
         if (cityName) updateData.cityName = cityName;
         if (phoneNumber) updateData.phoneNumber = phoneNumber;
-
 
         // Prevent merchants from updating tinNumber and nationalId
         if (existingUser.role === "merchant" && (tinNumber || nationalId)) {
@@ -108,7 +101,6 @@ export async function PUT(req) {
         if (bank_code) updateData.bank_code = bank_code;
 
         // Update the user in the database
-
         const updatedUser = await User.findOneAndUpdate(
             { _id: _id }, // Find user by _id
             { $set: updateData }, // Update specified fields
@@ -116,7 +108,6 @@ export async function PUT(req) {
         );
 
         if (!updatedUser) {
-
             return new Response(JSON.stringify({ error: "Failed to update user." }), { status: 400 });
         }
 
@@ -140,7 +131,6 @@ export async function DELETE(req) {
         const email = url.searchParams.get("email");
 
         // Check session and email
-
         const sessionError = await checkSession(email);
         if (sessionError) {
             return sessionError; // Return the error response
