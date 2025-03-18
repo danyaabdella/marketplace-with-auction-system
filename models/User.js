@@ -40,7 +40,7 @@ const UserSchema = new Schema(
     },
     uniqueTinNumber: { 
       type: String, 
-      required: function() { return this.role === "merchant"; } 
+      required: function() { return this.approvalStatus === "approved"; } 
     },
     nationalId: { 
       type: String, 

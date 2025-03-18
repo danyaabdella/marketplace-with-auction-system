@@ -216,17 +216,6 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8 justify-between">
       <div className="grid grid-cols-1 gap-6">
-        {/* User Info Display */}
-        {isLoadingUser ? (
-          <p>Loading user data...</p>
-        ) : loggedUser ? (
-          <div>
-            <h2 className="text-xl font-bold">
-              Welcome, {loggedUser.name || "User"}!
-            </h2>
-          </div>
-        ) : null}
-
         {/* Search Form */}
         <div className="mb-8">
           <form className="flex gap-4 max-w-2xl w-full mx-auto">
