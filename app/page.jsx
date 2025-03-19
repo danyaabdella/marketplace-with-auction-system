@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { fetchUserData } from "../libs/ui_functions";
+import ChatBot from "@/components/commons/ChatBot";
 
 export default function Home() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -15,8 +16,8 @@ export default function Home() {
   const [loggedUser, setLoggedUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false); // New loading state
 
-  // Fetch user data when session changes
-  useEffect(() => {
+   // Fetch user data when session changes
+   useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
         setIsLoadingUser(true); // Start loading
@@ -35,8 +36,8 @@ export default function Home() {
 
     fetchUser();
   }, [session]);
-
-  // Dynamic items per page based on screen size
+  
+  // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
   useEffect(() => {
     const updateItemsPerPage = () => {
       setItemsPerPage(window.innerWidth < 1024 ? 6 : 10);

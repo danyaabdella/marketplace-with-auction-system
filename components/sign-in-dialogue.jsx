@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "react-hot-toast"
 import { Eye, EyeOff } from "lucide-react"
 import { VerifyEmailDialog } from "./verify-email-dialogue"
+import { ForgotPasswordPage } from "./forgot-password-dialogue"
 
 export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [formData, setFormData] = useState({
@@ -19,7 +19,14 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [isLoading, setIsLoading] = useState(false);
   // Add state to control VerifyEmailDialog visibility
   const [showVerifyEmail, setShowVerifyEmail] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false); 
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) {
+      setIsForgotPassword(false); // Reset isForgotPassword when dialog is closed
+    }
+    onOpenChange(isOpen);
+  };
   const onSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -87,10 +94,15 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+     {isForgotPassword ? (
+              <ForgotPasswordPage open={isForgotPassword} onOpenChange={setIsForgotPassword} />
+            ) : (
+      <Dialog open={open} onOpenChange={handleOpenChange} >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle className="text-center text-2xl">Welcome Back</DialogTitle>
+            <DialogTitle className="text-center text-2xl">
+               "Welcome Back"
+            </DialogTitle>         
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <Button variant="outline" disabled={isLoading} onClick={handleGoogleSignIn} className="relative">
@@ -164,6 +176,18 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
                     </span>
                   </Button>
                 </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsForgotPassword(true); // Now only sets this when the button is clicked
+                    }}
+                  >
+                    Forgot Password?
+                  </Button>
+                </div>
               </div>
               <Button className="w-full" type="submit" disabled={isLoading}>
                 Sign in
@@ -176,8 +200,10 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
               Sign up
             </Button>
           </div>
+          
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Render the VerifyEmailDialog */}
       <VerifyEmailDialog
@@ -186,6 +212,9 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
         email={formData.email}
         onVerifySuccess={() => setShowVerifyEmail(false)} // Close dialog after verification
       />
+      {/* {showForgotPassword && (
+        <ForgotPasswordPage open={showForgotPassword} onOpenChange={setShowForgotPassword} />
+      )}    */}
     </>
   );
 }

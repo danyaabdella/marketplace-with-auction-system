@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -25,6 +25,50 @@ export function AuctionCard({ auction }) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [bidAmount, setBidAmount] = useState(auction.currentBid + 10)
   const { toast } = useToast()
+  const [timeLeft, setTimeLeft] = useState("")
+  const [urgent, setUrgentLevel] = useState("")
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const endTime = new Date(auction.endTime);
+      const diff = endTime - now;
+
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+      let timeString = "";
+      if (days > 0) timeString += `${days}d `;
+      if (hours > 0) timeString += `${hours}h `;
+      if (minutes > 0) timeString += `${minutes}m`;
+
+      setTimeLeft(timeString.trim());
+
+      const totalHoursLeft = days * 24 + hours + minutes / 60;
+      if (totalHoursLeft < 8) {
+        setUrgentLevel("high");
+      } else if (totalHoursLeft < 18) {
+        setUrgentLevel("medium");
+      } else {
+        setUrgentLevel("low");
+      }
+    };
+
+    // calculateTimeLeft(); // Initial calculation
+    // const timer = setInterval(calculateTimeLeft, 60000); // Update every minute
+
+    // return () => clearInterval(timer); // Cleanup on unmount
+    if (typeof window !== "undefined") {
+      calculateTimeLeft(); // Initial calculation
+      const timer = setInterval(calculateTimeLeft, 60000); // Update every minute
+  
+      return () => clearInterval(timer); // Cleanup on unmount
+    }
+  }, [auction.endTime]);
+
+
 
   const handleBid = () => {
     toast({
@@ -33,7 +77,7 @@ export function AuctionCard({ auction }) {
     })
   }
 
-  const isEndingSoon = auction.timeLeft.includes("hour") || auction.timeLeft.includes("min")
+  const isEndingSoon = timeLeft.includes("hour") || timeLeft.includes("min")
 
   const handleCardClick = () => {
     router.push(`/auctions/${auction.id}`)
@@ -86,20 +130,20 @@ export function AuctionCard({ auction }) {
                   <Clock
                     className={cn(
                       "h-4 w-4",
-                      auction.urgent === "high" && "text-red-500",
-                      auction.urgent === "medium" && "text-amber-500",
-                      auction.urgent === "low" && "text-green-500",
+                      urgent === "high" && "text-red-500",
+                      urgent === "medium" && "text-amber-500",
+                      urgent === "low" && "text-green-500",
                     )}
                   />
                   <span
                     className={cn(
                       "text-sm font-medium",
-                      auction.urgent === "high" && "text-red-500",
-                      auction.urgent === "medium" && "text-amber-500",
-                      auction.urgent === "low" && "text-green-500",
+                      urgent === "high" && "text-red-500",
+                      urgent === "medium" && "text-amber-500",
+                      urgent === "low" && "text-green-500",
                     )}
                   >
-                    {auction.timeLeft}
+                    {timeLeft}
                   </span>
                 </div>
               </div>
@@ -112,7 +156,7 @@ export function AuctionCard({ auction }) {
               <AvatarImage src={auction.seller.avatar} alt={auction.seller.name} />
               <AvatarFallback className="bg-primary/10 text-primary">{auction.seller.name[0]}</AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground">{auction.seller.name}</span>
+            <span className="text-xs text-muted-foreground">{auction.merchantId.name}</span>
           </div>
           <Dialog>
             <DialogTrigger asChild>

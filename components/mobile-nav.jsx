@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,6 @@ import {
   ChevronRight,
   TrendingUp,
   Clock,
-  Star,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -27,15 +26,23 @@ import { cn } from "@/libs/utils"
 export function MobileNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [categories, setCategories] = useState([])
 
-  const categories = [
-    { name: "Art & Collectibles", href: "/categories/art", icon: Star },
-    { name: "Electronics", href: "/categories/electronics", icon: Star },
-    { name: "Fashion", href: "/categories/fashion", icon: Star },
-    { name: "Home & Garden", href: "/categories/home", icon: Star },
-    { name: "Jewelry & Watches", href: "/categories/jewelry", icon: Star },
-    { name: "Vintage & Antiques", href: "/categories/vintage", icon: Star },
-  ]
+  useEffect(() => {
+      const fetchCategories = async () => {
+        try {
+          const response = await fetch("/api/categories"); // Adjust the endpoint if necessary
+          if (!response.ok) throw new Error("Failed to fetch categories");
+          
+          const data = await response.json();
+          setCategories(data);
+        } catch (error) {
+          console.error("Error fetching categories:", error.message);
+        } 
+      };
+      fetchCategories();
+    }, []);
+
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -142,8 +149,8 @@ export function MobileNav() {
                   <div className="flex flex-col space-y-1 pl-10">
                     {categories.map((category) => (
                       <Link
-                        key={category.name}
-                        href={category.href}
+                        key={category._id}
+                        href={`/categories/${category.name}`}
                         className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
                         onClick={() => setOpen(false)}
                       >
