@@ -197,7 +197,10 @@ export function NavBar() {
       </div>
 
       {/* Authentication Dialogs */}
-      <SignInDialog open={showSignIn} onOpenChange={setShowSignIn} />
+      <SignInDialog 
+        open={showSignIn} 
+        onOpenChange={setShowSignIn}
+        onSignUp={() => setShowSignUp(true)} />
       <SignUpDialog
         open={showSignUp}
         onOpenChange={setShowSignUp}

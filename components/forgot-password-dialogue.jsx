@@ -15,13 +15,16 @@ import { Label } from "@/components/ui/label"
 import { OtpVerification } from "@/components/auth/otp-verification"
 import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 import { toast } from "@/components/ui/use-toast"
+import { SignInDialog } from "./sign-in-dialogue"
 //import { Toaster } from "@/components/toaster"
 
-export function ForgotPasswordPage() {
+export function ForgotPasswordPage( open, onOpenChange) {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState("email")
+  const [isSignIn, setIsSignIn] = useState(false)
+  
 
   const handleRequestReset = async (e) => {
     e.preventDefault();
@@ -40,7 +43,7 @@ export function ForgotPasswordPage() {
       }
   
       // Call API to request password reset
-      const response = await fetch("/api/auth/send-otp", {
+      const response = await fetch("/api/forgotPassword", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,10 +165,14 @@ export function ForgotPasswordPage() {
       description: "Your password has been reset successfully",
     })
     // Redirect to login page
-    router.push("/signin")
+    router.push("/signIn")
   }
 
   return (
+    <>
+    {isSignIn? (
+      <SignInDialog open={isSignIn} onOpenChange={setIsSignIn} />
+    ) : (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md">
         {step === "email" && (
@@ -199,10 +206,17 @@ export function ForgotPasswordPage() {
               </form>
             </CardContent>
             <CardFooter className="flex justify-center">
-              <Link href="/signin" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+              <Button
+                variant="link"
+                className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsSignIn(true); // Now only sets this when the button is clicked
+                }}
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Sign In
-              </Link>
+                Back to SignIn
+              </Button>
             </CardFooter>
           </Card>
         )}
@@ -223,6 +237,8 @@ export function ForgotPasswordPage() {
       </div>
       {/* <Toaster /> */}
     </div>
+  )}
+  </>
   )
 }
 

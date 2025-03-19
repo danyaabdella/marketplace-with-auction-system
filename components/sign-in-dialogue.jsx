@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -20,8 +19,14 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [isLoading, setIsLoading] = useState(false);
   // Add state to control VerifyEmailDialog visibility
   const [showVerifyEmail, setShowVerifyEmail] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false); 
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) {
+      setIsForgotPassword(false); // Reset isForgotPassword when dialog is closed
+    }
+    onOpenChange(isOpen);
+  };
   const onSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -89,10 +94,15 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+     {isForgotPassword ? (
+              <ForgotPasswordPage open={isForgotPassword} onOpenChange={setIsForgotPassword} />
+            ) : (
+      <Dialog open={open} onOpenChange={handleOpenChange} >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle className="text-center text-2xl">Welcome Back</DialogTitle>
+            <DialogTitle className="text-center text-2xl">
+               "Welcome Back"
+            </DialogTitle>         
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <Button variant="outline" disabled={isLoading} onClick={handleGoogleSignIn} className="relative">
@@ -171,8 +181,8 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
                     variant="link"
                     className="p-0 h-auto text-sm"
                     onClick={(e) => {
-                      e.preventDefault()
-                      setShowForgotPassword(true)
+                      e.preventDefault();
+                      setIsForgotPassword(true); // Now only sets this when the button is clicked
                     }}
                   >
                     Forgot Password?
@@ -190,8 +200,10 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
               Sign up
             </Button>
           </div>
+          
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Render the VerifyEmailDialog */}
       <VerifyEmailDialog
@@ -200,7 +212,9 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
         email={formData.email}
         onVerifySuccess={() => setShowVerifyEmail(false)} // Close dialog after verification
       />
-      <ForgotPasswordPage open={showForgotPassword} onOpenChange={setShowForgotPassword} />
+      {/* {showForgotPassword && (
+        <ForgotPasswordPage open={showForgotPassword} onOpenChange={setShowForgotPassword} />
+      )}    */}
     </>
   );
 }
