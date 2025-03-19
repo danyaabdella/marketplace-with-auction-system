@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "react-hot-toast"
 import { Eye, EyeOff } from "lucide-react"
 import { VerifyEmailDialog } from "./verify-email-dialogue"
+import { ForgotPasswordPage } from "./forgot-password-dialogue"
 
 export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
   const [isLoading, setIsLoading] = useState(false);
   // Add state to control VerifyEmailDialog visibility
   const [showVerifyEmail, setShowVerifyEmail] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -164,6 +166,18 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
                     </span>
                   </Button>
                 </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setShowForgotPassword(true)
+                    }}
+                  >
+                    Forgot Password?
+                  </Button>
+                </div>
               </div>
               <Button className="w-full" type="submit" disabled={isLoading}>
                 Sign in
@@ -186,6 +200,7 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
         email={formData.email}
         onVerifySuccess={() => setShowVerifyEmail(false)} // Close dialog after verification
       />
+      <ForgotPasswordPage open={showForgotPassword} onOpenChange={setShowForgotPassword} />
     </>
   );
 }
