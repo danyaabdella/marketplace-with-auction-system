@@ -43,7 +43,7 @@ export function ForgotPasswordPage( open, onOpenChange) {
       }
   
       // Call API to request password reset
-      const response = await fetch("/api/forgotPassword", {
+      const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
