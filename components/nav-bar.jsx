@@ -1,27 +1,35 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { NotificationPopover } from "@/components/notification-popover"
 import { UserNav } from "@/components/user-nav"
-import { MobileNav } from "@/components/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { ShoppingCart, Gavel, Heart, TrendingUp, ChevronDown } from "lucide-react"
+import {
+
+  TrendingUp,
+  ChevronDown,
+  Home,
+  Gavel,
+  Grid3X3,
+  Info,
+  Mail,
+  Package,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/libs/utils"
+import { useSession } from "next-auth/react"
 import { SignInDialog } from "./sign-in-dialogue"
 import { SignUpDialog } from "./sign-up-dialogue"
-import { useCart } from "./cart-provider"
-import { useSession } from "next-auth/react"
 
-export function NavBar() {
+export function Navbar() {
   const [showSignIn, setShowSignIn] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { data: session, status } = useSession()
-  const { cartCount } = useCart()
   const pathname = usePathname()
 
   // Handle scroll effect for header styling
@@ -42,170 +50,175 @@ export function NavBar() {
     { name: "Vintage & Antiques", href: "/categories/vintage" },
   ]
 
+  const navItems = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Product", href: "/products", icon: Package },
+    {
+      name: "Auctions",
+      href: "/auctions",
+      icon: Gavel,
+      dropdown: true,
+      items: [
+        { name: "All Auctions", href: "/auctions", icon: Gavel },
+        { name: "Ending Soon", href: "/auctions/ending-soon", icon: TrendingUp },
+      ],
+    },
+    { name: "Categories", href: "/categories", icon: Grid3X3, dropdown: true, items: categories },
+    { name: "About", href: "/about", icon: Info },
+    { name: "Contact", href: "/contact", icon: Mail },
+  ]
+
   return (
-    <header
-      className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-300 pt-4",
-        scrolled ? "border-b bg-background/95 backdrop-blur-lg shadow-sm" : "bg-transparent backdrop-blur-sm"
-      )}
-    >
-      <div className="container flex h-10 items-center px-4 pb-4">
-        {/* Left section - Logo and mobile menu */}
-        <div className="flex items-center">
-          <MobileNav />
-          <Link href="/" className="flex items-center space-x-2 group">
-            <span className="text-xl font-bold bg-clip-text">AuctionHub</span>
-          </Link>
-        </div>
-
-        {/* Center section - Main navigation */}
-        <div className="hidden lg:flex flex-1 items-center justify-center">
-          <nav className="flex items-center space-x-1 text-sm font-medium justify-between">
-            <Link
-              href="/"
-              className={cn(
-                "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/" && "text-primary font-semibold"
-              )}
-            >
-              Home
+    <>
+      {/* Top Section - Left and Right (Mobile and Desktop) */}
+      <header
+        className={cn(
+          "fixed top-0 z-50 w-full transition-all duration-300",
+          scrolled ? "border-b bg-background/95 backdrop-blur-lg shadow-sm" : "bg-transparent backdrop-blur-sm",
+        )}
+      >
+        <div className="container flex h-16 items-center justify-between px-4">
+          {/* Left section - Logo */}
+          <div className="flex items-center flex-shrink-0">
+            <Link href="/" className="flex items-center space-x-2 group">
+              <div className="h-9 w-9 rounded-full gradient-bg flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
+                <span className="text-white font-bold text-lg">A</span>
+              </div>
+              <span className="text-xl font-bold bg-clip-text text-transparent gradient-bg lg:block hidden">
+                AuctionHub
+              </span>
             </Link>
-            <Link
-              href="/products"
-              className={cn(
-                "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname.startsWith("/products") && "text-primary font-semibold"
-              )}
-            >
-              Products
-            </Link>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "px-3 py-2 h-auto flex items-center gap-1 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                    pathname.startsWith("/auctions") && "text-primary font-semibold"
-                  )}
-                >
-                  Auctions
-                  <ChevronDown className="h-4 w-4 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[220px] p-2">
-                <DropdownMenuItem asChild>
-                  <Link href="/auctions/allAuctions" className="flex items-center gap-2 cursor-pointer">
-                    <Gavel className="h-4 w-4" />
-                    <span>All Auctions</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/auctions/ending-soon" className="flex items-center gap-2 cursor-pointer">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>Ending Soon</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "px-3 py-2 h-auto flex items-center gap-1 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                    pathname.startsWith("/categories") && "text-primary font-semibold"
-                  )}
-                >
-                  Categories
-                  <ChevronDown className="h-4 w-4 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[220px] p-2">
-                {categories.map((category) => (
-                  <DropdownMenuItem key={category.name} asChild>
-                    <Link href={category.href} className="cursor-pointer">
-                      {category.name}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Link
-              href="/about"
-              className={cn(
-                "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/about" && "text-primary font-semibold"
-              )}
-            >
-              About
-            </Link>
-
-            <Link
-              href="/contact"
-              className={cn(
-                "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
-                pathname === "/contact" && "text-primary font-semibold"
-              )}
-            >
-              Contact
-            </Link>
-          </nav>
-        </div>
-
-        {/* Right section - User actions */}
-        <div className="fixed right-0 flex items-center gap-2 pr-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
-            asChild
-          >
-            <Link href="/cart">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
-            </Link>
-          </Button>
-
-          <NotificationPopover />
-          <ThemeToggle />
-
-          <div className="flex items-center space-x-4 relative">
-            {status === "authenticated" ? (
-              <UserNav user={session.user} />
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowSignIn(true)}
-                  disabled={status === "loading"}
-                >
-                  Log in
-                </Button>
-                <Button
-                  onClick={() => setShowSignUp(true)}
-                  disabled={status === "loading"}
-                >
-                  Sign up
-                </Button>
-              </>
-            )}
           </div>
+          <div className="hidden md:flex flex-grow items-center justify-center mx-4">
+             <nav className="flex items-center space-x-1 text-sm font-medium">
+               {navItems.map((item) =>
+                item.dropdown ? (
+                  <DropdownMenu key={item.name}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "px-3 py-2 h-auto flex items-center gap-1 rounded-md transition-colors hover:bg-primary/10 hover:text-primary",
+                          pathname.startsWith(item.href) && "text-primary font-semibold",
+                          "lg:flex-row lg:space-x-1 md:flex-col md:space-y-1 md:space-x-0 md:text-xs",
+                        )}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span className="lg:block md:hidden md:group-hover:block">{item.name}</span>
+                        <ChevronDown className="h-4 w-4 opacity-70 lg:block md:hidden" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-[220px] p-2">
+                      {item.items.map((subItem) => (
+                        <DropdownMenuItem key={subItem.name} asChild>
+                          <Link href={subItem.href} className="flex items-center gap-2 cursor-pointer">
+                            {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                            <span>{subItem.name}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "px-3 py-2 rounded-md transition-colors hover:bg-primary/10 hover:text-primary flex items-center gap-1",
+                      pathname === item.href && "text-primary font-semibold",
+                      "lg:flex-row lg:space-x-1 md:flex-col md:space-y-1 md:space-x-0 md:text-xs",
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="lg:block md:hidden md:group-hover:block">{item.name}</span>
+                  </Link>
+                ),
+              )}
+            </nav>
+          </div>
+
+          {/* Right section - User actions */}
+          <div className="flex items-center justify-end flex-shrink-0 gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors relative"
+              asChild
+            >
+              <Link href="/cart">
+                <ShoppingCart className="h-5 w-5" />
+                {/* Cart count badge */}
+                {status === "authenticated" && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    0
+                  </span>
+                )}
+                <span className="sr-only">Cart</span>
+              </Link>
+            </Button>
+
+            <NotificationPopover />
+            <ThemeToggle />
+
+            <div className="flex items-center space-x-2">
+              {status === "authenticated" ? (
+                <UserNav user={session.user} />
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowSignIn(true)}
+                    disabled={status === "loading"}
+                    className="lg:block"
+                  >
+                    Log in
+                  </Button>
+                  <Button onClick={() => setShowSignUp(true)} disabled={status === "loading"}>
+                    Sign up
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Bottom Section - Center (Mobile Only) */}
+      <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t md:hidden">
+        <div className="grid h-full grid-cols-6">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "inline-flex flex-col items-center justify-center px-5 hover:bg-muted",
+                pathname === item.href && "text-primary",
+              )}
+            >
+              <item.icon className="w-6 h-6 mb-1" />
+              <span className="text-xs">{item.name}</span>
+            </Link>
+          ))}
         </div>
       </div>
 
       {/* Authentication Dialogs */}
-      <SignInDialog 
-        open={showSignIn} 
+      <SignInDialog
+        open={showSignIn}
         onOpenChange={setShowSignIn}
-        onSignUp={() => setShowSignUp(true)} />
+        onSignUp={() => {
+          setShowSignIn(false)
+          setShowSignUp(true)
+        }}
+      />
       <SignUpDialog
         open={showSignUp}
         onOpenChange={setShowSignUp}
-        onSignIn={() => setShowSignIn(true)} // Opens the sign-in dialog
+        onSignIn={() => {
+          setShowSignUp(false)
+          setShowSignIn(true)
+        }}
       />
-    </header>
+    </>
   )
 }

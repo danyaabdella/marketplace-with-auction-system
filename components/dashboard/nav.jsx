@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/libs/utils"
-import { BarChart3, Box, Clock, Gavel, Home, Package, Settings, Users, Menu } from "lucide-react"
+import { BarChart3, Box, Clock, Gavel, Home, Package, Users, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"

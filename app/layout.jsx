@@ -2,7 +2,7 @@ import { Roboto } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
-import { NavBar } from "@/components/nav-bar";
+import { Navbar } from "@/components/nav-bar";
 import { CartProvider } from "@/components/cart-provider";
 import ChatBot from "@/components/commons/ChatBot";
 import { Footer } from "@/components/footer";
@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <CartProvider>
               <ContextProvider>
-                <NavBar />
+                <Navbar />
                 <Toaster position="bottom-right" />
                 <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
                   {children}
