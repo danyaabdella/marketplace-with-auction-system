@@ -49,25 +49,34 @@ export default function ProductsPage() {
   }, [])
 
   return (
-    <div className="container py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-12">
+      <div className="grid grid-cols-1 gap-6">
       {/* Search Form */}
-      <div className="mb-8">
-        <form className="flex gap-4 max-w-2xl w-full mx-auto">
-          <Input type="search" placeholder="Search products..." className="flex-1" />
-          <Button type="submit">Search</Button>
-        </form>
+        <div className="mb-8">
+          <form className="flex gap-4 max-w-2xl w-full mx-auto">
+            <Input type="search" placeholder="Search products..." className="flex-1" />
+            <Button type="submit">Search</Button>
+          </form>
+        </div>
+
+        {/* Product Slider */}
+        <div className="mb-8">
+          <ProductSlider />
+        </div>
       </div>
-      <div className="mb-8">
-        <ProductSlider />
-      </div>
-              
+      {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Section */}
         <div className="w-full lg:w-64">
-          <Button className="w-full lg:hidden mb-4" onClick={() => setShowFilters(!showFilters)}>
+          {/* Toggle Filters Button (Mobile Only) */}
+          <Button
+            className="w-full lg:hidden mb-4"
+            onClick={() => setShowFilters(!showFilters)}
+          >
             {showFilters ? "Hide Filters" : "Show Filters"}
           </Button>
 
+          {/* Filters Panel */}
           <div className={`${showFilters ? "block" : "hidden"} lg:block`}>
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
               {/* Price Range */}
@@ -192,6 +201,7 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* Apply Filters Button */}
               <Button className="col-span-2 lg:col-span-1">Apply Filters</Button>
             </div>
           </div>
@@ -199,7 +209,7 @@ export default function ProductsPage() {
 
         {/* Products Grid */}
         <div className="flex-1">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

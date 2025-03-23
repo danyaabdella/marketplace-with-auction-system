@@ -13,6 +13,7 @@ import {
   TrendingUp,
   ChevronDown,
   Home,
+  ShoppingCart,
   Gavel,
   Grid3X3,
   Info,
@@ -184,14 +185,14 @@ export function Navbar() {
       </header>
 
       {/* Bottom Section - Center (Mobile Only) */}
-      <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t md:hidden">
-        <div className="grid h-full grid-cols-6">
-          {navItems.map((item) => (
+      <div className="fixed bottom-0 left-0 z-50 w-screen h-16 bg-background border-t md:hidden overflow-x-hidden">
+        <div className="flex h-full justify-evenly items-center">
+          {navItems.slice(0,5).map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "inline-flex flex-col items-center justify-center px-5 hover:bg-muted",
+                "inline-flex flex-col items-center justify-center hover:bg-muted",
                 pathname === item.href && "text-primary",
               )}
             >

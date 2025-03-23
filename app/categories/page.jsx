@@ -67,7 +67,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="container py-8 mt-8">
+    <div className="container py-8 mt-8 mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-4">Categories</h1>
         <form onSubmit={handleSearch} className="max-w-md">

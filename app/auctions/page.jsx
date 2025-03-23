@@ -8,7 +8,7 @@ import { ProductSlider } from "components/product-slider"
 export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <ProductSlider/>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
           <aside className="space-y-6">
