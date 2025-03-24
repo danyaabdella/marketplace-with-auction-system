@@ -40,7 +40,8 @@ const UserSchema = new Schema(
     },
     uniqueTinNumber: { 
       type: String, 
-      required: function() { return this.role === "merchant"; } 
+      required: function() { return this.role === "merchant"; } ,
+      default: function() { return this.tinNumber; }
     },
     nationalId: { 
       type: String, 
@@ -59,7 +60,8 @@ const UserSchema = new Schema(
       required: function() { return this.role === "merchant"; } 
     },
     otp: { type: String, default: null },
-    otpExpires: { type: Date, default: null },
+    otpExpiry: { type: Date, default: null },
+    isEmailVerified: { type: Boolean, default: false}
   },
   { timestamps: true }
 );
