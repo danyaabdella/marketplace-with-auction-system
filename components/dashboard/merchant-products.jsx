@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -29,137 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 
-// Mock data (unchanged)
-const products = [
-  {
-    id: "1",
-    merchantDetail: {
-      merchantId: "user123",
-      merchantName: "Vintage Treasures",
-      merchantEmail: "vintage@example.com",
-    },
-    productName: "Vintage Polaroid Camera",
-    category: {
-      categoryId: "cat1",
-      categoryName: "Electronics",
-    },
-    price: 120.0,
-    quantity: 5,
-    soldQuantity: 8,
-    description: "Original Polaroid camera from the 1970s in excellent condition.",
-    images: ["/placeholder.svg"],
-    variant: ["Black", "Brown"],
-    size: [],
-    brand: "Polaroid",
-    location: {
-      type: "Point",
-      coordinates: [40.7128, -74.006],
-    },
-    delivery: "FLAT",
-    deliveryPrice: 10.0,
-    status: "In Stock",
-    review: [
-      {
-        customerId: "cust1",
-        comment: "Great vintage camera!",
-        rating: 5,
-        createdDate: "2023-12-10T10:30:00Z",
-      },
-    ],
-    createdAt: "2023-11-15T09:00:00Z",
-  },
-  {
-    id: "2",
-    merchantDetail: {
-      merchantId: "user123",
-      merchantName: "Vintage Treasures",
-      merchantEmail: "vintage@example.com",
-    },
-    productName: "Antique Wooden Desk",
-    category: {
-      categoryId: "cat2",
-      categoryName: "Furniture",
-    },
-    price: 350.0,
-    quantity: 2,
-    soldQuantity: 12,
-    description: "Beautiful oak desk from the early 20th century.",
-    images: ["/placeholder.svg"],
-    variant: ["Oak", "Mahogany"],
-    size: [],
-    brand: "Hand Made",
-    location: {
-      type: "Point",
-      coordinates: [40.7128, -74.006],
-    },
-    delivery: "PERPIECE",
-    deliveryPrice: 50.0,
-    status: "Low Stock",
-    review: [],
-    createdAt: "2023-10-20T14:30:00Z",
-  },
-  {
-    id: "3",
-    merchantDetail: {
-      merchantId: "user123",
-      merchantName: "Vintage Treasures",
-      merchantEmail: "vintage@example.com",
-    },
-    productName: "Limited Edition Vinyl",
-    category: {
-      categoryId: "cat3",
-      categoryName: "Music",
-    },
-    price: 75.0,
-    quantity: 15,
-    soldQuantity: 5,
-    description: "Rare first pressing of a classic album, still sealed.",
-    images: ["/placeholder.svg"],
-    variant: [],
-    size: [],
-    brand: "Columbia Records",
-    location: {
-      type: "Point",
-      coordinates: [40.7128, -74.006],
-    },
-    delivery: "FLAT",
-    deliveryPrice: 5.0,
-    status: "In Stock",
-    review: [],
-    createdAt: "2023-12-01T11:15:00Z",
-  },
-  {
-    id: "4",
-    merchantDetail: {
-      merchantId: "user123",
-      merchantName: "Vintage Treasures",
-      merchantEmail: "vintage@example.com",
-    },
-    productName: "Art Deco Lamp",
-    category: {
-      categoryId: "cat4",
-      categoryName: "Home Decor",
-    },
-    price: 220.0,
-    quantity: 0,
-    soldQuantity: 7,
-    description: "Original Art Deco lamp with stained glass shade.",
-    images: ["/placeholder.svg"],
-    variant: ["Green", "Blue"],
-    size: [],
-    brand: "Hand Made",
-    location: {
-      type: "Point",
-      coordinates: [40.7128, -74.006],
-    },
-    delivery: "FLAT",
-    deliveryPrice: 15.0,
-    status: "Out of Stock",
-    review: [],
-    createdAt: "2023-09-15T16:45:00Z",
-  },
-];
-
+  
 export function MerchantProducts() {
   const router = useRouter();
   const { toast } = useToast();
@@ -171,28 +41,21 @@ export function MerchantProducts() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Ensure sorting logic is deterministic
-  const sortedProducts = React.useMemo(() => {
-    if (!sortColumn) return products;
-    return [...products].sort((a, b) => {
-      if (a[sortColumn] < b[sortColumn]) return sortDirection === "asc" ? -1 : 1;
-      if (a[sortColumn] > b[sortColumn]) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [sortColumn, sortDirection]);
+  // const handleSort = (column) => {
+  //   if (sortColumn === column) {
+  //     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+  //   } else {
+  //     setSortColumn(column);
+  //     setSortDirection("asc");
+  //   }
+  // };
 
-  const handleSort = (column) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
-  const handleProductClick = (product) => {
-    router.push(`/dashboard/products/${product.id}`);
+  const handleProductClick = (productId) => {
+    router.push(`/products/${productId}`);
   };
 
   const handleAddProduct = () => {
@@ -205,25 +68,6 @@ export function MerchantProducts() {
     setIsEditProductOpen(true);
   };
 
-  const handleDeleteProduct = (product, e) => {
-    e.stopPropagation();
-    setSelectedProduct(product);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    toast({
-      title: "Product deleted",
-      description: `${selectedProduct.productName} has been deleted successfully.`,
-    });
-    setIsDeleteDialogOpen(false);
-  };
-
-  const getProductStatus = (product) => {
-    if (product.quantity <= 0) return "Out of Stock";
-    if (product.quantity <= 2) return "Low Stock";
-    return "In Stock";
-  };
   const handleSearch = (query) => {
     setSearchQuery(query);
     // Implement search logic here
@@ -233,15 +77,7 @@ export function MerchantProducts() {
     setFilter(value);
     // Implement filter logic here
   };
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.productName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "banned" && product.status === "Banned") ||
-      (filter === "out-of-stock" && product.quantity === 0) ||
-      (filter === "available" && product.quantity > 0);
-    return matchesSearch && matchesFilter;
-  });
+  
 
   const filters = [
     { value: "all", label: "All Products" },
@@ -249,6 +85,215 @@ export function MerchantProducts() {
     { value: "out-of-stock", label: "Out of Stock" },
     { value: "available", label: "Available Products" },
   ];
+  // Enhanced memoized calculations with better error handling
+  const sortedProducts = useMemo(() => {
+    try {
+      const safeProducts = Array.isArray(products) ? products : [];
+      if (!sortColumn) return safeProducts;
+      
+      return [...safeProducts].sort((a, b) => {
+        // Handle nested properties and potential undefined values
+        const valA = sortColumn.includes('.') 
+          ? sortColumn.split('.').reduce((o, i) => (o && o[i]) ? o[i] : "", a)
+          : a[sortColumn] || "";
+        
+        const valB = sortColumn.includes('.') 
+          ? sortColumn.split('.').reduce((o, i) => (o && o[i]) ? o[i] : "", b)
+          : b[sortColumn] || "";
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDirection === "asc" 
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
+        }
+        
+        return sortDirection === "asc" 
+          ? (valA < valB ? -1 : valA > valB ? 1 : 0)
+          : (valA > valB ? -1 : valA < valB ? 1 : 0);
+      });
+    } catch (err) {
+      console.error("Sorting error:", err);
+      return Array.isArray(products) ? products : [];
+    }
+  }, [products, sortColumn, sortDirection]);
+
+  const filteredProducts = useMemo(() => {
+    try {
+      if (!Array.isArray(sortedProducts)) return [];
+      
+      return sortedProducts.filter((product) => {
+        // Safely handle all properties with null checks
+        const productName = product?.productName || "";
+        const status = product?.status || "";
+        const quantity = product?.quantity ?? 0;
+        const categoryName = product?.category?.categoryName || "";
+        
+        const matchesSearch = 
+          productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          categoryName.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesFilter =
+          filter === "all" ||
+          (filter === "banned" && status === "Banned") ||
+          (filter === "out-of-stock" && quantity === 0) ||
+          (filter === "available" && quantity > 0);
+        
+        return matchesSearch && matchesFilter;
+      });
+    } catch (err) {
+      console.error("Filtering error:", err);
+      return [];
+    }
+  }, [sortedProducts, searchQuery, filter]);
+
+  // Enhanced fetch with retry logic
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/products');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products (HTTP ${response.status})`);
+      }
+      
+      const data = await response.json();
+      const productData = await data.products || []
+      const isArray = Array.isArray(productData);
+      
+      // Validate response structure
+      if (!isArray) {
+        throw new Error("Invalid data format: Expected array of products");
+      }
+      
+      // Additional data validation
+      const validatedProducts = productData.map(item => ({
+        _id: item._id || "",
+        productName: item.productName || "Unnamed Product",
+        category: item.category || { categoryName: "Uncategorized" },
+        status: item.status || "Unknown",
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 0,
+        soldQuantity: Number(item.soldQuantity) || 0,
+        images: Array.isArray(item.images) ? item.images : ["/placeholder.svg"],
+        deliveryPrice: item.deliveryPrice,
+        location: item.location
+      }));
+      
+      setProducts(validatedProducts);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message);
+      setProducts([]);
+      
+      // Show error toast only if it's not the initial load
+      if (products.length > 0) {
+        toast({
+          title: "Failed to load products",
+          description: err.message,
+          variant: "destructive",
+          action: (
+            <Button variant="ghost" onClick={fetchProducts}>
+              Retry
+            </Button>
+          )
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, products.length]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Enhanced delete handler with confirmation
+  const handleDeleteProduct = useCallback(async (product, e) => {
+    e?.stopPropagation();
+    setSelectedProduct(product);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/products?productId=${selectedProduct?._id}`, {
+        method: 'DELETE',
+        // headers: {
+        //   'Content-Type': 'application/json',
+        // },
+        // body: JSON.stringify({ productId: selectedProduct?._id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      // Update local state
+        setProducts(prev => prev.map(p => 
+          p._id === selectedProduct._id ? {...p, isDeleted: true} : p
+        ));
+        
+        toast({
+          title: "Product moved to trash",
+          description: `${selectedProduct?.productName} will be permanently deleted after 30 days.`,
+        });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: err.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleteDialogOpen(false);
+      }
+    }, [selectedProduct, toast]);
+
+  const handleSort = useCallback((column) => {
+    setSortColumn(prev => {
+      // Toggle direction if sorting same column
+      if (prev === column) {
+        setSortDirection(dir => dir === "asc" ? "desc" : "asc");
+        return column;
+      }
+      // New column, reset to ascending
+      setSortDirection("asc");
+      return column;
+    });
+  }, []);
+
+  const getProductStatus = useCallback((product) => {
+    const quantity = product?.quantity ?? 0;
+    if (quantity <= 0) return "Out of Stock";
+    if (quantity <= 2) return "Low Stock";
+    return "In Stock";
+  }, []);
+
+  // Loading and error states
+  if (loading && products.length === 0) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-4">Loading products...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && products.length === 0) {
+    return (
+      <div className="container p-6">
+        <div className="bg-destructive/10 p-4 rounded-lg flex flex-col items-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={fetchProducts} variant="outline">
+            Retry Loading
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container p-6">
@@ -273,20 +318,20 @@ export function MerchantProducts() {
         <Table className="min-w-[600px] w-full">
           <TableHeader>
             <TableRow>
-              <TableHead  >Product</TableHead>
-              <TableHead className="cursor-pointer" OnClick={() => handleSort("category")}>
+              <TableHead>Product</TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("category")}>
                 Category
               </TableHead>
-              <TableHead className="cursor-pointer" OnClick={() => handleSort("status")}>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                 Status
               </TableHead>
-              <TableHead className="cursor-pointer" OnClick={() => handleSort("price")}>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("price")}>
                 Price
               </TableHead>
-              <TableHead className="cursor-pointer" OnClick={() => handleSort("quantity")}>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("quantity")}>
                 Available
               </TableHead>
-              <TableHead className="cursor-pointer" OnClick={() => handleSort("soldQuantity")}>
+              <TableHead className="cursor-pointer" onClick={() => handleSort("soldQuantity")}>
                 Sold
               </TableHead>
               <TableHead className="">Actions</TableHead>
@@ -295,9 +340,9 @@ export function MerchantProducts() {
           <TableBody>
             {filteredProducts.map((product) => (
               <TableRow
-                key={product.id}
+                key={product._id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => handleProductClick(product)}
+                onClick={() => handleProductClick(product._id)}
               >
                 <TableCell>
                   <div className="flex items-center gap-2 sm:gap-4">
@@ -375,7 +420,9 @@ export function MerchantProducts() {
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to delete this product?</AlertDialogTitle>
+              <AlertDialogTitle>
+              {/* <VisuallyHidden>Delete Confirmation</VisuallyHidden> */}
+              Are you sure you want to delete this product?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the product "{selectedProduct?.productName}"
                 and remove it from our servers.
@@ -392,6 +439,7 @@ export function MerchantProducts() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
       </div>
     </div>
   );

@@ -156,7 +156,7 @@ export function AuctionCard({ auction }) {
               <AvatarImage src={auction.seller.avatar} alt={auction.seller.name} />
               <AvatarFallback className="bg-primary/10 text-primary">{auction.seller.name[0]}</AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground">{auction.merchantId.name}</span>
+            <span className="text-xs text-muted-foreground">{auction.seller.name}</span>
           </div>
           <Dialog>
             <DialogTrigger asChild>

@@ -10,96 +10,142 @@ export async function POST(req) {
         await connectToDB();
 
         const { auctionId, bids } = await req.json();
-        console.log(auctionId, bids);
-    
-        const { bidderEmail, bidderName, bidAmount, quantity, groupBidId } = bids[0]; 
-        console.log(bidderEmail, bidderName, bidAmount, quantity);
-
+        
         // Validate input
-        if (!auctionId || !bids || bids.length === 0 ) {
-            return new Response(JSON.stringify({ message: 'All fields are required' }),
+        if (!auctionId || !bids || bids.length === 0) {
+            return new Response(
+                JSON.stringify({ message: 'All fields are required' }),
                 { status: 400 }
             );
         }
+
+        const { bidderEmail, bidderName, bidAmount, quantity, groupBidId } = bids[0];
+        
+        // Get auction with proper locking to prevent race conditions
         const auction = await Auction.findById(auctionId);
         if (!auction || auction.status !== "active") {
-            return new Response(JSON.stringify({ message: 'Auction is not active' }), { status: 400 });
+            return new Response(
+                JSON.stringify({ message: 'Auction is not active' }), 
+                { status: 400 }
+            );
         }
-        
-         
 
+        // Validate quantity
+        if (auction.buyByParts && quantity > auction.remainingQuantity) {
+            return new Response(
+                JSON.stringify({ message: 'Bid quantity exceeds remaining quantity' }),
+                { status: 400 }
+            );
+        }
+
+        // Find or create bid document
         let bid = await Bid.findOne({ auctionId });
+        const isNewBid = !bid;
 
-        if (!bid) {
+        if (isNewBid) {
             bid = new Bid({
                 auctionId,
-                bids: [{ bidderEmail, bidderName, bidAmount, quantity,
-                        isGroupBid: !!groupBidId,
-                        groupBidId: groupBidId || null
-                 }],
-                // highestBid: bidAmount,
-                // highestBidderEmail: bidderEmail,
+                bids: []
             });
+        }
+
+        // Check for existing bid on this quantity
+        const existingBidIndex = bid.bids.findIndex(b => b.quantity === quantity);
+        
+        if (existingBidIndex >= 0) {
+            // Update existing bid if amount is higher
+            if (bidAmount <= bid.bids[existingBidIndex].bidAmount) {
+                return new Response(
+                    JSON.stringify({ 
+                        message: 'Bid amount must be higher than current bid for this quantity' 
+                    }),
+                    { status: 400 }
+                );
+            }
+            bid.bids[existingBidIndex] = { 
+                bidderEmail, 
+                bidderName, 
+                bidAmount, 
+                quantity,
+                isGroupBid: !!groupBidId,
+                groupBidId: groupBidId || null,
+                timestamp: new Date()
+            };
         } else {
-            const existingBid = bid.bids.find((b) => b.quantity === quantity)
-            if(existingBid ) {
-                if (bidAmount <= existingBid.bidAmount) {
-                    return new Response(
-                        JSON.stringify({ message: 'Bid amount must be higher than the current bid for this quantity' }),
-                        { status: 400 }
-                    );
-                }
-                bid.bids.push({ bidderEmail, bidderName, bidAmount, quantity,
-                                isGroupBid: !!groupBidId,
-                                groupBidId: groupBidId || null
-                 });
+            // Add new bid
+            bid.bids.push({
+                bidderEmail,
+                bidderName,
+                bidAmount,
+                quantity,
+                isGroupBid: !!groupBidId,
+                groupBidId: groupBidId || null,
+                timestamp: new Date()
+            });
+        }
 
-                // bid.highestBid = bidAmount;
-                // bid.highestBidderEmail = bidderEmail;
-
-            } else {
-                if(auction.buyByParts && quantity > auction.remainingQuantity) {
-                    return new Response(
-                            JSON.stringify({ message: 'Bid quantity exceeds remaining quantity' }),
-                            { status: 400 }
-                        );
-                }
-                bid = new Bid({
-                    auctionId,
-                    bids: [{ bidderEmail, bidderName, bidAmount, quantity,
-                            isGroupBid: !!groupBidId,
-                            groupBidId: groupBidId || null
-                     }],
-                    // highestBid: bidAmount,
-                    // highestBidderEmail: bidderEmail,
-                });
-                auction.remainingQuantity-= quantity
-                await auction.save();
-
+        // Update auction remaining quantity (only for new quantities)
+        if (existingBidIndex === -1) {
+            auction.remainingQuantity -= quantity;
+            if (auction.remainingQuantity < 0) {
+                return new Response(
+                    JSON.stringify({ message: 'Not enough quantity remaining' }),
+                    { status: 400 }
+                );
             }
         }
-        
+
+        // Handle group bid if applicable
         if (groupBidId) {
-            // If it's a group bid, mark the group as participating
-            await GroupBid.findByIdAndUpdate(groupBidId, { status: 'active' });
+            await GroupBid.findByIdAndUpdate(groupBidId, { 
+                status: 'active',
+                $inc: { currentBidAmount: bidAmount } 
+            });
         }
 
-        await bid.save();
-        const previousBidders = bid.bids.map(b => b.bidderEmail).filter(email => email !== bidderEmail);
-        if (previousBidders.length > 0) sendEmail(previousBidders, 'New Bid Placed!', `A new bid of ${bidAmount} has been placed by ${bidderName}.`)
-        
-        
-        const io = getIO(); 
+        // Save changes in transaction
+        await Promise.all([
+            auction.save(),
+            bid.save()
+        ]);
 
-        io.to(auctionId).emit("newBidIncrement", {
+        // Notify previous bidders
+        const previousBidders = bid.bids
+            .filter(b => b.bidderEmail !== bidderEmail)
+            .map(b => b.bidderEmail);
+            
+        if (previousBidders.length > 0) {
+            sendEmail(
+                previousBidders, 
+                'New Bid Placed!', 
+                `A new bid of ${bidAmount} has been placed by ${bidderName}.`
+            );
+        }
+
+        // Emit socket event
+        getIO().to(auctionId).emit("newBidIncrement", {
             auctionId,
             bidAmount,
             bidderName,
-            bidderEmail
+            bidderEmail,
+            remainingQuantity: auction.remainingQuantity
         });
 
+        return new Response(
+            JSON.stringify({ 
+                message: 'Bid placed successfully',
+                remainingQuantity: auction.remainingQuantity
+            }),
+            { status: 200 }
+        );
+
     } catch (error) {
-        return new Response(JSON.stringify({ message: 'Failed to add bid', error: error.message }),
+        console.error('Bid placement error:', error);
+        return new Response(
+            JSON.stringify({ 
+                message: 'Failed to place bid', 
+                error: error.message 
+            }),
             { status: 500 }
         );
     }

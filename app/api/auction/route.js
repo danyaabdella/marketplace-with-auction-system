@@ -2,29 +2,35 @@ import { checkProductAvailability, connectToDB, userInfo } from "@/libs/function
 import Auction from "@/models/Auction";
 import { getToken } from "next-auth/jwt";
 import { scheduleAuctionEnd } from "@/libs/functions";
+import { withAuth } from "@/middleware/authMiddleware";
 
     export async function POST(req) {
         try {
-
-            const auctionData = await req.json();
-            const userData = await userInfo();
+            const authResponse = await withAuth("merchant")(req);
+            if (authResponse) return authResponse;  
             
-            if (!userData || userData.role !== "merchant") {
-                return new Response(
-                    JSON.stringify({ error: "Unauthorized: Only merchants can create auctions" }),
-                    { status: 403 }
-                );
-            }
+            const { user } = req; 
+            const auctionData = await req.json();
+            console.log("Received auction data:", auctionData);
+            // const userData = await userInfo(req);
+            // console.log("User data:", userData);
+            
+            // if (!userData || userData.role !== "merchant") {
+            //     return new Response(
+            //         JSON.stringify({ error: "Unauthorized: Only merchants can create auctions" }),
+            //         { status: 403 }
+            //     );
+            // }
     
             // Ensure the auction belongs to the logged-in merchant
-            if (auctionData.merchantId && auctionData.merchantId !== userData.id) {
-                return new Response(
-                    JSON.stringify({ error: "Unauthorized: You are not the owner of this auction" }),
-                    { status: 403 }
-                );
-            }
+            // if (auctionData.merchantId && auctionData.merchantId !== userData.id) {
+            //     return new Response(
+            //         JSON.stringify({ error: "Unauthorized: You are not the owner of this auction" }),
+            //         { status: 403 }
+            //     );
+            // }
 
-            auctionData.merchantId = userData._id;
+            // auctionData.merchantId = userData._id;
             if( auctionData.productId ) {
                 const availability = await checkProductAvailability(auctionData.productId, auctionData.quantity);
 
@@ -37,7 +43,10 @@ import { scheduleAuctionEnd } from "@/libs/functions";
             }
             
 
-            const newAuction = await Auction.create(auctionData);
+            const newAuction = await Auction.create({
+                ...auctionData,
+                merchantId: user._id
+            });
             await scheduleAuctionEnd(newAuction);
             return new Response(
                 JSON.stringify({ message: "Auction created successfully", auction: newAuction }),

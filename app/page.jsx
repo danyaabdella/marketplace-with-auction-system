@@ -97,7 +97,7 @@ export default function Home() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const categoriesResponse = await fetch("/api/category");
+      const categoriesResponse = await fetch("/api/categories");
       if (!categoriesResponse.ok) throw new Error("Failed to fetch categories");
       const fetchedCategories = await categoriesResponse.json();
       setCategories(fetchedCategories);
@@ -267,9 +267,9 @@ export default function Home() {
           <div className="flex overflow-x-auto gap-4 justify-between">
             {displayedCategories.map((category) => (
               <Button
-                key={category.id}
+                key={category._id}
                 variant="outline"
-                onClick={() => scrollToSection(category.id)}
+                onClick={() => scrollToSection(category._id)}
               >
                 {category.name}
               </Button>

@@ -97,54 +97,155 @@
 //     </div>
 //   )
 // }
-"use client"; // Ensure this is a client component
+// "use client"; // Ensure this is a client component
 
-import { useEffect, useState } from "react";
-import { AuctionCard } from "@/components/auction-card";
+// import { useEffect, useState } from "react";
+// import { AuctionCard } from "@/components/auction-card";
+
+// export function AuctionGrid() {
+//   const [auctions, setAuctions] = useState([]); // State to store fetched auctions
+//   const [loading, setLoading] = useState(true); // State to track loading status
+//   const [error, setError] = useState(null); // State to track errors
+
+//   // Fetch auctions from the API
+//   useEffect(() => {
+//     const fetchAuctions = async () => {
+//       try {
+//         const response = await fetch("/api/fetchAuctions?type=all-active"); // Fetch all active auctions
+//         if (!response.ok) {
+//           throw new Error("Failed to fetch auctions");
+//         }
+
+//         const data = await response.json();
+//         setAuctions(data); // Update the auctions state with fetched data
+//       } catch (error) {
+//         console.error("Error fetching auctions:", error);
+//         setError(error.message); // Set error state
+//       } finally {
+//         setLoading(false); // Set loading to false
+//       }
+//     };
+
+//     fetchAuctions();
+//   }, []);
+
+//   // Display loading state
+//   if (loading) {
+//     return <div className="text-center py-8">Loading auctions...</div>;
+//   }
+
+//   // Display error state
+//   if (error) {
+//     return <div className="text-center py-8 text-red-500">Error: {error}</div>;
+//   }
+
+//   // Display auctions
+//   return (
+//     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+//       {auctions.map((auction) => (
+//         <AuctionCard key={auction._id} auction={auction} />
+//       ))}
+//     </div>
+//   );
+// }
+"use client"
+
+import { AuctionCard } from "./auction-card"
+import { useEffect, useState } from "react"
 
 export function AuctionGrid() {
-  const [auctions, setAuctions] = useState([]); // State to store fetched auctions
-  const [loading, setLoading] = useState(true); // State to track loading status
-  const [error, setError] = useState(null); // State to track errors
+  const [auctions, setAuctions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Fetch auctions from the API
   useEffect(() => {
     const fetchAuctions = async () => {
       try {
-        const response = await fetch("/api/fetchAuctions?type=all-active"); // Fetch all active auctions
+        setLoading(true)
+        const response = await fetch('/api/fetchAuctions?type=all-active')
+        
         if (!response.ok) {
-          throw new Error("Failed to fetch auctions");
+          throw new Error('Failed to fetch auctions')
         }
 
-        const data = await response.json();
-        setAuctions(data); // Update the auctions state with fetched data
-      } catch (error) {
-        console.error("Error fetching auctions:", error);
-        setError(error.message); // Set error state
+        const data = await response.json()
+        setAuctions(data)
+      } catch (err) {
+        setError(err.message)
+        console.error('Error fetching auctions:', err)
       } finally {
-        setLoading(false); // Set loading to false
+        setLoading(false)
       }
-    };
+    }
 
-    fetchAuctions();
-  }, []);
+    fetchAuctions()
+  }, [])
 
-  // Display loading state
   if (loading) {
-    return <div className="text-center py-8">Loading auctions...</div>;
+    return (
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+        ))}
+      </div>
+    )
   }
 
-  // Display error state
   if (error) {
-    return <div className="text-center py-8 text-red-500">Error: {error}</div>;
+    return (
+      <div className="text-center py-8 text-red-500">
+        Error loading auctions: {error}
+      </div>
+    )
   }
 
-  // Display auctions
+  if (auctions.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No active auctions found
+      </div>
+    )
+  }
+
+  // Transform auction data to match your card component's expected format
+  const transformedAuctions = auctions.map(auction => ({
+    id: auction._id,
+    title: auction.productId?.productName || 'Untitled Auction',
+    description: auction.description || 'No description available',
+    currentBid: auction.startingPrice, // You might want to fetch actual current bid
+    bids: 0, // You'll need to fetch bid count from your database
+    timeLeft: calculateTimeLeft(auction.endTime),
+    imageUrl: auction.itemImg?.[0] || '/placeholder.svg',
+    seller: {
+      name: auction.merchantId?.fullName || 'Unknown Seller',
+      avatar: '/placeholder.svg'
+    }
+  }))
+
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {auctions.map((auction) => (
+      {transformedAuctions.map((auction) => (
         <AuctionCard key={auction._id} auction={auction} />
       ))}
     </div>
-  );
+  )
+}
+
+// Helper function to calculate time left
+function calculateTimeLeft(endTime) {
+  const now = new Date()
+  const end = new Date(endTime)
+  const diff = end - now
+
+  if (diff <= 0) return 'Ended'
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(hours / 24)
+  const remainingHours = hours % 24
+
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`
+  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`
+  
+  const minutes = Math.floor(diff / (1000 * 60))
+  return `${minutes} minute${minutes !== 1 ? 's' : ''}`
 }

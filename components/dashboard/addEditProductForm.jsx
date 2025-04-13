@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react"
@@ -36,8 +37,6 @@ const formSchema = z.object({
   longitude: z.string().optional(),
 })
 
-
-
 export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const { toast } = useToast()
   const [variants, setVariants] = useState([])
@@ -45,8 +44,8 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const [sizes, setSizes] = useState([])
   const [newSize, setNewSize] = useState("")
   const [images, setImages] = useState([])
-  const [categories, setCategories] = useState([]);
-
+  const [categories, setCategories] = useState([])
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -62,11 +61,12 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       longitude: "",
     },
   })
+  
 
   // Initialize form with product data when editing
   useEffect(() => {
     if (mode === "edit" && product) {
-      form.reset({
+      const initialValues = {
         productName: product.productName,
         categoryId: product.category.categoryId,
         price: product.price.toString(),
@@ -74,15 +74,17 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         description: product.description,
         brand: product.brand,
         delivery: product.delivery,
-        deliveryPrice: product.deliveryPrice.toString(),
-        latitude: product.location.coordinates[0].toString(),
-        longitude: product.location.coordinates[1].toString(),
-      })
-      setVariants(product.variant || [])
-      setSizes(product.size || [])
-      setImages(product.images || [])
+        deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice.toString(),
+        latitude: product.location?.coordinates[1]?.toString() || "",
+        longitude: product.location?.coordinates[0]?.toString() || "",
+      };
+  
+      form.reset(initialValues);
+      setVariants(product.variant || []);
+      setSizes(product.size || []);
+      setImages(product.images || []);
+    
     } else {
-      // Reset form for add mode
       form.reset({
         productName: "",
         categoryId: "",
@@ -100,22 +102,24 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       setImages([])
     }
   }, [form, mode, product])
-  console.log("Category ID:", form.getValues("categoryId"));
+  const { formState } = form
+  const isDirty = formState.isDirty
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories"); // Adjust the endpoint if necessary
-        if (!response.ok) throw new Error("Failed to fetch categories");
-        
-        const data = await response.json();
-        setCategories(data);
+        const response = await fetch("/api/categories")
+        if (!response.ok) throw new Error("Failed to fetch categories")
+        const data = await response.json()
+        setCategories(data)
       } catch (error) {
-        console.error("Error fetching categories:", error.message);
-      } 
-    };
-    fetchCategories();
-  }, []);
+        console.error("Error fetching categories:", error.message)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // ... (keep all your existing handler functions unchanged)
 
   const handleAddVariant = () => {
     if (newVariant && !variants.includes(newVariant)) {
@@ -152,68 +156,155 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   }
 
   // Handle form submission
+  // const onSubmit = async (values) => {
+  //   // Find the selected category to get its name
+  //   const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
+  //   if (!selectedCategory) {
+  //     toast({
+  //       title: "Error",
+  //       description: "Selected category not found.",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  
+  //   // Construct productData with explicit fields to match the schema
+  //   const productData = {
+  //     productName: values.productName,
+  //     category: {
+  //       categoryId: values.categoryId,
+  //       categoryName: selectedCategory.name,
+  //     },
+  //     price: Number(values.price), // Convert string to number
+  //     quantity: Number(values.quantity), // Convert string to number
+  //     description: values.description,
+  //     brand: values.brand || "Hand Made",
+  //     delivery: values.delivery,
+  //     deliveryPrice: Number(values.deliveryPrice), // Convert string to number
+  //     variant: variants,
+  //     size: sizes,
+  //     images: images, // Note: Images should be URLs, addressed below
+  //     location: {
+  //       type: "Point",
+  //       coordinates: [Number.parseFloat(values.longitude || "0"), Number.parseFloat(values.latitude || "0")],
+  //     },
+  //   };
+  
+  //   try {
+  //     const response = await fetch(
+  //       mode === "add" ? "/api/product" : `/api/product/${product.id}`,
+  //       {
+  //         method: mode === "add" ? "POST" : "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(productData),
+  //       }
+  //     );
+  
+  //     const data = await response.json();
+  
+  //     if (response.ok) {
+  //       toast({
+  //         title: mode === "add" ? "Product added" : "Product updated",
+  //         description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
+  //       });
+  //       onOpenChange(false);
+  //     } else {
+  //       toast({
+  //         title: "Error",
+  //         description: data.message || "Something went wrong. Please try again.",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Something went wrong. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
+  // Enhanced form submission
   const onSubmit = async (values) => {
-    const productData = {
-      ...values,
-      variant: variants,
-      size: sizes,
-      images: images,
-      location: {
-        type: "Point",
-        coordinates: [Number.parseFloat(values.latitude || "0"), Number.parseFloat(values.longitude || "0")],
-      },
-    }
-
     try {
-      const response = await fetch(
-        mode === "add" ? "/api/products" : `/api/products/${product.id}`,
-        {
-          method: mode === "add" ? "POST" : "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(productData),
-        }
-      )
-
-      const data = await response.json()
-
-      if (response.ok) {
-        toast({
-          title: mode === "add" ? "Product added" : "Product updated",
-          description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
-        })
-        onOpenChange(false)
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "Something went wrong. Please try again.",
-          variant: "destructive",
-        })
+      const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
+      if (!selectedCategory) {
+        throw new Error("Selected category not found");
       }
+
+      const productData = {
+        productName: values.productName,
+        category: {
+          categoryId: values.categoryId,
+          categoryName: selectedCategory.name,
+        },
+        price: Number(values.price),
+        quantity: Number(values.quantity),
+        description: values.description,
+        brand: values.brand,
+        delivery: values.delivery,
+        deliveryPrice: values.delivery === "FREE" ? 0 : Number(values.deliveryPrice),
+        variant: variants,
+        size: sizes,
+        images: images,
+        location: {
+          type: "Point",
+          coordinates: [
+            Number(values.longitude) || 0, 
+            Number(values.latitude) || 0
+          ],
+        },
+      };
+
+      const url = mode === "add" 
+        ? "/api/product" 
+        : `/api/product?productId=${product._id}`;
+
+      const response = await fetch(url, {
+        method: mode === "add" ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to save product");
+      }
+
+      toast({
+        title: `Product ${mode === "add" ? "added" : "updated"}`,
+        description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
+      });
+      onOpenChange(false);
     } catch (error) {
-      console.error("Error:", error)
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        {/* Proper DialogHeader structure with required DialogTitle */}
         <DialogHeader>
           <DialogTitle>{mode === "add" ? "Add New Product" : "Edit Product"}</DialogTitle>
           <DialogDescription>
-            {mode === "add"
-              ? "Fill in the details to add a new product to your inventory."
-              : "Update the details of your existing product."}
+            {mode === "add" 
+              ? "Fill in the details to add a new product to your inventory" 
+              : "Update your existing product details"}
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Keep all your existing form fields exactly as they are */}
+            {/* ... */}
             <FormField
               control={form.control}
               name="productName"
@@ -490,7 +581,11 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="gradient-bg border-0">
+              <Button 
+                type="submit"
+                className="gradient-bg border-0"
+                disabled={mode === 'edit' && !isDirty}
+              >
                 {mode === "add" ? "Add Product" : "Update Product"}
               </Button>
             </DialogFooter>
@@ -500,4 +595,3 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
     </Dialog>
   )
 }
-

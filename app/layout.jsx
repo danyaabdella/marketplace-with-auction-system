@@ -17,9 +17,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-      <html lang="en" className="scroll-smooth overflow-x-hidden mt-8">
+      <html lang="en" className="scroll-smooth overflow-x-hidden mt-8" suppressHydrationWarning>
         <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <CartProvider>
               <ContextProvider>
                 <Navbar />
