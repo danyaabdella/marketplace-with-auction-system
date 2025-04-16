@@ -9,15 +9,15 @@ const UserSchema = new Schema(
       unique: true
     }, 
     password: { type: String, required: true },
+    bio: {type: String},
     role: { 
       type: String, 
       enum: ['customer', 'merchant'],
       default: 'customer' 
     },
-    image: { type: String, default: " " },
+    image: { type: String, default: '/default-avatar.png'},
     isBanned: { type: Boolean, default: false },
     bannedBy: { type: String, required: function() { return this.isBanned === true; } },
-    isEmailVerified: { type: Boolean, default: false },
     stateName: { type: String, required: false },
     cityName: { type: String, required: false },
     phoneNumber: { type: String, required: false },

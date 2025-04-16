@@ -131,7 +131,9 @@ export async function userInfo(req) {
       }
       
       await connectToDB();
-      let userInfo = await User.findOne({ email: session.user.email });
+      let userInfo = await User.findOne({ email: session.user.email })
+            .select('-image ')
+            .lean();
       
       if (!userInfo) {
         return null;

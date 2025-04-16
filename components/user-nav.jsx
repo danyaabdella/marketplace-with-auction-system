@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +24,22 @@ export function UserNav({ user }) {
     const initials = names.map((n) => n[0]).join("");
     return initials.toUpperCase().slice(0, 2); // e.g., "John Doe" -> "JD"
   };
+  const [avatarUrl, setAvatarUrl] = useState('/default-avatar.png');
+
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        const res = await fetch('api/user');
+        const data = await res.json();
+        if (data.image) setAvatarUrl(data.image);
+      } catch (error) {
+        console.error('Error fetching avatar:', error);
+      }
+    };
+    
+    fetchAvatar();
+  }, []);
+
 
   return (
     <DropdownMenu>
@@ -30,8 +47,9 @@ export function UserNav({ user }) {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8 border border-primary/20 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
             <AvatarImage
-              src={user?.image || "/placeholder.svg?height=32&width=32"}
+              src={avatarUrl}
               alt={user?.name || "User"}
+              className="object-fit"
             />
             <AvatarFallback className="bg-primary/10 text-primary">
               {getInitials(user?.name)}
@@ -58,12 +76,14 @@ export function UserNav({ user }) {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
+          {user?.role == 'merchant' && 
+            <DropdownMenuItem asChild>
             <Link href="/dashboard" className="flex items-center gap-2">
               <LayoutDashboard className="mr-2 h-4 w-4" />
               <span>Dashboard</span>
             </Link>
           </DropdownMenuItem>
+          }
           <DropdownMenuItem asChild>
             <Link href="/auctions/my_auctions" className="flex items-center gap-2">
               <CreditCard className="mr-2 h-4 w-4" />

@@ -25,6 +25,7 @@ import { cn } from "@/libs/utils"
 import { useSession } from "next-auth/react"
 import { SignInDialog } from "./sign-in-dialogue"
 import { SignUpDialog } from "./sign-up-dialogue"
+import { useCart } from "@/components/cart-provider"
 
 export function Navbar() {
   const [showSignIn, setShowSignIn] = useState(false)
@@ -32,7 +33,10 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const { data: session, status } = useSession()
   const pathname = usePathname()
-
+  const { cart } = useCart()
+  const cartItemCount = cart.merchants.reduce((total, merchant) => {
+    return total + merchant.products.reduce((sum, product) => sum + product.quantity, 0)
+  }, 0)
   // Handle scroll effect for header styling
   useEffect(() => {
     const handleScroll = () => {
@@ -151,7 +155,7 @@ export function Navbar() {
                 {/* Cart count badge */}
                 {status === "authenticated" && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    0
+                    {cartItemCount}
                   </span>
                 )}
                 <span className="sr-only">Cart</span>

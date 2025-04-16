@@ -20,7 +20,9 @@ export const options = {
           await mongoose.connect(process.env.MONGO_URL);
         }
 
-        const user = await User.findOne({ email: credentials?.email });
+        const user = await User.findOne({ email: credentials?.email })
+              .select('-image -tinNumber -nationalId -uniqueTinNumber')
+              .lean();
         console.log("User found:", user);
 
         if (!user) {
@@ -37,7 +39,12 @@ export const options = {
           throw new Error('Email not verified');
         }
 
-        return { id: user._id, email: user.email, role: user.role, name: user.fullName || null };
+        return { 
+          id: user._id,
+          email: user.email,
+          role: user.role, 
+          name: user.fullName || null, 
+         };
       },
     }),
   ],

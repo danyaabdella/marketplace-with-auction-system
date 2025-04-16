@@ -223,7 +223,7 @@ export default function Home() {
         ) : loggedUser ? (
           <div>
             <h2 className="text-xl font-bold">
-              Welcome, {loggedUser.name || "User"}!
+              Welcome, {loggedUser.fullName || "User"}!
             </h2>
           </div>
         ) : null}

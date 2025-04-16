@@ -97,7 +97,7 @@ export function EndingSoonAuctions() {
     const fetchAuctions = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/auction/endingSoon')
+        const response = await fetch('/api/fetchAuctions/endingSoon')
         
         if (!response.ok) {
           throw new Error('Failed to fetch auctions')

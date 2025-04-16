@@ -1,20 +1,16 @@
-import { checkSession, connectToDB } from "@/libs/functions";
+import { checkSession, connectToDB, userInfo } from "@/libs/functions";
 import User from "@/models/User";
 import argon2 from 'argon2';
 
 export async function GET(req) {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email");
-    const sessionError = await checkSession(email);
-
-    if (!email || sessionError) {
-        return new Response(JSON.stringify({ error: "Email is required OR Invalid  email" }), { status: 400 });
-    }
+    const user = await userInfo(req)
+    if (!user) 
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
     try {
         await connectToDB();
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: user.email });
 
         if (existingUser) {
             return new Response(JSON.stringify(existingUser), {
@@ -37,7 +33,8 @@ export async function PUT(req) {
             _id, 
             email, 
             fullName, 
-            password, 
+            password,
+            bio, 
             image, 
             stateName, 
             cityName, 
@@ -71,6 +68,7 @@ export async function PUT(req) {
         // Allow updates to profile fields
         if (fullName) updateData.fullName = fullName;
         if (password) updateData.password = await argon2.hash(password);  
+        if(bio) updateData.bio = bio;
         if (image) updateData.image = image;
         if (stateName) updateData.stateName = stateName;
         if (cityName) updateData.cityName = cityName;

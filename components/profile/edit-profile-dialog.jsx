@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -20,8 +20,9 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "react-hot-toast"
 import { Edit, Loader2, Upload } from "lucide-react"
+import { State, City } from "country-state-city";
 
 // Form schema with validation
 const profileFormSchema = z.object({
@@ -34,64 +35,40 @@ const profileFormSchema = z.object({
   image: z.any().optional(),
 })
 
-// Mock states data - replace with actual data in production
-const states = [
-  { value: "new-york", label: "New York" },
-  { value: "california", label: "California" },
-  { value: "texas", label: "Texas" },
-  { value: "florida", label: "Florida" },
-  { value: "illinois", label: "Illinois" },
-]
-
-// Mock cities data - in production, this would be filtered based on selected state
-const cities = {
-  "new-york": [
-    { value: "new-york-city", label: "New York City" },
-    { value: "buffalo", label: "Buffalo" },
-    { value: "rochester", label: "Rochester" },
-  ],
-  california: [
-    { value: "los-angeles", label: "Los Angeles" },
-    { value: "san-francisco", label: "San Francisco" },
-    { value: "san-diego", label: "San Diego" },
-  ],
-  texas: [
-    { value: "houston", label: "Houston" },
-    { value: "austin", label: "Austin" },
-    { value: "dallas", label: "Dallas" },
-  ],
-  florida: [
-    { value: "miami", label: "Miami" },
-    { value: "orlando", label: "Orlando" },
-    { value: "tampa", label: "Tampa" },
-  ],
-  illinois: [
-    { value: "chicago", label: "Chicago" },
-    { value: "aurora", label: "Aurora" },
-    { value: "naperville", label: "Naperville" },
-  ],
-}
-
-
 
 export function EditProfileDialog({ user, trigger }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [imagePreview, setImagePreview] = useState(user.image)
-  const [selectedState, setSelectedState] = useState(user.stateName || "")
-
+  const [imagePreview, setImagePreview] = useState(user?.image)
+  const [selectedState, setSelectedState] = useState(user?.stateName || "")
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
   // Initialize form with user data
   const form = useForm({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      fullName: user.fullName,
-      email: user.email,
-      phoneNumber: user.phoneNumber || "",
-      stateName: user.stateName || "",
-      cityName: user.cityName || "",
-      bio: user.bio || "",
+      fullName: user?.fullName,
+      email: user?.email,
+      phoneNumber: user?.phoneNumber || "",
+      stateName: user?.stateName || "",
+      cityName: user?.cityName || "",
+      bio: user?.bio || "",
     },
   })
+  useEffect(() => {
+    const ethiopiaStates = State.getStatesOfCountry("ET");
+    setStates(ethiopiaStates);
+  }, []);
+
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      if (value.stateName) {
+        const stateCities = City.getCitiesOfState("ET", value.stateName);
+        setCities(stateCities);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
 
   // Handle image upload
   const handleImageChange = (event) => {
@@ -107,35 +84,62 @@ export function EditProfileDialog({ user, trigger }) {
     }
   }
 
-  // Handle form submission
   async function onSubmit(data) {
-    setIsSubmitting(true)
-
+    setIsSubmitting(true);
+    
     try {
-      // In a real app, you would send this data to your API
-      console.log("Profile update data:", data)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      })
-
-      setOpen(false)
+      const formData = new FormData();
+      
+      // Append all fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'image') formData.append(key, value);
+      });
+      
+      if (data.image) {
+        formData.append('image', data.image);
+      }
+  
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        body: JSON.stringify({
+          _id: user._id,
+          email: user.email,
+          ...data,
+          image: data.image ? await convertToBase64(data.image) : undefined
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      if (!response.ok) throw new Error('Update failed');
+      
+      const updatedUser = await response.json();
+      
+      toast.success({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+      
+      setOpen(false);
+      window.location.reload(); // Or update context/state
+  
     } catch (error) {
-      console.error("Error updating profile:", error)
-      toast({
-        title: "Error",
-        description: "There was a problem updating your profile.",
-        variant: "destructive",
-      })
+      toast.fail(error.message,);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
+  // Add this helper function
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  };
   // Handle state change to update city options
   const handleStateChange = (value) => {
     setSelectedState(value)
@@ -164,8 +168,8 @@ export function EditProfileDialog({ user, trigger }) {
             {/* Profile Image */}
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="h-24 w-24 border-4 border-muted">
-                <AvatarImage src={imagePreview} alt={user.fullName} />
-                <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
+                <AvatarImage src={imagePreview} alt={user?.fullName} />
+                <AvatarFallback>{user?.fullName.charAt(0)}</AvatarFallback>
               </Avatar>
 
               <div className="flex items-center">
@@ -245,9 +249,9 @@ export function EditProfileDialog({ user, trigger }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {states.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
+                         {states.map((state) => (
+                          <SelectItem key={state.isoCode} value={state.isoCode}>
+                            {state.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -270,12 +274,11 @@ export function EditProfileDialog({ user, trigger }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {selectedState &&
-                          cities[selectedState]?.map((city) => (
-                            <SelectItem key={city.value} value={city.value}>
-                              {city.label}
-                            </SelectItem>
-                          ))}
+                        {cities.map((city) => (
+                          <SelectItem key={city.name} value={city.name}>
+                            {city.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
