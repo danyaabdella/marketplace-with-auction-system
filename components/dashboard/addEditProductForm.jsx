@@ -1,13 +1,11 @@
+"use client";
 
-"use client"
-
-import React from "react"
-import { useState, useEffect } from "react"
-import Image from "next/image"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,15 +13,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
-import { X, Plus, MapPin } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { X, Plus, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
+// Updated schema to include mass for PERKG delivery
 const formSchema = z.object({
   productName: z.string().min(2, { message: "Product name must be at least 2 characters." }),
   categoryId: z.string().min(1, { message: "Please select a category." }),
@@ -33,19 +32,23 @@ const formSchema = z.object({
   brand: z.string().optional(),
   delivery: z.enum(["FLAT", "PERPIECE", "PERKG", "FREE"]),
   deliveryPrice: z.string(),
+  mass: z.string().optional().refine((val) => {
+    if (val) return Number(val) > 0;
+    return true;
+  }, { message: "Mass must be a positive number." }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-})
+});
 
 export function AddEditProductForm({ open, onOpenChange, product, mode }) {
-  const { toast } = useToast()
-  const [variants, setVariants] = useState([])
-  const [newVariant, setNewVariant] = useState("")
-  const [sizes, setSizes] = useState([])
-  const [newSize, setNewSize] = useState("")
-  const [images, setImages] = useState([])
-  const [categories, setCategories] = useState([])
-  
+  const { toast } = useToast();
+  const [variants, setVariants] = useState([]);
+  const [newVariant, setNewVariant] = useState("");
+  const [sizes, setSizes] = useState([]);
+  const [newSize, setNewSize] = useState("");
+  const [images, setImages] = useState([]);
+  const [categories, setCategories] = useState([]);
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,33 +60,37 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       brand: "Hand Made",
       delivery: "FLAT",
       deliveryPrice: "0",
+      mass: "",
       latitude: "",
       longitude: "",
     },
-  })
-  
+  });
+
+  const { formState } = form;
+  const isDirty = formState.isDirty;
 
   // Initialize form with product data when editing
   useEffect(() => {
     if (mode === "edit" && product) {
       const initialValues = {
-        productName: product.productName,
-        categoryId: product.category.categoryId,
-        price: product.price.toString(),
-        quantity: product.quantity.toString(),
-        description: product.description,
-        brand: product.brand,
-        delivery: product.delivery,
-        deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice.toString(),
+        productName: product.productName || "",
+        categoryId: product.category?.categoryId || "",
+        price: product.price?.toString() || "",
+        quantity: product.quantity?.toString() || "",
+        description: product.description || "",
+        brand: product.brand || "Hand Made",
+        delivery: product.delivery || "FLAT",
+        deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice?.toString() || "0",
+        mass: product.mass?.toString() || "", // Initialize mass if exists
         latitude: product.location?.coordinates[1]?.toString() || "",
         longitude: product.location?.coordinates[0]?.toString() || "",
       };
-  
+
       form.reset(initialValues);
+      console.log('initialize', initialValues);
       setVariants(product.variant || []);
       setSizes(product.size || []);
       setImages(product.images || []);
-    
     } else {
       form.reset({
         productName: "",
@@ -94,139 +101,64 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         brand: "Hand Made",
         delivery: "FLAT",
         deliveryPrice: "0",
+        mass: "",
         latitude: "",
         longitude: "",
-      })
-      setVariants([])
-      setSizes([])
-      setImages([])
+      });
+      setVariants([]);
+      setSizes([]);
+      setImages([]);
     }
-  }, [form, mode, product])
-  const { formState } = form
-  const isDirty = formState.isDirty
-
+  }, [form, mode, product]);
+  
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories")
-        if (!response.ok) throw new Error("Failed to fetch categories")
-        const data = await response.json()
-        setCategories(data)
+        const response = await fetch("/api/categories");
+        if (!response.ok) throw new Error("Failed to fetch categories");
+        const data = await response.json();
+        setCategories(data);
       } catch (error) {
-        console.error("Error fetching categories:", error.message)
+        console.error("Error fetching categories:", error.message);
       }
-    }
-    fetchCategories()
-  }, [])
-
-  // ... (keep all your existing handler functions unchanged)
+    };
+    fetchCategories();
+  }, []);
 
   const handleAddVariant = () => {
     if (newVariant && !variants.includes(newVariant)) {
-      setVariants([...variants, newVariant])
-      setNewVariant("")
+      setVariants([...variants, newVariant]);
+      setNewVariant("");
     }
-  }
+  };
 
   const handleRemoveVariant = (variant) => {
-    setVariants(variants.filter((v) => v !== variant))
-  }
+    setVariants(variants.filter((v) => v !== variant));
+  };
 
   const handleAddSize = () => {
     if (newSize && !sizes.includes(newSize)) {
-      setSizes([...sizes, newSize])
-      setNewSize("")
+      setSizes([...sizes, newSize]);
+      setNewSize("");
     }
-  }
+  };
 
   const handleRemoveSize = (size) => {
-    setSizes(sizes.filter((s) => s !== size))
-  }
+    setSizes(sizes.filter((s) => s !== size));
+  };
 
   const handleImageUpload = (e) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-      setImages([...images, ...newImages])
+      const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
+      setImages([...images, ...newImages]);
     }
-  }
+  };
 
   const handleRemoveImage = (index) => {
-    setImages(images.filter((_, i) => i !== index))
-  }
+    setImages(images.filter((_, i) => i !== index));
+  };
 
-  // Handle form submission
-  // const onSubmit = async (values) => {
-  //   // Find the selected category to get its name
-  //   const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
-  //   if (!selectedCategory) {
-  //     toast({
-  //       title: "Error",
-  //       description: "Selected category not found.",
-  //       variant: "destructive",
-  //     });
-  //     return;
-  //   }
-  
-  //   // Construct productData with explicit fields to match the schema
-  //   const productData = {
-  //     productName: values.productName,
-  //     category: {
-  //       categoryId: values.categoryId,
-  //       categoryName: selectedCategory.name,
-  //     },
-  //     price: Number(values.price), // Convert string to number
-  //     quantity: Number(values.quantity), // Convert string to number
-  //     description: values.description,
-  //     brand: values.brand || "Hand Made",
-  //     delivery: values.delivery,
-  //     deliveryPrice: Number(values.deliveryPrice), // Convert string to number
-  //     variant: variants,
-  //     size: sizes,
-  //     images: images, // Note: Images should be URLs, addressed below
-  //     location: {
-  //       type: "Point",
-  //       coordinates: [Number.parseFloat(values.longitude || "0"), Number.parseFloat(values.latitude || "0")],
-  //     },
-  //   };
-  
-  //   try {
-  //     const response = await fetch(
-  //       mode === "add" ? "/api/product" : `/api/product/${product.id}`,
-  //       {
-  //         method: mode === "add" ? "POST" : "PUT",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         body: JSON.stringify(productData),
-  //       }
-  //     );
-  
-  //     const data = await response.json();
-  
-  //     if (response.ok) {
-  //       toast({
-  //         title: mode === "add" ? "Product added" : "Product updated",
-  //         description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
-  //       });
-  //       onOpenChange(false);
-  //     } else {
-  //       toast({
-  //         title: "Error",
-  //         description: data.message || "Something went wrong. Please try again.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error:", error);
-  //     toast({
-  //       title: "Error",
-  //       description: "Something went wrong. Please try again.",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
-  // Enhanced form submission
   const onSubmit = async (values) => {
     try {
       const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
@@ -246,22 +178,17 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         brand: values.brand,
         delivery: values.delivery,
         deliveryPrice: values.delivery === "FREE" ? 0 : Number(values.deliveryPrice),
+        mass: values.delivery === "PERKG" ? Number(values.mass) : undefined, // Include mass only for PERKG
         variant: variants,
         size: sizes,
         images: images,
         location: {
           type: "Point",
-          coordinates: [
-            Number(values.longitude) || 0, 
-            Number(values.latitude) || 0
-          ],
+          coordinates: [Number(values.longitude) || 0, Number(values.latitude) || 0],
         },
       };
 
-      const url = mode === "add" 
-        ? "/api/product" 
-        : `/api/product?productId=${product._id}`;
-
+      const url = mode === "add" ? "/api/products" : `/api/products?productId=${product._id}`;
       const response = await fetch(url, {
         method: mode === "add" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -269,7 +196,6 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.message || "Failed to save product");
       }
@@ -291,20 +217,15 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        {/* Proper DialogHeader structure with required DialogTitle */}
         <DialogHeader>
           <DialogTitle>{mode === "add" ? "Add New Product" : "Edit Product"}</DialogTitle>
           <DialogDescription>
-            {mode === "add" 
-              ? "Fill in the details to add a new product to your inventory" 
-              : "Update your existing product details"}
+            {mode === "add" ? "Fill in the details to add a new product to your inventory" : "Update your existing product details"}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Keep all your existing form fields exactly as they are */}
-            {/* ... */}
             <FormField
               control={form.control}
               name="productName"
@@ -343,6 +264,7 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                 </FormItem>
               )}
             />
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -508,7 +430,7 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Delivery Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select delivery type" />
@@ -540,6 +462,23 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                 )}
               />
             </div>
+
+            {/* Conditional Mass Input for PERKG */}
+            {form.watch("delivery") === "PERKG" && (
+              <FormField
+                control={form.control}
+                name="mass"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mass (kg)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Enter mass in kilograms" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Images */}
             <div>
@@ -581,10 +520,10 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="gradient-bg border-0"
-                disabled={mode === 'edit' && !isDirty}
+                disabled={mode === "edit" && !isDirty}
               >
                 {mode === "add" ? "Add Product" : "Update Product"}
               </Button>
@@ -593,5 +532,5 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

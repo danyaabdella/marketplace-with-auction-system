@@ -1,26 +1,56 @@
-import { connectToDB } from "@/libs/functions";
 import Category from "@/models/Category";
+import { connectToDB } from "@/libs/functions";
 
-export async function GET(req) {
-    try {
-      await connectToDB();
+export async function GET() {
+  try {
+    await connectToDB();
 
-      const { searchParams } = new URL(req.url);
-      const id = searchParams.get('id');
-      const name = searchParams.get('name');
-      const createdBy = searchParams.get('createdBy');
-      const createdAt = searchParams.get('createdAt');
-  
-      let query = {};
-      if (id) query._id = id;
-      if (name) query.name = name;
-      if (createdBy) query.createdBy = createdBy;
-      if (createdAt) query.createdAt = { $gte: new Date(createdAt) };
-  
-      const categories = await Category.find(query);
-  
-      return new Response(JSON.stringify(categories), { status: 200 });
-    } catch (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 400 });
-    }
+    // Aggregate categories with product count
+    const categories = await Category.aggregate([
+      {
+        $match: {
+          isDeleted: { $ne: true }, // Exclude deleted categories
+        },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: 'category.categoryId',
+          as: 'products',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          createdBy: 1,
+          productCount: { $size: '$products' },
+        },
+      },
+    ]).exec();
+
+    return new Response(JSON.stringify(categories), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+      }
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block'
+      }
+    });
   }
+}

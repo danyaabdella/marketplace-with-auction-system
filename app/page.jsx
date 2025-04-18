@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { fetchUserData } from "../libs/ui_functions";
-import ChatBot from "@/components/commons/ChatBot";
 
 export default function Home() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -16,26 +14,27 @@ export default function Home() {
   const [loggedUser, setLoggedUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false); // New loading state
 
-   // Fetch user data when session changes
-   useEffect(() => {
+  useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
         setIsLoadingUser(true); // Start loading
         console.log("Session: ", session.user.email);
         try {
-          const user = await fetchUserData(session.user.email);
-          console.log("User: ", user);
-          setLoggedUser(user);
+          const response = await fetch('/api/user'); 
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          const user = await response.json(); 
+          setLoggedUser(user); 
         } catch (error) {
           console.error("Error fetching user data:", error);
         } finally {
-          setIsLoadingUser(false); // Stop loading
+            setIsLoadingUser(false); // Stop loading
+          }  
         }
-      }
-    };
-
-    fetchUser();
-  }, [session]);
+      };
+      fetchUser();
+    }, [session])
   
   // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
   useEffect(() => {
