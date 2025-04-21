@@ -6,7 +6,6 @@ export async function GET(req) {
     const user = await userInfo(req)
     if (!user) 
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-
     try {
         await connectToDB();
 
@@ -25,7 +24,11 @@ export async function GET(req) {
     }
 }
 
+
 export async function PUT(req) {
+    const user = await userInfo(req)
+    if (!user) 
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     try {
         // Parse request body
         const body = await req.json();
@@ -124,6 +127,9 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
+    const user = await userInfo(req)
+    if (!user) 
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     try {
         const url = new URL(req.url);
         const email = url.searchParams.get("email");

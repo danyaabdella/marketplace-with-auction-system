@@ -34,7 +34,8 @@
 import mongoose from 'mongoose'
 
 const auctionSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    auctionTitle: {type: String, required: true},
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     description: String,
     condition: { type: String, enum: ['new', 'used'], required: true },
@@ -58,6 +59,10 @@ const auctionSchema = new mongoose.Schema({
     totalQuantity: { type: Number, default: 1 },
     remainingQuantity: { type: Number },
     buyByParts: { type: Boolean, default: false },
+    singleItemPrice: { 
+        type: Number, 
+        required: function() { return this.buyByParts; }
+    },
     category: { type: String, required: true }
 }, { timestamps: true })
 

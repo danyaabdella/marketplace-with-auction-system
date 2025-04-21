@@ -7,18 +7,28 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useCart } from "./cart-provider"
 import toast from "react-hot-toast"
+import { useSession } from "next-auth/react"
 
 export function ProductCard({ product }) {
 
-  if (!product?._id) {
-    console.error("Product missing ID:", product)
-    return null
+  if (!product || !product?._id) {
+    console.error("Product missing ID or invalid:", {
+      product,
+      hasProduct: !!product,
+      hasId: product?._id,
+    });
+    // Return a fallback UI instead of null
+    return (
+      <div className="group relative rounded-lg border p-4 bg-gray-100 text-center">
+        <p className="text-sm text-muted-foreground">Invalid product data</p>
+      </div>
+    );
   }
-  console.log(product._id);
-  console.log("/products/",product._id)
+  
   const [isFavorite, setIsFavorite] = useState(false)
   
   // Ensure we have fallback values for missing data
+  const { data: session } = useSession()
   const productName = product.productName || "Unnamed Product"
   const price = product.price || 0
   const originalPrice = product.originalPrice || null
@@ -42,7 +52,9 @@ export function ProductCard({ product }) {
       merchantId: product.merchantDetail.merchantId,
       merchantName: product.merchantDetail.merchantName,
       delivery: product.delivery,
-      deliveryPrice: product.deliveryPrice
+      deliveryPrice: product.deliveryPrice,
+      email: session.user.email 
+      
     })
     toast.success(`${product.productName} has been added to your cart`)
 

@@ -1,114 +1,21 @@
+
 "use client"
 
-import { useState, useEffect } from "react"
 import Image from "next/image"
+import { useState } from "react"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import toast from "react-hot-toast" // Replaced useToast with react-hot-toast
-
-// Demo cart data grouped by merchant
-const demoCart = {
-  merchants: [
-    {
-      merchantId: "1",
-      merchantName: "Tech Store",
-      merchantEmail: "store@example.com",
-      products: [
-        {
-          id: "1",
-          name: "iPhone 15 Pro",
-          price: 999.99,
-          quantity: 1,
-          image: "/placeholder.svg",
-          delivery: "FLAT",
-          deliveryPrice: 10,
-        },
-        {
-          id: "2",
-          name: "AirPods Pro",
-          price: 249.99,
-          quantity: 1,
-          image: "/placeholder.svg",
-          delivery: "FLAT",
-          deliveryPrice: 5,
-        },
-      ],
-    },
-    {
-      merchantId: "2",
-      merchantName: "Fashion Store",
-      merchantEmail: "fashion@example.com",
-      products: [
-        {
-          id: "3",
-          name: "Designer T-Shirt",
-          price: 49.99,
-          quantity: 2,
-          image: "/placeholder.svg",
-          delivery: "PERPIECE",
-          deliveryPrice: 3,
-        },
-      ],
-    },
-  ],
-}
+import toast from "react-hot-toast"
+import { useSession } from "next-auth/react"
+import { useCart } from "@/components/cart-provider"
 
 export default function CartPage() {
-  const [cart, setCart] = useState(() => {
-    if (typeof window !== "undefined") {
-      const storedCart = localStorage.getItem("cart")
-      return storedCart ? JSON.parse(storedCart) : demoCart
-    }
-    return demoCart
-  })
+  const { data: session, status } = useSession()
+  const { cart, updateQuantity, removeProduct, clearMerchant } = useCart()
   const [processingPayment, setProcessingPayment] = useState({})
-
-  // Sync cart with local storage whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("cart", JSON.stringify(cart))
-    }
-  }, [cart])
-
-  const updateQuantity = (merchantId, productId, newQuantity) => {
-    setCart((prev) => ({
-      ...prev,
-      merchants: prev.merchants.map((merchant) => {
-        if (merchant.merchantId === merchantId) {
-          return {
-            ...merchant,
-            products: merchant.products.map((product) => {
-              if (product.id === productId) {
-                return { ...product, quantity: newQuantity }
-              }
-              return product
-            }),
-          }
-        }
-        return merchant
-      }),
-    }))
-  }
-
-  const removeProduct = (merchantId, productId) => {
-    setCart((prev) => ({
-      ...prev,
-      merchants: prev.merchants
-        .map((merchant) => {
-          if (merchant.merchantId === merchantId) {
-            return {
-              ...merchant,
-              products: merchant.products.filter((product) => product.id !== productId),
-            }
-          }
-          return merchant
-        })
-        .filter((merchant) => merchant.products.length > 0),
-    }))
-  }
 
   const calculateMerchantTotal = (merchant) => {
     return merchant.products.reduce((total, product) => {
@@ -127,26 +34,37 @@ export default function CartPage() {
 
   const handlePayment = async (merchantId, total) => {
     setProcessingPayment((prev) => ({ ...prev, [merchantId]: true }))
-
     try {
-      // Simulated payment processing
       await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      toast.success("Your order has been placed successfully.") // Updated to use react-hot-toast
-
-      // Remove paid items from cart
-      setCart((prev) => ({
-        ...prev,
-        merchants: prev.merchants.filter((m) => m.merchantId !== merchantId),
-      }))
+      toast.success("Your order has been placed successfully.")
+      clearMerchant(merchantId) // Use CartProvider's clearMerchant
     } catch (error) {
-      toast.error("There was an error processing your payment.") // Updated to use react-hot-toast
+      toast.error("There was an error processing your payment.")
     } finally {
       setProcessingPayment((prev) => ({ ...prev, [merchantId]: false }))
     }
   }
 
-  if (cart.merchants.length === 0) {
+  if (status === "loading") {
+    return <div className="container py-16 text-center">Loading...</div>
+  }
+
+  if (!session) {
+    return (
+      <div className="container py-16">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="rounded-full bg-muted p-6 mb-4">
+            <ShoppingBag className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Please log in to view your cart</h1>
+          <p className="text-muted-foreground mb-6">You need to be logged in to access your shopping cart.</p>
+          <Button onClick={() => (window.location.href = "/login")}>Login to your account</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!cart || cart.merchants.length === 0) {
     return (
       <div className="container py-16">
         <div className="flex flex-col items-center justify-center text-center">
@@ -164,7 +82,6 @@ export default function CartPage() {
   return (
     <div className="container py-8">
       <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
-
       <div className="grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-6">
           {cart.merchants.map((merchant) => (
@@ -184,7 +101,7 @@ export default function CartPage() {
                       <div key={product.id} className="flex gap-4">
                         <div className="relative aspect-square h-24 w-24 shrink-0 overflow-hidden rounded-lg border">
                           <Image
-                            src={product.image || "/placeholder.svg"}
+                            src={product.image}
                             alt={product.name}
                             fill
                             className="object-cover"
@@ -249,7 +166,6 @@ export default function CartPage() {
             </Card>
           ))}
         </div>
-
         <div className="lg:col-span-4 space-y-6">
           <Card>
             <CardHeader>
@@ -277,7 +193,6 @@ export default function CartPage() {
               </Button>
             </CardFooter>
           </Card>
-
           <Card>
             <CardContent className="pt-6">
               <div className="rounded-lg border-2 border-dashed p-4 text-center">

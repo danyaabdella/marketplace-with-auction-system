@@ -28,7 +28,8 @@ const orderSchema = new mongoose.Schema({
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
             delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
-            deliveryPrice: { type: Number, required: true }
+            deliveryPrice: { type: Number, required: true },
+            categoryName: { type: String }
         }
     ],
     auction: {
