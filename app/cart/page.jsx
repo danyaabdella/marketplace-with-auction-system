@@ -1,20 +1,22 @@
-
 "use client"
 
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import Image from "next/image"
-import { useState } from "react"
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import toast from "react-hot-toast"
-import { useSession } from "next-auth/react"
 import { useCart } from "@/components/cart-provider"
+import { CartProvider } from "@/components/cart-provider"
+
+
 
 export default function CartPage() {
   const { data: session, status } = useSession()
-  const { cart, updateQuantity, removeProduct, clearMerchant } = useCart()
+  const { cart, removeProduct, updateQuantity, clearMerchant } = useCart()
   const [processingPayment, setProcessingPayment] = useState({})
 
   const calculateMerchantTotal = (merchant) => {
@@ -35,11 +37,84 @@ export default function CartPage() {
   const handlePayment = async (merchantId, total) => {
     setProcessingPayment((prev) => ({ ...prev, [merchantId]: true }))
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      toast.success("Your order has been placed successfully.")
-      clearMerchant(merchantId) // Use CartProvider's clearMerchant
+      // Fetch customer details from /api/user
+      const customerResponse = await fetch('/api/user')
+      if (!customerResponse.ok) {
+        throw new Error("Failed to fetch customer details")
+      }
+      const customerData = await customerResponse.json()
+      // Fetch merchant details
+      const merchantResponse = await fetch(`/api/user/${merchantId}`)
+      if (!merchantResponse.ok) {
+        throw new Error("Failed to fetch merchant details")
+      }
+      const merchantData = await merchantResponse.json()
+
+      // Prepare customerDetail
+      const customerDetail = {
+        customerId: customerData._id,
+        customerName: customerData.fullName,
+        phoneNumber: customerData.phoneNumber || "0000000000",
+        customerEmail: customerData.email,
+        address: {
+          state: customerData.stateName || "Default State",
+          city: customerData.cityName || "Default City",
+        },
+      }
+
+      // Prepare merchantDetail
+      const merchantDetail = {
+        merchantId: merchantData._id,
+        merchantName: merchantData.fullName,
+        merchantEmail: merchantData.email,
+        phoneNumber: merchantData.phoneNumber,
+        account_name: merchantData.account_name || "Merchant Account",
+        account_number: merchantData.account_number || "1234567890",
+        bank_code: merchantData.bank_code || "DEFAULT",
+      }
+
+      // Prepare products
+      const merchant = cart.merchants.find((m) => m.merchantId === merchantId)
+      const products = merchant.products.map((p) => ({
+        productId: p.id,
+        productName: p.name,
+        quantity: p.quantity,
+        price: p.price,
+        delivery: p.delivery === "PERPIECE" ? "PERPIECS" : p.delivery,
+        deliveryPrice: p.deliveryPrice,
+        categoryName: p.categoryName || "Uncategorized",
+      }))
+
+      // Call /api/checkout to initialize payment
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          amount: total, 
+          orderData: {
+            customerDetail,
+            merchantDetail,
+            products,
+            totalPrice: total
+          }
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.checkout_url) {
+        throw new Error(data.message || "Failed to initialize payment")
+      }
+
+      // Clear the cart for this merchant after successful payment initialization
+      clearMerchant(merchantId)
+      
+      // Redirect to Chapa checkout page
+      window.location.href = data.checkout_url
     } catch (error) {
-      toast.error("There was an error processing your payment.")
+      console.error("Payment error:", error)
+      toast.error(error.message || "There was an error processing your payment.")
     } finally {
       setProcessingPayment((prev) => ({ ...prev, [merchantId]: false }))
     }

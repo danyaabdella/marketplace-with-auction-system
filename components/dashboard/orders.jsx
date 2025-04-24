@@ -1,51 +1,78 @@
 'use client'
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { FilterBar } from "../filterBar"
 
-const orders = [
-  {
-    id: "ORD-001",
-    customer: "John Smith",
-    product: "Vintage Camera",
-    date: "2024-03-01",
-    total: 450.0,
-    status: "Completed",
-  },
-  {
-    id: "ORD-002",
-    customer: "Sarah Johnson",
-    product: "Antique Clock",
-    date: "2024-03-02",
-    total: 275.0,
-    status: "Processing",
-  },
-  {
-    id: "ORD-003",
-    customer: "Mike Brown",
-    product: "Art Print",
-    date: "2024-03-03",
-    total: 125.0,
-    status: "Shipped",
-  },
-  {
-    id: "ORD-004",
-    customer: "Emma Wilson",
-    product: "Vintage Record",
-    date: "2024-03-04",
-    total: 85.0,
-    status: "Pending",
-  },
-]
+// const orders = [
+//   {
+//     id: "ORD-001",
+//     customer: "John Smith",
+//     product: "Vintage Camera",
+//     date: "2024-03-01",
+//     total: 450.0,
+//     status: "Completed",
+//   },
+//   {
+//     id: "ORD-002",
+//     customer: "Sarah Johnson",
+//     product: "Antique Clock",
+//     date: "2024-03-02",
+//     total: 275.0,
+//     status: "Processing",
+//   },
+//   {
+//     id: "ORD-003",
+//     customer: "Mike Brown",
+//     product: "Art Print",
+//     date: "2024-03-03",
+//     total: 125.0,
+//     status: "Shipped",
+//   },
+//   {
+//     id: "ORD-004",
+//     customer: "Emma Wilson",
+//     product: "Vintage Record",
+//     date: "2024-03-04",
+//     total: 85.0,
+//     status: "Pending",
+//   },
+// ]
 
 
 export function OrdersPage() {
   const router = useRouter()
+  const [orders, setOrders] = useState([])
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
 
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('/api/orderFiltering')
+        const data = await response.json()
+        if (data.success) {
+          const transformedOrders = data.orders.map(order => ({
+            id: order._id.toString(),
+            customer: order.customerDetail.customerName,
+            product: order.products.length > 0 
+              ? order.products[0].productName 
+              : (order.auction ? 'Auction Item' : 'N/A'),
+            date: order.orderDate,
+            total: order.totalPrice,
+            status: order.status,
+          }))
+          setOrders(transformedOrders)
+        } else {
+          console.error('Failed to fetch orders:', data.message)
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error)
+      }
+    }
+    fetchOrders()
+  }, [])
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -66,8 +93,8 @@ export function OrdersPage() {
   const filters = [
     { value: "all", label: "All Orders" },
     { value: "pending", label: "Pending Orders" },
-    { value: "shipped", label: "Shipped Orders" },
-    { value: "completed", label: "Completed Orders" },
+    { value: "shipped", label: "Dispached Orders" },
+    { value: "completed", label: "Recieved Orders" },
   ];
   return (
     <div className="container p-6">
@@ -107,11 +134,11 @@ export function OrdersPage() {
                 <TableCell>
                   <Badge
                     variant={
-                      order.status === "Completed"
+                      order.status === "Recieved"
                         ? "success"
-                        : order.status === "Processing"
+                        : order.status === "Dispached"
                           ? "default"
-                          : order.status === "Shipped"
+                          : order.status === "Pending"
                             ? "secondary"
                             : "outline"
                     }

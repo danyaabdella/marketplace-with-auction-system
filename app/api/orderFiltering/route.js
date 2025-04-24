@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const sessionUser = await userInfo();
+    const sessionUser = await userInfo(req);
 
     // Check if user is authenticated
     if (!sessionUser) {

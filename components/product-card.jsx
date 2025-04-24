@@ -35,6 +35,8 @@ export function ProductCard({ product }) {
   //const rating = product.averageRating || 0
   const soldCount = product.soldQuantity || 0
   const image = product.images?.[0] || "/placeholder.svg"
+  const quantity = product.quantity || 0
+  const isOutOfStock = quantity === 0
   const { addToCart } = useCart()
   const averageRating = product.review?.length 
       ? product.review.reduce((acc, curr) => acc + curr.rating, 0) / product.review.length
@@ -61,7 +63,11 @@ export function ProductCard({ product }) {
   }
   return (
     <div className="group relative rounded-lg border p-4 hover:shadow-lg">
-      {/* ... rest of your ProductCard component ... */}
+      {isOutOfStock && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+          <p className="text-white font-medium">Out of Stock</p>
+        </div>
+      )}
       <Link href={`/products/${product._id}`} passHref>
         <div className="aspect-square overflow-hidden rounded-lg">
           <Image
@@ -100,11 +106,11 @@ export function ProductCard({ product }) {
                 </p>
               )}
             </div>
-            {/* ... rest of your ProductCard component ... */}
             <Button
               size="icon"
-              className="rounded-full h-10 w-10 hover:bg-primary/90 " 
+              className="rounded-full h-10 w-10 hover:bg-primary/90"
               onClick={handleAddToCart}
+              disabled={isOutOfStock}
             >
               <ShoppingCart className="h-5 w-5 text-primary-foreground" />
             </Button>

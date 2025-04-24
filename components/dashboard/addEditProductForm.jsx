@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { X, Plus, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import LocationMap from "@/components/LocationMap";
 
 // Updated schema to include mass for PERKG delivery
 const formSchema = z.object({
@@ -388,6 +389,27 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
             </div>
 
             {/* Location */}
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <LocationMap 
+                        location={[
+                          Number(form.watch("longitude") || 0),
+                          Number(form.watch("latitude") || 0)
+                        ]}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -396,7 +418,16 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                   <FormItem>
                     <FormLabel>Latitude</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. 40.7128" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.000001"
+                        placeholder="e.g. 40.7128" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          form.trigger("location");
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -410,7 +441,16 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                   <FormItem>
                     <FormLabel>Longitude</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. -74.0060" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.000001"
+                        placeholder="e.g. -74.0060" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          form.trigger("location");
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

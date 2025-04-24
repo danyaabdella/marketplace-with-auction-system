@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CreditCard, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
+import { CreditCard, LayoutDashboard, LogOut, Settings, User, Package } from "lucide-react";
 
 export function UserNav({ user }) {
   // Helper function to generate initials from the user's name
@@ -76,6 +76,9 @@ export function UserNav({ user }) {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          {/* {user?.role === 'customer' && (
+            
+          )} */}
           {user?.role == 'merchant' && 
             <DropdownMenuItem asChild>
             <Link href="/dashboard" className="flex items-center gap-2">
@@ -89,6 +92,12 @@ export function UserNav({ user }) {
               <CreditCard className="mr-2 h-4 w-4" />
               <span>My Auctions</span>
             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+              <Link href="/orders" className="flex items-center gap-2">
+                <Package className="mr-2 h-4 w-4" />
+                <span>My Orders</span>
+              </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/settings" className="flex items-center gap-2">

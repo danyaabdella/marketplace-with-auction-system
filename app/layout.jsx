@@ -7,7 +7,6 @@ import { CartProvider } from "@/components/cart-provider";
 import ChatBot from "@/components/commons/ChatBot";
 import { Footer } from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
-import Providers from "@/components/providers";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -21,7 +20,6 @@ export default function RootLayout({ children }) {
       <html lang="en" className="scroll-smooth overflow-x-hidden mt-8" suppressHydrationWarning>
         <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-            <Providers>
               <CartProvider>
                 <ContextProvider>
                   <Navbar />
@@ -33,10 +31,8 @@ export default function RootLayout({ children }) {
                   <Footer />
                 </ContextProvider>
               </CartProvider>
-            </Providers>
           </ThemeProvider>
         </body>
       </html>
-    
   );
 }

@@ -14,8 +14,6 @@ const navigation = [
   { name: "Auctions", icon: Gavel },
   { name: "Orders", icon: Box },
   { name: "Customers", icon: Users },
-  { name: "History", icon: Clock },
-  //{ name: "Settings", icon: Settings },
 ];
 
 export function DashboardNav({ currentView, setCurrentView }) {

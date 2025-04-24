@@ -43,10 +43,52 @@ export default function ProductsPage() {
     const loadAllProducts = async () => {
       try {
         setLoading(true)
-        const response = await fetch("/api/fetchProducts?limit=1000")
-        const { products } = await response.json()
-        setAllProducts(products)
+        // Get user's location
+        let userLocation = null
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0
+            })
+          })
+          userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          console.log("Got user location:", userLocation)
+        } catch (error) {
+          console.log("Could not get user location:", error)
+        }
+
+        // Build the API URL with location if available
+        let apiUrl = "/api/fetchProducts?limit=1000"
+        if (userLocation) {
+          apiUrl += `&lat=${userLocation.lat}&lng=${userLocation.lng}`
+        }
+        console.log("Fetching from URL:", apiUrl)
+
+        const response = await fetch(apiUrl)
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch products')
+        }
+        
+        const data = await response.json()
+        console.log("API Response:", data)
+
+        if (!data.products || !Array.isArray(data.products)) {
+          throw new Error('Invalid products data received')
+        }
+
+        // Log the first few products to verify sorting
+        console.log("First few products:", data.products.slice(0, 3))
+        
+        // Set the products, they will already be sorted by distance if location was provided
+        setAllProducts(data.products)
       } catch (err) {
+        console.error('Error loading products:', err)
         setError(err.message)
       } finally {
         setLoading(false)
@@ -57,7 +99,16 @@ export default function ProductsPage() {
 
   // Compute filtered products based on filters
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((product) => {
+    if (!allProducts || allProducts.length === 0) {
+      console.log("No products to filter")
+      return []
+    }
+
+    // First, create a copy of the products to avoid mutating the original array
+    let products = [...allProducts]
+
+    // Apply filters
+    const filtered = products.filter((product) => {
       let matches = true
       // Filter by phrase
       if (
@@ -120,6 +171,9 @@ export default function ProductsPage() {
       }
       return matches
     })
+
+    console.log(`Filtered ${products.length} products down to ${filtered.length} products`)
+    return filtered
   }, [allProducts, filters])
 
   // Reset displayPage to 1 when filters change
