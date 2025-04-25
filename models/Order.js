@@ -70,7 +70,7 @@ const orderSchema = new mongoose.Schema({
         coordinates: { type: [Number], required: true }
     },
     transactionRef: { type: String, required: true }, 
-    chapaRef: { type: String, required: false },
+    reference: { type: String, required: false },
     orderDate: { type: Date, default: Date.now },
     refundReason: { type: String, required: false }
 });

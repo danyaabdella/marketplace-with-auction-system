@@ -165,6 +165,31 @@ export default function OrderDetailPage({ params }) {
     }
   }
 
+  const handleDispatch = async () => {
+    try {
+      const response = await fetch(`/api/order`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          _id: order._id,
+          status: 'Dispatched'
+        }),
+      })
+
+      const data = await response.json()
+      if (data.message === "Order updated successfully") {
+        setOrder(prev => ({
+          ...prev,
+          status: 'Dispatched'
+        }))
+      }
+    } catch (error) {
+      console.error("Failed to dispatch order:", error)
+    }
+  }
+
   if (loading) {
     return <div>Loading...</div>
   }
@@ -177,6 +202,7 @@ export default function OrderDetailPage({ params }) {
   const isMerchant = session?.user?.role === 'merchant'
   const canRequestRefund = isCustomer && order.status === 'Pending' && order.paymentStatus === 'Paid'
   const canEditDetails = isCustomer && order.status === 'Pending'
+  const canDispatch = isMerchant && order.status === 'Pending'
 
   return (
     <div className="container py-8">
@@ -229,6 +255,16 @@ export default function OrderDetailPage({ params }) {
               <div className="flex items-center gap-2">
                 <Badge variant={statusColors[order.status]}>{order.status}</Badge>
                 <Badge variant={statusColors[order.paymentStatus]}>{order.paymentStatus}</Badge>
+                {canDispatch && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDispatch}
+                  >
+                    <Truck className="h-4 w-4 mr-2" />
+                    Dispatch Order
+                  </Button>
+                )}
               </div>
               <div className="relative flex gap-2">
                 <div className="flex flex-col items-center">

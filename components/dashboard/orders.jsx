@@ -5,40 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { FilterBar } from "../filterBar"
 
-// const orders = [
-//   {
-//     id: "ORD-001",
-//     customer: "John Smith",
-//     product: "Vintage Camera",
-//     date: "2024-03-01",
-//     total: 450.0,
-//     status: "Completed",
-//   },
-//   {
-//     id: "ORD-002",
-//     customer: "Sarah Johnson",
-//     product: "Antique Clock",
-//     date: "2024-03-02",
-//     total: 275.0,
-//     status: "Processing",
-//   },
-//   {
-//     id: "ORD-003",
-//     customer: "Mike Brown",
-//     product: "Art Print",
-//     date: "2024-03-03",
-//     total: 125.0,
-//     status: "Shipped",
-//   },
-//   {
-//     id: "ORD-004",
-//     customer: "Emma Wilson",
-//     product: "Vintage Record",
-//     date: "2024-03-04",
-//     total: 85.0,
-//     status: "Pending",
-//   },
-// ]
 
 
 export function OrdersPage() {
@@ -46,10 +12,14 @@ export function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const response = await fetch('/api/orderFiltering')
         const data = await response.json()
         if (data.success) {
@@ -66,9 +36,12 @@ export function OrdersPage() {
           setOrders(transformedOrders)
         } else {
           console.error('Failed to fetch orders:', data.message)
+          setError(err.message);
         }
       } catch (error) {
         console.error('Error fetching orders:', error)
+      } finally {
+        setLoading(false);
       }
     }
     fetchOrders()
@@ -93,9 +66,20 @@ export function OrdersPage() {
   const filters = [
     { value: "all", label: "All Orders" },
     { value: "pending", label: "Pending Orders" },
-    { value: "shipped", label: "Dispached Orders" },
-    { value: "completed", label: "Recieved Orders" },
+    { value: "dispatched", label: "Dispatched Orders" },
+    { value: "recieved", label: "Recieved Orders" },
   ];
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-4">Loading Orders...</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container p-6">
       <div className="mb-8">
@@ -136,7 +120,7 @@ export function OrdersPage() {
                     variant={
                       order.status === "Recieved"
                         ? "success"
-                        : order.status === "Dispached"
+                        : order.status === "Dispatched"
                           ? "default"
                           : order.status === "Pending"
                             ? "secondary"

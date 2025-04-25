@@ -1,33 +1,66 @@
-
 "use client"
 
+import { useState, useEffect } from "react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from "recharts"
 import { ArrowUpRight, ArrowDownRight, Users, Package, DollarSign, TrendingUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { RecentSales } from "./recent-sales"
-
-const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-  name: new Date(0, i).toLocaleString("default", { month: "short" }),
-  total: Math.floor(Math.random() * 5000) + 1000,
-}))
-
-const categoryData = [
-  { name: "Art & Collectibles", value: 35 },
-  { name: "Electronics", value: 25 },
-  { name: "Fashion", value: 15 },
-  { name: "Home & Garden", value: 10 },
-  { name: "Jewelry", value: 15 },
-]
+import { useToast } from "@/components/ui/use-toast"
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe"]
-const totalRevenue = monthlyData.reduce((sum, item) => sum + item.total, 0)
 
 export function Overview() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/merchant/overview')
+        if (!response.ok) throw new Error('Failed to fetch overview data')
+        const result = await response.json()
+        setData(result)
+      } catch (error) {
+        console.error('Error fetching overview data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load overview data",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [toast])
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="p-4 space-y-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      </div>
+    )
+  }
+
   const metrics = [
-    { title: "Total Customers", value: "3,842", change: "+12.5%", trend: "up", icon: Users },
-    { title: "Active Auctions", value: "1,249", change: "+8.2%", trend: "up", icon: Package },
-    { title: "Avg. Order Value", value: "$285", change: "-3.1%", trend: "down", icon: DollarSign },
-    { title: "Conversion Rate", value: "3.2%", change: "+0.5%", trend: "up", icon: TrendingUp },
+    { title: "Total Revenue", value: `$${data.metrics.totalRevenue}`, change: "+12.5%", trend: "up", icon: DollarSign },
+    { title: "Total Orders", value: data.metrics.totalOrders, change: "+8.2%", trend: "up", icon: Package },
+    { title: "Avg. Order Value", value: `$${data.metrics.avgOrderValue}`, change: "-3.1%", trend: "down", icon: DollarSign },
+    { title: "Conversion Rate", value: data.metrics.conversionRate, change: "+0.5%", trend: "up", icon: TrendingUp },
   ]
 
   return (
@@ -63,11 +96,11 @@ export function Overview() {
           <h3 className="text-lg font-semibold">Revenue Overview</h3>
           <div className="flex justify-between text-sm text-muted-foreground">
             <p>Monthly revenue from all sales channels</p>
-            <p className="text-lg font-bold">${totalRevenue.toLocaleString()}</p>
+            <p className="text-lg font-bold">${data.metrics.totalRevenue}</p>
           </div>
           <div className="h-52 mt-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
+              <BarChart data={data.monthlyData}>
                 <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
                 <Tooltip />
@@ -82,8 +115,8 @@ export function Overview() {
           <div className="h-52 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart className="my-4">
-                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value">
-                  {categoryData.map((entry, index) => (
+                <Pie data={data.categoryData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value">
+                  {data.categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -98,22 +131,26 @@ export function Overview() {
         <Card>
           <CardContent className="p-4">
             <h4 className="text-sm font-medium text-muted-foreground">Top Selling Item</h4>
-            <p className="text-lg font-semibold mt-1">Vintage Polaroid Camera</p>
-            <p className="text-sm text-muted-foreground mt-1">142 units sold this month</p>
+            <p className="text-lg font-semibold mt-1">{data.topSellingProduct?.name || "No sales yet"}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {data.topSellingProduct ? `${data.topSellingProduct.unitsSold} units sold this month` : "No sales data available"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <h4 className="text-sm font-medium text-muted-foreground">Highest Bid</h4>
-            <p className="text-lg font-semibold mt-1">Antique Gold Watch</p>
-            <p className="text-sm text-muted-foreground mt-1">$4,250 current bid</p>
+            <p className="text-lg font-semibold mt-1">{data.highestBid?.name || "No active auctions"}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {data.highestBid ? `$${data.highestBid.currentBid} current bid` : "No active auctions"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <h4 className="text-sm font-medium text-muted-foreground">Customer Satisfaction</h4>
-            <p className="text-lg font-semibold mt-1">4.8/5.0</p>
-            <p className="text-sm text-muted-foreground mt-1">Based on 1,248 reviews</p>
+            <p className="text-lg font-semibold mt-1">{data.customerSatisfaction}</p>
+            <p className="text-sm text-muted-foreground mt-1">Based on customer reviews</p>
           </CardContent>
         </Card>
       </div>

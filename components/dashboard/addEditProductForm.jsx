@@ -31,12 +31,16 @@ const formSchema = z.object({
   quantity: z.string().min(1, { message: "Quantity is required." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   brand: z.string().optional(),
-  delivery: z.enum(["FLAT", "PERPIECE", "PERKG", "FREE"]),
+  delivery: z.enum(["PERPIECE", "PERKG", "FREE", "PERKM"]),
   deliveryPrice: z.string(),
-  mass: z.string().optional().refine((val) => {
+  KilometerPerPrice: z.string().optional().refine((val) => {
     if (val) return Number(val) > 0;
     return true;
-  }, { message: "Mass must be a positive number." }),
+  }, { message: "Kilometers per price must be a positive number." }),
+  KilogramPerPrice: z.string().optional().refine((val) => {
+    if (val) return Number(val) > 0;
+    return true;
+  }, { message: "Kilograms per price must be a positive number." }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
 });
@@ -59,9 +63,10 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       quantity: "",
       description: "",
       brand: "Hand Made",
-      delivery: "FLAT",
+      delivery: "FREE",
       deliveryPrice: "0",
-      mass: "",
+      KilometerPerPrice: "",
+      KilogramPerPrice: "",
       latitude: "",
       longitude: "",
     },
@@ -80,9 +85,10 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         quantity: product.quantity?.toString() || "",
         description: product.description || "",
         brand: product.brand || "Hand Made",
-        delivery: product.delivery || "FLAT",
+        delivery: product.delivery || "FREE",
         deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice?.toString() || "0",
-        mass: product.mass?.toString() || "", // Initialize mass if exists
+        KilometerPerPrice: product.KilometerPerPrice?.toString() || "",
+        KilogramPerPrice: product.KilogramPerPrice?.toString() || "",
         latitude: product.location?.coordinates[1]?.toString() || "",
         longitude: product.location?.coordinates[0]?.toString() || "",
       };
@@ -100,9 +106,10 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         quantity: "",
         description: "",
         brand: "Hand Made",
-        delivery: "FLAT",
+        delivery: "FREE",
         deliveryPrice: "0",
-        mass: "",
+        KilometerPerPrice: "",
+        KilogramPerPrice: "",
         latitude: "",
         longitude: "",
       });
@@ -179,7 +186,8 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         brand: values.brand,
         delivery: values.delivery,
         deliveryPrice: values.delivery === "FREE" ? 0 : Number(values.deliveryPrice),
-        mass: values.delivery === "PERKG" ? Number(values.mass) : undefined, // Include mass only for PERKG
+        KilometerPerPrice: values.delivery === "PERKM" ? Number(values.KilometerPerPrice) : undefined,
+        KilogramPerPrice: values.delivery === "PERKG" ? Number(values.KilogramPerPrice) : undefined,
         variant: variants,
         size: sizes,
         images: images,
@@ -477,10 +485,10 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="FLAT">Flat Rate</SelectItem>
+                        <SelectItem value="FREE">Free Delivery</SelectItem>
                         <SelectItem value="PERPIECE">Per Piece</SelectItem>
                         <SelectItem value="PERKG">Per Kilogram</SelectItem>
-                        <SelectItem value="FREE">Free Delivery</SelectItem>
+                        <SelectItem value="PERKM">Per Kilometer</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -503,16 +511,33 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
               />
             </div>
 
-            {/* Conditional Mass Input for PERKG */}
+            {/* Conditional Price Per Kilogram Input for PERKG */}
             {form.watch("delivery") === "PERKG" && (
               <FormField
                 control={form.control}
-                name="mass"
+                name="KilogramPerPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mass (kg)</FormLabel>
+                    <FormLabel>Enter Kilogram</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="Enter mass in kilograms" {...field} />
+                      <Input type="number" step="0.01" placeholder="Enter kilogram per the delivery price" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Conditional Price Per Kilometer Input for PERKM */}
+            {form.watch("delivery") === "PERKM" && (
+              <FormField
+                control={form.control}
+                name="KilometerPerPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter Kilometer</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Enter kilometer per the delivery price" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

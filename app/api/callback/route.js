@@ -4,7 +4,7 @@ import { userInfo } from "@/libs/functions";
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { tx_ref, status } = body;
+    const { tx_ref, status, reference } = body;
 
     if (!tx_ref || !status) {
       return NextResponse.json({ message: "Missing tx_ref or status" }, { status: 400 });
@@ -26,7 +26,7 @@ export async function POST(req) {
     }
     const { order } = await orderResponse.json();
 
-    // Update paymentStatus to Paid
+    // Update paymentStatus to Paid and save the Chapa reference
     const updateResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/order`, {
       method: "PUT",
       headers: {
@@ -36,6 +36,7 @@ export async function POST(req) {
       body: JSON.stringify({
         _id: order._id,
         paymentStatus: "Paid",
+        reference: reference
       }),
     });
 

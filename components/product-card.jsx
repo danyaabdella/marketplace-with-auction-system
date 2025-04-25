@@ -30,9 +30,11 @@ export function ProductCard({ product }) {
   // Ensure we have fallback values for missing data
   const { data: session } = useSession()
   const productName = product.productName || "Unnamed Product"
-  const price = product.price || 0
-  const originalPrice = product.originalPrice || null
-  //const rating = product.averageRating || 0
+  const originalPrice = product.price || 0
+  const offerPrice = product.offer?.price
+  const offerEndDate = product.offer?.offerEndDate ? new Date(product.offer.offerEndDate) : null
+  const isOfferActive = offerPrice && offerEndDate && offerEndDate > new Date()
+  const displayPrice = isOfferActive ? offerPrice : originalPrice
   const soldCount = product.soldQuantity || 0
   const image = product.images?.[0] || "/placeholder.svg"
   const quantity = product.quantity || 0
@@ -48,7 +50,7 @@ export function ProductCard({ product }) {
     addToCart({
       id: product._id,
       name: product.productName,
-      price: product.price,
+      price: displayPrice,
       image: product.images?.[0] || "/placeholder.svg",
       quantity: 1,
       merchantId: product.merchantDetail.merchantId,
@@ -56,10 +58,8 @@ export function ProductCard({ product }) {
       delivery: product.delivery,
       deliveryPrice: product.deliveryPrice,
       email: session.user.email 
-      
     })
     toast.success(`${product.productName} has been added to your cart`)
-
   }
   return (
     <div className="group relative rounded-lg border p-4 hover:shadow-lg">
@@ -99,11 +99,15 @@ export function ProductCard({ product }) {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-bold">${price.toFixed(2)}</p>
-              {originalPrice && (
-                <p className="text-sm text-muted-foreground line-through">
-                  ${originalPrice.toFixed(2)}
-                </p>
+              {isOfferActive ? (
+                <>
+                  <p className="text-lg font-bold text-red-600">${offerPrice.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${originalPrice.toFixed(2)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-bold">${originalPrice.toFixed(2)}</p>
               )}
             </div>
             <Button

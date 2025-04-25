@@ -1,5 +1,5 @@
 import { Roboto } from "next/font/google";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/toaster";
 import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
 import { Navbar } from "@/components/nav-bar";
@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
               <CartProvider>
                 <ContextProvider>
                   <Navbar />
-                  <Toaster position="bottom-right" />
+                  <Toaster />
                   <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
                     {children}
                   </main>

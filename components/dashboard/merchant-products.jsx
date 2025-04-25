@@ -45,7 +45,7 @@ export function MerchantProducts() {
   const [error, setError] = useState(null);
 
   const handleProductClick = (productId) => {
-    router.push(`/products/${productId}`);
+    router.push(`dashboard/products/${productId}`);
   };
 
   const handleAddProduct = () => {

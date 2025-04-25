@@ -9,10 +9,14 @@ export function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const response = await fetch('/api/merchant/customers');
         if (!response.ok) {
           throw new Error('Failed to fetch customers');
@@ -21,6 +25,9 @@ export function CustomersPage() {
         setCustomers(data);
       } catch (error) {
         console.error('Error fetching customers:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
     fetchCustomers();
@@ -53,6 +60,16 @@ export function CustomersPage() {
     { value: "inactive", label: "Inactive Customers" },
   ];
 
+  if (loading && customers.length === 0) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-4">Loading Orders...</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container p-4 sm:p-6">
       <div className="mb-6">

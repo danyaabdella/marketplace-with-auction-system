@@ -108,7 +108,7 @@ export async function POST(req) {
 
 export async function PUT(req) {
     try {
-        const sessionUser = await userInfo();
+        const sessionUser = await userInfo(req);
         const body = await req.json();
 
         if (!sessionUser) {
