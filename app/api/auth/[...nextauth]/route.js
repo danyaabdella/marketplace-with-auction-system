@@ -8,17 +8,17 @@ const handler = NextAuth(options)
 export { handler as GET, handler as POST }
 
 
-  export async function role(req, res) {
-      // return userInfo.role;
-      const user = await userInfo(req, res);  // Call the fixed `userInfo` function
+  // export async function role(req, res) {
+  //     // return userInfo.role;
+  //     const user = await userInfo(req, res);  // Call the fixed `userInfo` function
 
-      if (!user) {
-        return null;
-      }
+  //     if (!user) {
+  //       return null;
+  //     }
 
-      console.log("User role:", user.role);
-      return user.role;
-    }
+  //     console.log("User role:", user.role);
+  //     return user.role;
+  //   }
   export async function signOut() {
     // return NextAuth.signOut(options);
     return nextAuthSignOut();
