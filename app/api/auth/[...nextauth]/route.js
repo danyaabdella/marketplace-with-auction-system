@@ -19,10 +19,10 @@ export { handler as GET, handler as POST }
   //     console.log("User role:", user.role);
   //     return user.role;
   //   }
-  export async function signOut() {
-    // return NextAuth.signOut(options);
-    return nextAuthSignOut();
-  }
+  // export async function signOut() {
+  //   // return NextAuth.signOut(options);
+  //   return nextAuthSignOut();
+  // }
 
 
  
