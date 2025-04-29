@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 export async function PUT(req) {
     try {
         // Retrieve the session user
-        const sessionUser = await userInfo();
+        const sessionUser = await userInfo(req);
         const body = await req.json();
 
         if (!sessionUser) {
