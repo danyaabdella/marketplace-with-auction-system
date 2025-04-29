@@ -1,32 +1,78 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Label } from "@/components/ui/label"
 
-const categories = [
-  { id: "art", name: "Art & Collectibles" },
-  { id: "electronics", name: "Electronics" },
-  { id: "fashion", name: "Fashion" },
-  { id: "home", name: "Home & Garden" },
-  { id: "jewelry", name: "Jewelry & Watches" },
-  { id: "music", name: "Music & Instruments" },
-  { id: "sports", name: "Sports & Outdoors" },
-  { id: "toys", name: "Toys & Hobbies" },
-  { id: "vehicles", name: "Vehicles" },
-  { id: "other", name: "Other" },
-]
+// const categories = [
+//   { id: "art", name: "Art & Collectibles" },
+//   { id: "electronics", name: "Electronics" },
+//   { id: "fashion", name: "Fashion" },
+//   { id: "home", name: "Home & Garden" },
+//   { id: "jewelry", name: "Jewelry & Watches" },
+//   { id: "music", name: "Music & Instruments" },
+//   { id: "sports", name: "Sports & Outdoors" },
+//   { id: "toys", name: "Toys & Hobbies" },
+//   { id: "vehicles", name: "Vehicles" },
+//   { id: "other", name: "Other" },
+// ]
 
-export function CategoryFilter() {
+export function CategoryFilter({ onCategoryChange }) {
   const [selectedCategories, setSelectedCategories] = useState([])
   const [isOpen, setIsOpen] = useState(true)
+  const [categories, setCategories] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/categories', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories')
+        }
+
+        const data = await response.json()
+        const formattedCategories = data.map((category) => ({
+          id: category._id,
+          name: category.name,
+        }))
+        setCategories(formattedCategories)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   const toggleCategory = (categoryId) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
-    )
+    setSelectedCategories((prev) => {
+      const newCategories = prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+      onCategoryChange(newCategories)
+      return newCategories
+    })
+  }
+
+  if (isLoading) {
+    return <div>Loading categories...</div>
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>
   }
 
   return (
@@ -66,4 +112,3 @@ export function CategoryFilter() {
     </Collapsible>
   )
 }
-

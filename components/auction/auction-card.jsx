@@ -1,10 +1,10 @@
 // "use client"
-
-// import { useState } from "react"
+// import { useState, useEffect } from "react"
 // import Link from "next/link"
 // import Image from "next/image"
 // import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // import { Button } from "@/components/ui/button"
+// import { cn } from "@/libs/utils"
 // import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 // import {
 //   Dialog,
@@ -17,32 +17,120 @@
 // } from "@/components/ui/dialog"
 // import { Input } from "@/components/ui/input"
 // import { Label } from "@/components/ui/label"
-// // import { useToast } from "@/components/ui/use-toast"
+// import { useToast } from "@/components/ui/use-toast"
 // import { Clock, Heart } from "lucide-react"
+// import { socket } from "@/libs/socketClient"
+// import { useSession } from "next-auth/react"
+// import { useRouter } from "next/navigation"
+// import { calculateTimeLeft } from "@/libs/utils"
 
 // export function AuctionCard({ auction }) {
 //   const [isFavorite, setIsFavorite] = useState(false)
-//   const [bidAmount, setBidAmount] = useState(auction.currentBid + 10)
-// //   const { toast } = useToast()
+//   const [currentBid, setCurrentBid] = useState(highestBid || auction.startingPrice)
+//   const [totalBids, setTotalBids] = useState(auction.totalBids || 0)
+//   const [bidAmount, setBidAmount] = useState(currentBid + auction.bidIncrement)
+//   const { toast } = useToast()
+//   const [timeLeft, setTimeLeft] = useState("")
+//   const [urgent, setUrgentLevel] = useState("")
+//   const { data: session } = useSession()
+//   const router = useRouter()
 
-//   const handleBid = () => {
-//     // toast({
-//     //   title: "Bid placed successfully!",
-//     //   description: `You placed a bid of $${bidAmount} on ${auction.title}`,
-//     // })
+//   useEffect(() => {
+//     const updateTimeLeft = () => {
+//       const timeString = calculateTimeLeft(auction.endTime)
+//       setTimeLeft(timeString)
+
+//       const now = new Date()
+//       const endTime = new Date(auction.endTime)
+//       const diff = endTime - now
+//       const totalHoursLeft = diff / (1000 * 60 * 60)
+
+//       setUrgentLevel(
+//         totalHoursLeft < 8 ? "high" :
+//         totalHoursLeft < 18 ? "medium" : "low"
+//       )
+//     }
+
+//     updateTimeLeft()
+//     const timer = setInterval(updateTimeLeft, 60000)
+//     return () => clearInterval(timer)
+//   }, [auction.endTime])
+
+//   const handleBid = async () => {
+//     if (!session) {
+//       router.push('/login')
+//       return
+//     }
+
+//     const minBid = currentBid + auction.bidIncrement
+//     if (bidAmount < minBid) {
+//       toast({
+//         title: "Invalid bid amount",
+//         description: `Your bid must be at least $${minBid}`,
+//         variant: "destructive"
+//       })
+//       return
+//     }
+    
+//     try {
+//       const response = await fetch('/api/bid', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//           auctionId: auction._id,
+//           bidAmount
+//         })
+//       })
+
+//       if (!response.ok) throw new Error('Failed to place bid')
+      
+//       const data = await response.json()
+//       setCurrentBid(data.highestBid)
+//       setTotalBids(data.totalBids)
+//       setBidAmount(data.highestBid + auction.bidIncrement)
+
+//       toast({
+//         title: "Bid placed successfully!",
+//         description: `You bid $${bidAmount} on ${auction.auctionTitle}`,
+//       })
+
+//       socket.emit('newBidIncrement', {
+//         auctionId: auction._id,
+//         bidAmount,
+//         bidderName: session.user.name,
+//         bidderEmail: session.user.email
+//       })
+//     } catch (error) {
+//       toast({
+//         title: "Bid failed",
+//         description: error.message,
+//         variant: "destructive"
+//       })
+//     }
 //   }
 
-//   const isEndingSoon = auction.timeLeft.includes("hour") || auction.timeLeft.includes("min")
+//   const handleBidChange = (e) => {
+//     const value = Number(e.target.value)
+//     const minBid = currentBid + auction.bidIncrement
+//     setBidAmount(Math.max(value, minBid))
+//   }
+
+//   const incrementBid = () => {
+//     setBidAmount(prev => prev + auction.bidIncrement)
+//   }
+
+//   const isEndingSoon = urgent === "high" || urgent === "medium"
+//   const hasBids = totalBids > 0
 
 //   return (
 //     <Card className="overflow-hidden border-primary/10 auction-card-hover">
 //       <CardHeader className="p-0">
 //         <div className="relative">
-//           <Link href={`/auctions/${auction.id}`}>
+//           <Link href={`/auctions/${auction._id}`}>
 //             <div className="aspect-[4/3] w-full overflow-hidden">
 //               <Image
-//                 src={auction.imageUrl || "/placeholder.svg"}
-//                 alt={auction.title}
+//                 src={auction.itemImg || "/placeholder.svg"}
+//                 alt={auction.auctionTitle}
 //                 width={400}
 //                 height={300}
 //                 className="h-full w-full object-cover transition-transform hover:scale-105"
@@ -57,41 +145,72 @@
 //           >
 //             <Heart className={`h-5 w-5 ${isFavorite ? "fill-destructive text-destructive" : ""}`} />
 //           </Button>
-//           {isEndingSoon && <div className="absolute left-2 top-2 highlight-badge animate-pulse-slow">Ending Soon</div>}
+//           {isEndingSoon && (
+//             <div className="absolute left-2 top-2 highlight-badge animate-pulse-slow">
+//               Ending Soon
+//             </div>
+//           )}
 //         </div>
 //       </CardHeader>
+      
 //       <CardContent className="p-4">
 //         <div className="space-y-2">
-//           <Link href={`/auctions/${auction.id}`} className="block">
-//             <h3 className="line-clamp-1 font-semibold">{auction.title}</h3>
+//           <Link href={`/auctions/${auction._id}`} className="block">
+//             <h3 className="line-clamp-1 font-semibold">{auction.auctionTitle}</h3>
 //           </Link>
 //           <p className="line-clamp-2 text-sm text-muted-foreground">{auction.description}</p>
+          
 //           <div className="flex items-center justify-between">
 //             <div>
 //               <p className="text-sm font-medium">Current Bid</p>
-//               <p className="text-lg font-bold text-primary">${auction.currentBid}</p>
+//               <p className="text-lg font-bold text-primary">
+//                 ${hasBids ? currentBid : auction.startingPrice}
+//                 {!hasBids && <span className="text-sm ml-2 text-muted-foreground">(Starting Price)</span>}
+//               </p>
 //             </div>
 //             <div className="text-right">
-//               <p className="text-sm font-medium">{auction.bids} bids</p>
-//               <div className="flex items-center text-sm text-muted-foreground">
-//                 <Clock className="mr-1 h-3 w-3" />
-//                 {auction.timeLeft}
+//               <p className="text-sm font-medium">
+//                 {totalBids} {totalBids === 1 ? 'bid' : 'bids'}
+//               </p>
+//               <div className="flex items-center gap-1">
+//                 <Clock className={cn(
+//                   "h-4 w-4",
+//                   urgent === "high" && "text-red-500",
+//                   urgent === "medium" && "text-amber-500",
+//                   urgent === "low" && "text-green-500"
+//                 )} />
+//                 <span className={cn(
+//                   "text-sm font-medium",
+//                   urgent === "high" && "text-red-500",
+//                   urgent === "medium" && "text-amber-500",
+//                   urgent === "low" && "text-green-500"
+//                 )}>
+//                   {timeLeft}
+//                 </span>
 //               </div>
 //             </div>
 //           </div>
 //         </div>
 //       </CardContent>
+
 //       <CardFooter className="flex items-center justify-between border-t p-4 bg-muted/30">
 //         <div className="flex items-center space-x-2">
 //           <Avatar className="h-6 w-6 border border-primary/20">
-//             <AvatarImage src={auction.seller.avatar} alt={auction.seller.name} />
-//             <AvatarFallback className="bg-primary/10 text-primary">{auction.seller.name[0]}</AvatarFallback>
+//             <AvatarImage src={auction.merchant?.avatar} alt={auction.merchant?.name} />
+//             <AvatarFallback className="bg-primary/10 text-primary">
+//               {auction.merchant?.name?.[0]}
+//             </AvatarFallback>
 //           </Avatar>
-//           <span className="text-xs text-muted-foreground">{auction.seller.name}</span>
+//           <span className="text-xs text-muted-foreground">{auction.merchant?.name}</span>
 //         </div>
+        
 //         <Dialog>
 //           <DialogTrigger asChild>
-//             <Button size="sm" className="gradient-bg border-0">
+//             <Button 
+//               size="sm" 
+//               className="gradient-bg border-0"
+//               onClick={() => setBidAmount(currentBid + auction.bidIncrement)}
+//             >
 //               Place Bid
 //             </Button>
 //           </DialogTrigger>
@@ -99,22 +218,37 @@
 //             <DialogHeader>
 //               <DialogTitle>Place a Bid</DialogTitle>
 //               <DialogDescription>
-//                 Current highest bid is ${auction.currentBid}. Your bid must be higher.
+//                 {hasBids 
+//                   ? `Current highest bid: $${currentBid} (Minimum bid: $${currentBid + auction.bidIncrement})`
+//                   : `Starting price: $${auction.startingPrice} (Minimum bid: $${auction.startingPrice + auction.bidIncrement})`}
 //               </DialogDescription>
 //             </DialogHeader>
+            
 //             <div className="grid gap-4 py-4">
 //               <div className="grid gap-2">
 //                 <Label htmlFor="bid-amount">Bid Amount ($)</Label>
-//                 <Input
-//                   id="bid-amount"
-//                   type="number"
-//                   min={auction.currentBid + 1}
-//                   value={bidAmount}
-//                   onChange={(e) => setBidAmount(Number(e.target.value))}
-//                   className="border-primary/20"
-//                 />
+//                 <div className="flex items-center gap-2">
+//                   <Button 
+//                     variant="outline" 
+//                     size="icon" 
+//                     onClick={incrementBid}
+//                     className="h-8 w-8"
+//                   >
+//                     +
+//                   </Button>
+//                   <Input
+//                     id="bid-amount"
+//                     type="number"
+//                     min={currentBid + auction.bidIncrement}
+//                     value={bidAmount}
+//                     onChange={handleBidChange}
+//                     onKeyDown={(e) => e.key === 'ArrowDown' && e.preventDefault()}
+//                     className="border-primary/20 text-center"
+//                   />
+//                 </div>
 //               </div>
 //             </div>
+            
 //             <DialogFooter>
 //               <Button onClick={handleBid} className="gradient-bg border-0">
 //                 Place Bid
@@ -127,108 +261,163 @@
 //   )
 // }
 
-"use client"
-
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Clock, Heart } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
-import { useSession } from "next-auth/react"
+"use client";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/libs/utils";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { Clock, Heart } from "lucide-react";
+import { socket } from "@/libs/socketClient";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { calculateTimeLeft } from "@/libs/utils";
 
 export function AuctionCard({ auction }) {
-    const { data: session } = useSession()
-    const [isFavorite, setIsFavorite] = useState(false)
-    const [bidAmount, setBidAmount] = useState(auction.currentBid + 10) || useState(auction.startingPrice + 10)
-    const [timeLeft, setTimeLeft] = useState(auction.timeLeft)
-    const { toast } = useToast()
-
-    // Update time left counter
+    console.log("AuctionCard auction:", auction);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [currentBid, setCurrentBid] = useState(
+        auction.highestBid > 0 ? auction.highestBid : auction.startingPrice // Fixed initialization
+    );
+    const [totalBids, setTotalBids] = useState(auction.totalBids || 0);
+    const [bidAmount, setBidAmount] = useState(currentBid + auction.bidIncrement);
+    const { toast } = useToast();
+    const [timeLeft, setTimeLeft] = useState("");
+    const [urgent, setUrgentLevel] = useState("");
+    const { data: session } = useSession();
+    const router = useRouter();
+    
+    
+    // Add WebSocket listener for real-time bid updates
     useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date()
-            const end = new Date(auction.endTime)
-            const diff = end - now
-            
-            if (diff <= 0) {
-                setTimeLeft('Ended')
-                clearInterval(interval)
-                return
+        const handleNewBid = (data) => {
+            if (data.auctionId === auction._id) {
+                setCurrentBid(data.bidAmount);
+                setTotalBids((prev) => prev + 1);
+                setBidAmount(data.bidAmount + auction.bidIncrement);
+                toast({
+                    title: "New bid placed!",
+                    description: `Someone bid $${data.bidAmount} on ${auction.auctionTitle}`,
+                });
             }
-            
-            const hours = Math.floor(diff / (1000 * 60 * 60))
-            setTimeLeft(formatTimeLeft(hours))
-        }, 60000) // Update every minute
-        
-        return () => clearInterval(interval)
-    }, [auction.endTime])
+        };
+
+        socket.on("newBidIncrement", handleNewBid);
+
+        return () => {
+            socket.off("newBidIncrement", handleNewBid);
+        };
+    }, [auction._id, auction.bidIncrement, auction.auctionTitle]);
+
+    useEffect(() => {
+        const updateTimeLeft = () => {
+            const timeString = calculateTimeLeft(auction.endTime);
+            setTimeLeft(timeString);
+            console.log("AuctionCard auction:", auction);
+            const now = new Date();
+            const endTime = new Date(auction.endTime);
+            const diff = endTime - now;
+            const totalHoursLeft = diff / (1000 * 60 * 60);
+
+            setUrgentLevel(
+                totalHoursLeft < 8 ? "high" : totalHoursLeft < 18 ? "medium" : "low"
+            );
+        };
+
+        updateTimeLeft();
+        const timer = setInterval(updateTimeLeft, 60000);
+        return () => clearInterval(timer);
+    }, [auction.endTime]);
 
     const handleBid = async () => {
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please sign in to place a bid",
-                variant: "destructive"
-            })
-            return
+            router.push("/login");
+            return;
         }
 
-        if (bidAmount <= auction.currentBid) {
+        const minBid = currentBid + auction.bidIncrement;
+        if (bidAmount < minBid) {
             toast({
-                title: "Invalid Bid Amount",
-                description: `Your bid must be higher than $${auction.currentBid}`,
-                variant: "destructive"
-            })
-            return
+                title: "Invalid bid amount",
+                description: `Your bid must be at least $${minBid}`,
+                variant: "destructive",
+            });
+            return;
         }
 
         try {
-            const response = await fetch('/api/bids', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+            const response = await fetch("/api/bid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    auctionId: auction.id,
+                    auctionId: auction._id,
                     bidAmount,
-                    quantity: 1
-                })
-            })
+                }),
+            });
 
-            if (!response.ok) {
-                throw new Error(await response.text())
-            }
+            if (!response.ok) throw new Error("Failed to place bid");
+
+            const data = await response.json();
+            setCurrentBid(data.highestBid);
+            setTotalBids(data.totalBids);
+            setBidAmount(data.highestBid + auction.bidIncrement);
 
             toast({
-                title: "Bid Placed Successfully!",
-                description: `Your bid of $${bidAmount} has been placed`,
-            })
+                title: "Bid placed successfully!",
+                description: `You bid $${bidAmount} on ${auction.auctionTitle}`,
+            });
+
+            socket.emit("newBidIncrement", {
+                auctionId: auction._id,
+                bidAmount,
+                bidderName: session.user.name,
+                bidderEmail: session.user.email,
+            });
         } catch (error) {
             toast({
-                title: "Bid Failed",
-                description: error.message || "Failed to place bid",
-                variant: "destructive"
-            })
+                title: "Bid failed",
+                description: error.message,
+                variant: "destructive",
+            });
         }
-    }
+    };
 
-    const isEndingSoon = timeLeft.includes('h') && !timeLeft.includes('Ended')
+    const handleBidChange = (e) => {
+        const value = Number(e.target.value);
+        const minBid = currentBid + auction.bidIncrement;
+        setBidAmount(Math.max(value, minBid));
+    };
+
+    const incrementBid = () => {
+        setBidAmount((prev) => prev + auction.bidIncrement);
+    };
+
+    const isEndingSoon = urgent === "high" || urgent === "medium";
+    const hasBids = totalBids > 0;
 
     return (
-        <Card className="overflow-hidden border-primary/10 hover:shadow-lg transition-shadow">
+        <Card className="overflow-hidden border-primary/10 auction-card-hover">
             <CardHeader className="p-0">
                 <div className="relative">
-                    <Link href={`/auctions/${auction.id}`}>
+                    <Link href={`/auctions/${auction._id}`}>
                         <div className="aspect-[4/3] w-full overflow-hidden">
                             <Image
-                                src={auction.itemImg}
-                                alt={auction.title}
+                                src={auction.itemImg || "/placeholder.svg"}
+                                alt={auction.auctionTitle}
                                 width={400}
                                 height={300}
                                 className="h-full w-full object-cover transition-transform hover:scale-105"
@@ -241,59 +430,84 @@ export function AuctionCard({ auction }) {
                         className="absolute right-2 top-2 rounded-full bg-background/80 backdrop-blur-sm"
                         onClick={() => setIsFavorite(!isFavorite)}
                     >
-                        <Heart className={`h-5 w-5 ${isFavorite ? "fill-destructive text-destructive" : ""}`} />
+                        <Heart
+                            className={`h-5 w-5 ${isFavorite ? "fill-destructive text-destructive" : ""}`}
+                        />
                     </Button>
                     {isEndingSoon && (
-                        <div className="absolute left-2 top-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md animate-pulse">
+                        <div className="absolute left-2 top-2 highlight-badge animate-pulse-slow">
                             Ending Soon
                         </div>
                     )}
                 </div>
             </CardHeader>
+
             <CardContent className="p-4">
                 <div className="space-y-2">
-                    <Link href={`/auctions/${auction.id}`} className="block">
-                        <h3 className="line-clamp-1 font-semibold hover:text-primary transition-colors">
-                            {auction.title}
-                        </h3>
+                    <Link href={`/auctions/${auction._id}`} className="block">
+                        <h3 className="line-clamp-1 font-semibold">{auction.auctionTitle}</h3>
                     </Link>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {auction.description}
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
+                    <p className="line-clamp-2 text-sm text-muted-foreground">{auction.description}</p>
+
+                    <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium">Current Bid</p>
                             <p className="text-lg font-bold text-primary">
-                                ${auction.currentBid.toLocaleString()}
+                                ${hasBids ? currentBid : auction.startingPrice}
+                                {!hasBids && (
+                                    <span className="text-sm ml-2 text-muted-foreground">
+                                        (Starting Price)
+                                    </span>
+                                )}
                             </p>
                         </div>
                         <div className="text-right">
                             <p className="text-sm font-medium">
-                                {auction.bids} bid{auction.bids !== 1 ? 's' : ''}
+                                {totalBids} {totalBids === 1 ? "bid" : "bids"}
                             </p>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                                <Clock className="mr-1 h-3 w-3" />
-                                {timeLeft}
+                            <div className="flex items-center gap-1">
+                                <Clock
+                                    className={cn(
+                                        "h-4 w-4",
+                                        urgent === "high" && "text-red-500",
+                                        urgent === "medium" && "text-amber-500",
+                                        urgent === "low" && "text-green-500"
+                                    )}
+                                />
+                                <span
+                                    className={cn(
+                                        "text-sm font-medium",
+                                        urgent === "high" && "text-red-500",
+                                        urgent === "medium" && "text-amber-500",
+                                        urgent === "low" && "text-green-500"
+                                    )}
+                                >
+                                    {timeLeft}
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </CardContent>
+
             <CardFooter className="flex items-center justify-between border-t p-4 bg-muted/30">
                 <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6 border border-primary/20">
-                        <AvatarImage src={auction.seller.avatar} alt={auction.seller.name} />
+                        <AvatarImage src={auction.merchant?.avatar} alt={auction.merchant?.name} />
                         <AvatarFallback className="bg-primary/10 text-primary">
-                            {auction.seller.name.charAt(0)}
+                            {auction.merchant?.name?.[0] || "U"}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                        {auction.seller.name}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{auction.merchant?.name}</span>
                 </div>
+
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button size="sm" className="bg-primary hover:bg-primary/90">
+                        <Button
+                            size="sm"
+                            className="gradient-bg border-0"
+                            onClick={() => setBidAmount(currentBid + auction.bidIncrement)}
+                        >
                             Place Bid
                         </Button>
                     </DialogTrigger>
@@ -301,28 +515,43 @@ export function AuctionCard({ auction }) {
                         <DialogHeader>
                             <DialogTitle>Place a Bid</DialogTitle>
                             <DialogDescription>
-                                Current highest bid is ${auction.currentBid.toLocaleString()}. 
-                                Your bid must be higher.
+                                {hasBids
+                                    ? `Current highest bid: $${currentBid} (Minimum bid: $${
+                                          currentBid + auction.bidIncrement
+                                      })`
+                                    : `Starting price: $${auction.startingPrice} (Minimum bid: $${
+                                          auction.startingPrice + auction.bidIncrement
+                                      })`}
                             </DialogDescription>
                         </DialogHeader>
+
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="bid-amount">Bid Amount ($)</Label>
-                                <Input
-                                    id="bid-amount"
-                                    type="number"
-                                    min={auction.currentBid + 1}
-                                    value={bidAmount}
-                                    onChange={(e) => setBidAmount(Number(e.target.value))}
-                                    className="border-primary/20"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={incrementBid}
+                                        className="h-8 w-8"
+                                    >
+                                        +
+                                    </Button>
+                                    <Input
+                                        id="bid-amount"
+                                        type="number"
+                                        min={currentBid + auction.bidIncrement}
+                                        value={bidAmount}
+                                        onChange={handleBidChange}
+                                        onKeyDown={(e) => e.key === "ArrowDown" && e.preventDefault()}
+                                        className="border-primary/20 text-center"
+                                    />
+                                </div>
                             </div>
                         </div>
+
                         <DialogFooter>
-                            <Button 
-                                onClick={handleBid}
-                                className="bg-primary hover:bg-primary/90"
-                            >
+                            <Button onClick={handleBid} className="gradient-bg border-0">
                                 Place Bid
                             </Button>
                         </DialogFooter>
@@ -330,18 +559,5 @@ export function AuctionCard({ auction }) {
                 </Dialog>
             </CardFooter>
         </Card>
-        
-    )
-}
-
-function formatTimeLeft(hours) {
-    if (hours <= 0) return 'Ended'
-    
-    const days = Math.floor(hours / 24)
-    const remainingHours = Math.floor(hours % 24)
-    
-    if (days > 0) {
-        return `${days}d ${remainingHours}h`
-    }
-    return `${Math.floor(hours)}h`
+    );
 }

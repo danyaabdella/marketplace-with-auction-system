@@ -6,150 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, SlidersHorizontal } from "lucide-react"
-import { MyAuctionCard } from "@/components/my-auctions-card"
+import { MyAuctionCard } from "@/components/auction/my-auctions-card"
 import { useRouter } from "next/navigation";
 
-// Mock data for auctions the user is participating in
-// const myAuctions = [
-//   {
-//     id: "1",
-//     title: "Vintage Polaroid Camera",
-//     description: "Original Polaroid camera from the 1970s in excellent condition.",
-//     currentBid: 150,
-//     myBid: 150,
-//     isHighestBidder: true,
-//     bids: 8,
-//     timeLeft: "2 hours",
-//     endDate: "2024-03-15T18:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Camera Collector",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: true,
-//     status: "active",
-//     bidHistory: [
-//       { id: "bid1", bidder: "You", amount: 150, time: "2 hours ago", isYou: true },
-//       { id: "bid2", bidder: "Sarah Chen", amount: 140, time: "3 hours ago", isYou: false },
-//       { id: "bid3", bidder: "Michael Brown", amount: 130, time: "5 hours ago", isYou: false },
-//     ],
-//   },
-//   {
-//     id: "2",
-//     title: "Antique Wooden Desk",
-//     description: "Beautiful oak desk from the early 20th century.",
-//     currentBid: 525,
-//     myBid: 500,
-//     isHighestBidder: false,
-//     bids: 12,
-//     timeLeft: "Ended",
-//     endDate: "2024-03-10T10:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Vintage Furniture",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: false,
-//     status: "ended",
-//     bidHistory: [
-//       { id: "bid1", bidder: "Emma Wilson", amount: 525, time: "2 days ago", isYou: false },
-//       { id: "bid2", bidder: "You", amount: 500, time: "3 days ago", isYou: true },
-//       { id: "bid3", bidder: "John Smith", amount: 475, time: "3 days ago", isYou: false },
-//     ],
-//   },
-//   {
-//     id: "3",
-//     title: "Limited Edition Vinyl Record",
-//     description: "Rare first pressing of a classic album, still sealed.",
-//     currentBid: 95,
-//     myBid: 95,
-//     isHighestBidder: true,
-//     bids: 6,
-//     timeLeft: "4 hours",
-//     endDate: "2024-03-15T20:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Music Enthusiast",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: true,
-//     status: "active",
-//     bidHistory: [
-//       { id: "bid1", bidder: "You", amount: 95, time: "1 hour ago", isYou: true },
-//       { id: "bid2", bidder: "Alex Thompson", amount: 90, time: "2 hours ago", isYou: false },
-//       { id: "bid3", bidder: "Jessica Lee", amount: 85, time: "3 hours ago", isYou: false },
-//     ],
-//   },
-//   {
-//     id: "4",
-//     title: "Handcrafted Leather Bag",
-//     description: "Premium leather messenger bag, handmade by artisans.",
-//     currentBid: 210,
-//     myBid: 180,
-//     isHighestBidder: false,
-//     bids: 9,
-//     timeLeft: "1 day",
-//     endDate: "2024-03-16T15:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Leather Artisan",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: true,
-//     status: "active",
-//     bidHistory: [
-//       { id: "bid1", bidder: "Robert Johnson", amount: 210, time: "5 hours ago", isYou: false },
-//       { id: "bid2", bidder: "You", amount: 180, time: "1 day ago", isYou: true },
-//       { id: "bid3", bidder: "Maria Garcia", amount: 170, time: "1 day ago", isYou: false },
-//     ],
-//   },
-//   {
-//     id: "5",
-//     title: "Vintage Mechanical Watch",
-//     description: "Swiss-made mechanical watch from the 1960s, recently serviced.",
-//     currentBid: 450,
-//     myBid: 450,
-//     isHighestBidder: true,
-//     bids: 15,
-//     timeLeft: "Won",
-//     endDate: "2024-03-05T12:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Watch Collector",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: false,
-//     status: "won",
-//     bidHistory: [
-//       { id: "bid1", bidder: "You", amount: 450, time: "5 days ago", isYou: true },
-//       { id: "bid2", bidder: "David Kim", amount: 425, time: "5 days ago", isYou: false },
-//       { id: "bid3", bidder: "Lisa Wang", amount: 400, time: "6 days ago", isYou: false },
-//     ],
-//   },
-//   {
-//     id: "6",
-//     title: "Art Deco Table Lamp",
-//     description: "Original Art Deco lamp with stained glass shade.",
-//     currentBid: 320,
-//     myBid: 300,
-//     isHighestBidder: false,
-//     bids: 11,
-//     timeLeft: "Lost",
-//     endDate: "2024-03-08T16:00:00",
-//     imageUrl: "/placeholder.svg?height=300&width=400",
-//     seller: {
-//       name: "Vintage Lighting",
-//       avatar: "/placeholder.svg?height=40&width=40",
-//     },
-//     hasNewActivity: false,
-//     status: "lost",
-//     bidHistory: [
-//       { id: "bid1", bidder: "Thomas Wilson", amount: 320, time: "7 days ago", isYou: false },
-//       { id: "bid2", bidder: "You", amount: 300, time: "7 days ago", isYou: true },
-//       { id: "bid3", bidder: "Anna Martinez", amount: 280, time: "8 days ago", isYou: false },
-//     ],
-//   },
-// ]
 
 export default function MyAuctionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -175,41 +34,6 @@ export default function MyAuctionsPage() {
     fetchAuctions()
   }, [])
 
-  // Filter auctions based on search query and status
-  // const filteredAuctions = myAuctions.filter((auction) => {
-  //   const matchesSearch =
-  //     auction.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     auction.description.toLowerCase().includes(searchQuery.toLowerCase())
-
-  //   if (statusFilter === "all") return matchesSearch
-  //   if (statusFilter === "active") return matchesSearch && auction.status === "active"
-  //   if (statusFilter === "won") return matchesSearch && auction.status === "won"
-  //   if (statusFilter === "lost") return matchesSearch && auction.status === "lost"
-  //   if (statusFilter === "ended")
-  //     return matchesSearch && (auction.status === "ended" || auction.status === "won" || auction.status === "lost")
-
-  //   return matchesSearch
-  // })
-
-  // // Sort auctions based on selected option
-  // const sortedAuctions = [...filteredAuctions].sort((a, b) => {
-  //   if (sortOption === "ending-soon") {
-  //     if (a.status !== "active" && b.status === "active") return 1
-  //     if (a.status === "active" && b.status !== "active") return -1
-  //     if (a.status !== "active" && b.status !== "active") return 0
-  //     return new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
-  //   }
-  //   if (sortOption === "newest") {
-  //     return new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-  //   }
-  //   if (sortOption === "highest-bid") {
-  //     return b.currentBid - a.currentBid
-  //   }
-  //   if (sortOption === "most-bids") {
-  //     return b.bids - a.bids
-  //   }
-  //   return 0
-  // })
   const baseArray = {
     all: data.participated,
     active: data.activeBids,
@@ -220,8 +44,8 @@ export default function MyAuctionsPage() {
   // 1) Filter by search + status (for “ended” tab include both won+lost)
   const filtered = baseArray.filter(auction => {
     const matchesSearch =
-      auction.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      auction.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (auction.auctionTitle || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (auction.description || "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch
   })
 
@@ -247,7 +71,7 @@ export default function MyAuctionsPage() {
 
 
   const handleAuctionClick = (auction) => {
-    router.push(`/auctions/${auction}`)
+    router.push(`/auctions/${auction._id}`)
   }
 
   return (

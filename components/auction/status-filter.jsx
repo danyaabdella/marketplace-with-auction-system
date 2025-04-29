@@ -4,22 +4,27 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 
-export function StatusFilter() {
+const statusOptions = [
+  { id: "all", name: "All Auctions" },
+  { id: "active", name: "Active" },
+  { id: "ending-soon", name: "Ending Soon" },
+  { id: "completed", name: "Completed" },
+];
+
+export function StatusFilter({ onStatusChange }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
-  const handleToggleStatus = (value) => {
-    setSelectedStatuses((prev) =>
-      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]
-    );
+  const handleStatusChange = (status) => {
+    setSelectedStatus(status);
+    onStatusChange(status);
   };
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold text-primary">Auction Status</Label>
+        <Label className="text-sm font-semibold text-primary">Status</Label>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:text-primary">
             <span className="sr-only">{isOpen ? "Close" : "Open"}</span>
@@ -28,25 +33,24 @@ export function StatusFilter() {
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent className="space-y-2">
-        {[
-          { id: "all", label: "All Auctions" },
-          { id: "active", label: "Active Auctions" },
-          { id: "ending-soon", label: "Ending Soon" },
-          { id: "new", label: "Newly Listed" },
-          { id: "completed", label: "Completed" }
-        ].map(({ id, label }) => (
-          <div key={id} className="flex items-center space-x-2">
-            <Checkbox
-              id={`status-${id}`}
-              checked={selectedStatuses.includes(id)}
-              onCheckedChange={() => handleToggleStatus(id)}
-              className="border-primary/20 text-primary"
-            />
-            <Label
-              htmlFor={`status-${id}`}
-              className="text-sm cursor-pointer hover:text-primary transition-colors"
+        {statusOptions.map((status) => (
+          <div key={status.id} className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-7 w-7 p-0 border-primary/20 ${
+                selectedStatus === status.id ? "bg-primary text-primary-foreground" : ""
+              }`}
+              onClick={() => handleStatusChange(status.id)}
             >
-              {label}
+              {selectedStatus === status.id && <span className="h-4 w-4">✓</span>}
+            </Button>
+            <Label
+              htmlFor={`status-${status.id}`}
+              className="text-sm cursor-pointer hover:text-primary transition-colors"
+              onClick={() => handleStatusChange(status.id)}
+            >
+              {status.name}
             </Label>
           </div>
         ))}

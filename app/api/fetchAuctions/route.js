@@ -1,4 +1,3 @@
-
 import { connectToDB } from "@/libs/functions"
 import Auction from "@/models/Auction"
 import Bid from "@/models/Bid"
@@ -9,99 +8,81 @@ export async function GET(request) {
         await connectToDB()
         
         const { searchParams } = new URL(request.url)
-        const type = searchParams.get("type")
-        const category = searchParams.get("category")
-        const minPrice = searchParams.get("minPrice")
-        const maxPrice = searchParams.get("maxPrice")
-        const status = searchParams.get("status")
+        const page = Number(searchParams.get("page")) || 1
+        const limit = Number(searchParams.get("limit")) || 12
+        const skip = (page - 1) * limit
 
-        const baseQuery = {}
-        
-        // Apply filters
-        if (category) baseQuery.category = category
-        if (status) baseQuery.status = status
-        if (minPrice || maxPrice) {
-            baseQuery.startingPrice = {}
-            if (minPrice) baseQuery.startingPrice.$gte = Number(minPrice)
-            if (maxPrice) baseQuery.startingPrice.$lte = Number(maxPrice)
-        }
+        // Fetch active auctions with pagination
+        const auctionResults = await Auction.find({
+            status: "active",
+            endTime: { $gt: new Date() }
+        })
+        .populate('merchantId', 'name avatar')
+        .populate('productId', 'name')
+        .sort({ endTime: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
-        let auctions = []
+        // Get auction IDs for bid lookup
+        const auctionIds = auctionResults.map((a) => a._id);
 
-        if (type === "all-active") {
-            baseQuery.status = "active"
-            baseQuery.endTime = { $gt: new Date() }
+        // Fetch bids for these auctions
+        const bidResults = await Bid.find({
+            auctionId: { $in: auctionIds },
+        }).populate({
+            path: 'bids.bidderId',
+            select: 'name avatar email',
+        });
 
-            auctions = await Auction.aggregate([
-                { $match: baseQuery },
-                {
-                    $lookup: {
-                        from: "bids",
-                        localField: "_id",
-                        foreignField: "auctionId",
-                        as: "bidInfo"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "merchantId",
-                        foreignField: "_id",
-                        as: "merchant",
-                        pipeline: [
-                            { $project: { fullName: 1, image: 1 } }
-                        ]
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        localField: "productId",
-                        foreignField: "_id",
-                        as: "product"
-                    }
-                },
-                {
-                    $addFields: {
-                        bidInfo: { $arrayElemAt: ["$bidInfo", 0] },
-                        merchantId: { $arrayElemAt: ["$merchant", 0] },
-                        product: { $arrayElemAt: ["$product", 0] }
-                    }
-                    // $addFields: {
-                    //     currentBid: { $max: "$bidInfo.highestBid" },
-                    //     bidCount: { $size: "$bidInfo" },
-                    //     merchantName: { $arrayElemAt: ["$merchant.username", 0] },
-                    //     productName: { $arrayElemAt: ["$product.productName", 0] },
-                    //     mainImage: { $arrayElemAt: ["$itemImg", 0] },
-                    //     timeLeft: {
-                    //         $divide: [
-                    //             { $subtract: ["$endTime", new Date()] },
-                    //             1000 * 60 * 60 // Convert to hours
-                    //         ]
-                    //     }
-                    // }
-                },
-                // Add computed fields
-                {
-                    $addFields: {
-                        currentBid: { $ifNull: ["$bidInfo.highestBid", "$startingPrice"] },
-                        bidCount: { $ifNull: ["$bidInfo.totalBids", 0] },
-                        productName: "$product.productName",
-                        mainImage: { $arrayElemAt: ["$itemImg", 0] },
-                        timeLeft: {
-                            $divide: [
-                                { $subtract: ["$endTime", new Date()] },
-                                1000 * 60 * 60 // Convert to hours
-                            ]
-                        }
-                    }
-                },
-                { $sort: { endTime: 1 } }, // Sort by ending soonest
-                { $limit: 50 }
-            ])
-        }
+        // Create a map of auctionId to bid data
+        const bidMap = bidResults.reduce((acc, bidDoc) => {
+            const bids = bidDoc.bids || [];
+            const highestBid = bids.length > 0 ? Math.max(...bids.map((b) => b.bidAmount)) : 0;
+            acc[bidDoc.auctionId.toString()] = {
+                highestBid: highestBid || 0,
+                totalBids: bids.length,
+                bids: bids.map((bid) => ({
+                    id: bid._id,
+                    bidder: {
+                        id: bid.bidderId?._id || null,
+                        name: bid.bidderId?.name || bid.bidderName || 'Unknown',
+                        avatar: bid.bidderId?.avatar || '/placeholder.svg',
+                        email: bid.bidderId?.email || bid.bidderEmail || '',
+                    },
+                    amount: bid.bidAmount,
+                    time: bid.bidTime,
+                    status: bid.status,
+                })),
+            };
+            return acc;
+        }, {});
 
-        return NextResponse.json(auctions)
+        // Combine auction data with bid data
+        const auctions = auctionResults.map((auction) => {
+            const bidData = bidMap[auction._id.toString()] || {
+                highestBid: auction.startingPrice,
+                totalBids: 0,
+                bids: [],
+            };
+            return {
+                ...auction,
+                auctionTitle: auction.auctionTitle || 'Untitled Auction',
+                highestBid: bidData.highestBid,
+                totalBids: bidData.totalBids,
+                bids: bidData.bids,
+                itemImg: auction.itemImg?.[0] || '/placeholder.svg',
+                merchant: {
+                    id: auction.merchantId?._id || null,
+                    name: auction.merchantId?.name || 'Unknown Merchant',
+                    avatar: auction.merchantId?.avatar || '/placeholder.svg',
+                },
+                productName: auction.productId?.name || 'Unknown Product',
+                timeLeft: Math.floor((auction.endTime - new Date()) / (1000 * 60 * 60)) // hours remaining
+            };
+        });
+
+        return NextResponse.json(auctions);
     } catch (error) {
         console.error("Error fetching auctions:", error)
         return NextResponse.json(
