@@ -8,6 +8,7 @@ import ChatBot from "@/components/commons/ChatBot";
 import { Footer } from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 
+
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
 export const metadata = {
@@ -20,17 +21,15 @@ export default function RootLayout({ children }) {
       <html lang="en" className="scroll-smooth overflow-x-hidden mt-8" suppressHydrationWarning>
         <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-              <CartProvider>
-                <ContextProvider>
-                  <Navbar />
-                  <Toaster />
-                  <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
-                    {children}
-                  </main>
-                  <ChatBot />
-                  <Footer />
-                </ContextProvider>
-              </CartProvider>
+              <ContextProvider>
+                <Navbar />
+                <Toaster />
+                <main className="flex-1 max-w-7xl mx-auto px-[10px] overflow-y-hidden">
+                  {children}
+                </main>
+                <ChatBot />
+                <Footer />
+              </ContextProvider>
           </ThemeProvider>
         </body>
       </html>

@@ -239,7 +239,14 @@ export default function ProductsPage() {
       </div>
 
       {/* Loading and Error States */}
-      {loading && <div className="text-center py-8">Loading products...</div>}
+      {loading && 
+        <div className="container p-6">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <span className="ml-4">Loading products...</span>
+          </div>
+        </div>
+      }
       {error && <div className="text-center text-red-500 py-8">{error}</div>}
 
       {/* Main Content */}

@@ -96,8 +96,23 @@ export default function CategoriesPage() {
         </form>
       </div>
 
-      {loading && <div className="text-center py-8">Loading categories...</div>}
-      {error && <div className="text-center text-red-500 py-8">{error}</div>}
+      {/* {loading && <div className="text-center py-8">Loading categories...</div>} */}
+       {
+          loading &&
+            <div className="container p-6">
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            </div>
+          
+        }
+      {error && 
+        <div className="container p-6">
+          <div className="bg-destructive/10 p-4 rounded-lg flex flex-col items-center">
+            <p className="text-destructive mb-4">{error}</p>
+           </div>
+        </div>
+      }
 
       {!loading && !error && (
         <>
