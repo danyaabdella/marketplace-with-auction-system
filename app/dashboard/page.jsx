@@ -7,10 +7,6 @@ import {MerchantProducts} from "components/dashboard/merchant-products";
 import { MerchantAuctions } from "components/dashboard/merchant-auctions";
 import {OrdersPage} from "components/dashboard/orders";
 import {CustomersPage} from "components/dashboard/customers";
-//import SettingsPage from "components/dashboard/setting";
-// import HistoryPage from "path/to/HistoryPage"; // Adjust path as needed
-import { Search } from "lucide-react";
-import { Input } from "components/ui/input";
 
 // Map of view names to their corresponding components
 const viewComponents = {
@@ -19,8 +15,7 @@ const viewComponents = {
   auctions: MerchantAuctions,
   orders: OrdersPage,
   customers: CustomersPage,
-  // history: HistoryPage,
-  //settings: SettingsPage,
+ 
 };
 
 export default function DashboardPage() {
@@ -37,18 +32,7 @@ export default function DashboardPage() {
       </div>
       
       <div className="flex-1">
-        {/* <div className="border-b">
-          <div className="flex h-16 items-center px-4">
-            <div className="relative w-full flex-1 md:max-w-sm items-center">
-              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="w-full pl-8 border-primary/20 focus-visible:ring-primary"
-              />
-            </div>
-          </div>
-        </div> */}
+       
         <div className={`flex-1 p-4 grid grid-cols-1 transition-all ${open ? "" : "blur-md"}`}>
             {/* Render the current component, or a fallback if invalid */}
             {CurrentComponent ? <CurrentComponent /> : <p>Invalid view selected</p>}

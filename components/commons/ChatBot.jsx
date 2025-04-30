@@ -64,7 +64,7 @@ export default function ChatBot() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-4 right-4 sm:right-16 z-50" // Adjusted for mobile
+            className="fixed bottom-4 right-4 sm:right-8 md:right-16 z-50" // Adjusted for mobile and larger screens
           >
             <Button
               ref={chatIconRef}
@@ -90,9 +90,9 @@ export default function ChatBot() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-4 sm:right-16 z-50 w-[95%] sm:w-[400px] md:w-[500px]" // Adjusted for mobile
+            className="fixed bottom-20 right-4 sm:right-8 md:right-16 z-50 w-[95%] sm:w-[400px] md:w-[500px] h-[calc(100vh-8rem)]" // Adjusted for mobile and larger screens
           >
-            <Card className="border-2">
+            <Card className="border-2 h-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="text-lg font-bold">
                   Chat with NoteWorthy AI
@@ -108,8 +108,8 @@ export default function ChatBot() {
                 </Button>
               </CardHeader>
 
-              <CardContent>
-                <ScrollArea className="h-[300px] sm:h-[400px] pr-4"> {/* Adjusted height for mobile */}
+              <CardContent className="h-[calc(100%-8rem)]">
+                <ScrollArea className="h-full pr-4"> {/* Adjusted height for mobile and larger screens */}
                   {messages?.length === 0 && (
                     <div className="w-full mt-32 text-gray-500 items-center justify-center flex gap-3">
                       No messages yet!

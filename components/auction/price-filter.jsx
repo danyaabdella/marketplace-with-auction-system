@@ -7,25 +7,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 
-export function PriceFilter() {
+export function PriceFilter({ onPriceChange }) {
   const [isOpen, setIsOpen] = useState(true)
   const [priceRange, setPriceRange] = useState([0, 1000])
 
   const handleSliderChange = (value) => {
     setPriceRange(value)
+    onPriceChange(value[0], value[1])
   }
 
   const handleMinChange = (e) => {
     const value = Number.parseInt(e.target.value)
     if (!isNaN(value) && value >= 0 && value <= priceRange[1]) {
-      setPriceRange([value, priceRange[1]])
+      const newRange = [value, priceRange[1]]
+      setPriceRange(newRange)
+      onPriceChange(value, priceRange[1])
     }
   }
 
   const handleMaxChange = (e) => {
     const value = Number.parseInt(e.target.value)
     if (!isNaN(value) && value >= priceRange[0]) {
-      setPriceRange([priceRange[0], value])
+      const newRange = [priceRange[0], value]
+      setPriceRange(newRange)
+      onPriceChange(priceRange[0], value)
     }
   }
 
@@ -71,8 +76,15 @@ export function PriceFilter() {
             />
           </div>
         </div>
+        <Slider
+          value={priceRange}
+          onValueChange={handleSliderChange}
+          min={0}
+          max={1000}
+          step={1}
+          className="w-full"
+        />
       </CollapsibleContent>
     </Collapsible>
   )
 }
-

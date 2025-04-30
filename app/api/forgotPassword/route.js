@@ -18,6 +18,11 @@ export async function POST(req) {
         }
         // Generate a short reset token using crypto.randomBytes
         const resetToken = crypto.randomBytes(15).toString('hex'); 
+
+        // Set token and expiry in the user document
+        user.otp = resetToken;
+        user.otpExpires = Date.now() + 3600000; // 1 hour from now
+        await user.save();
         // Send reset token to the user's email
         const transporter = nodemailer.createTransport({
             service: "gmail",

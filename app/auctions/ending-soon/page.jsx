@@ -1,5 +1,5 @@
-import  { Metadata } from "next"
-import { EndingSoonAuctions } from "@/components/ending-soon-auctions"
+
+import { EndingSoonAuctions } from "@/components/auction/ending-soon-auctions"
 
 export const metadata = {
   title: "Ending Soon Auctions | Auction Marketplace",

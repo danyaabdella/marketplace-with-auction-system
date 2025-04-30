@@ -1,13 +1,11 @@
-"use client"
+"use client";
 
-import React from "react"
-
-import { useState, useEffect } from "react"
-import Image from "next/image"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,15 +13,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
-import { X, Plus, MapPin } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { X, Plus, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import LocationMap from "@/components/LocationMap";
 
+// Updated schema to include mass for PERKG delivery
 const formSchema = z.object({
   productName: z.string().min(2, { message: "Product name must be at least 2 characters." }),
   categoryId: z.string().min(1, { message: "Please select a category." }),
@@ -31,35 +31,28 @@ const formSchema = z.object({
   quantity: z.string().min(1, { message: "Quantity is required." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   brand: z.string().optional(),
-  delivery: z.enum(["FLAT", "PERPIECE", "PERKG", "FREE"]),
+  delivery: z.enum(["PERPIECE", "PERKG", "FREE", "PERKM"]),
   deliveryPrice: z.string(),
+  KilometerPerPrice: z.string().optional().refine((val) => {
+    if (val) return Number(val) > 0;
+    return true;
+  }, { message: "Kilometers per price must be a positive number." }),
+  KilogramPerPrice: z.string().optional().refine((val) => {
+    if (val) return Number(val) > 0;
+    return true;
+  }, { message: "Kilograms per price must be a positive number." }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-})
+});
 
-// Mock categories for the dropdown
-const categories = [
-  { id: "cat1", name: "Electronics" },
-  { id: "cat2", name: "Furniture" },
-  { id: "cat3", name: "Music" },
-  { id: "cat4", name: "Home Decor" },
-  { id: "cat5", name: "Clothing" },
-  { id: "cat6", name: "Jewelry" },
-  { id: "cat7", name: "Art" },
-]
-
-export function AddEditProductForm({
-  open,
-  onOpenChange,
-  product,
-  mode,
-}) {
-  const { toast } = useToast()
-  const [variants, setVariants] = useState([])
-  const [newVariant, setNewVariant] = useState("")
-  const [sizes, setSizes] = useState([])
-  const [newSize, setNewSize] = useState("")
-  const [images, setImages] = useState([])
+export function AddEditProductForm({ open, onOpenChange, product, mode }) {
+  const { toast } = useToast();
+  const [variants, setVariants] = useState([]);
+  const [newVariant, setNewVariant] = useState("");
+  const [sizes, setSizes] = useState([]);
+  const [newSize, setNewSize] = useState("");
+  const [images, setImages] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -70,33 +63,42 @@ export function AddEditProductForm({
       quantity: "",
       description: "",
       brand: "Hand Made",
-      delivery: "FLAT",
+      delivery: "FREE",
       deliveryPrice: "0",
+      KilometerPerPrice: "",
+      KilogramPerPrice: "",
       latitude: "",
       longitude: "",
     },
-  })
+  });
+
+  const { formState } = form;
+  const isDirty = formState.isDirty;
 
   // Initialize form with product data when editing
   useEffect(() => {
     if (mode === "edit" && product) {
-      form.reset({
-        productName: product.productName,
-        categoryId: product.category.categoryId,
-        price: product.price.toString(),
-        quantity: product.quantity.toString(),
-        description: product.description,
-        brand: product.brand,
-        delivery: product.delivery,
-        deliveryPrice: product.deliveryPrice.toString(),
-        latitude: product.location.coordinates[0].toString(),
-        longitude: product.location.coordinates[1].toString(),
-      })
-      setVariants(product.variant || [])
-      setSizes(product.size || [])
-      setImages(product.images || [])
+      const initialValues = {
+        productName: product.productName || "",
+        categoryId: product.category?.categoryId || "",
+        price: product.price?.toString() || "",
+        quantity: product.quantity?.toString() || "",
+        description: product.description || "",
+        brand: product.brand || "Hand Made",
+        delivery: product.delivery || "FREE",
+        deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice?.toString() || "0",
+        KilometerPerPrice: product.KilometerPerPrice?.toString() || "",
+        KilogramPerPrice: product.KilogramPerPrice?.toString() || "",
+        latitude: product.location?.coordinates[1]?.toString() || "",
+        longitude: product.location?.coordinates[0]?.toString() || "",
+      };
+
+      form.reset(initialValues);
+      console.log('initialize', initialValues);
+      setVariants(product.variant || []);
+      setSizes(product.size || []);
+      setImages(product.images || []);
     } else {
-      // Reset form for add mode
       form.reset({
         productName: "",
         categoryId: "",
@@ -104,73 +106,122 @@ export function AddEditProductForm({
         quantity: "",
         description: "",
         brand: "Hand Made",
-        delivery: "FLAT",
+        delivery: "FREE",
         deliveryPrice: "0",
+        KilometerPerPrice: "",
+        KilogramPerPrice: "",
         latitude: "",
         longitude: "",
-      })
-      setVariants([])
-      setSizes([])
-      setImages([])
+      });
+      setVariants([]);
+      setSizes([]);
+      setImages([]);
     }
-  }, [form, mode, product])
-
-  function onSubmit(values) {
-    // Here you would typically send the data to your API
-    const productData = {
-      ...values,
-      variant: variants,
-      size: sizes,
-      images: images,
-      location: {
-        type: "Point",
-        coordinates: [Number.parseFloat(values.latitude || "0"), Number.parseFloat(values.longitude || "0")],
-      },
-    }
-
-    console.log(productData)
-
-    toast({
-      title: mode === "add" ? "Product added" : "Product updated",
-      description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
-    })
-
-    onOpenChange(false)
-  }
+  }, [form, mode, product]);
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories");
+        if (!response.ok) throw new Error("Failed to fetch categories");
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error("Error fetching categories:", error.message);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleAddVariant = () => {
     if (newVariant && !variants.includes(newVariant)) {
-      setVariants([...variants, newVariant])
-      setNewVariant("")
+      setVariants([...variants, newVariant]);
+      setNewVariant("");
     }
-  }
+  };
 
   const handleRemoveVariant = (variant) => {
-    setVariants(variants.filter((v) => v !== variant))
-  }
+    setVariants(variants.filter((v) => v !== variant));
+  };
 
   const handleAddSize = () => {
     if (newSize && !sizes.includes(newSize)) {
-      setSizes([...sizes, newSize])
-      setNewSize("")
+      setSizes([...sizes, newSize]);
+      setNewSize("");
     }
-  }
+  };
 
   const handleRemoveSize = (size) => {
-    setSizes(sizes.filter((s) => s !== size))
-  }
+    setSizes(sizes.filter((s) => s !== size));
+  };
 
   const handleImageUpload = (e) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-      setImages([...images, ...newImages])
+      const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
+      setImages([...images, ...newImages]);
     }
-  }
+  };
 
   const handleRemoveImage = (index) => {
-    setImages(images.filter((_, i) => i !== index))
-  }
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const onSubmit = async (values) => {
+    try {
+      const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
+      if (!selectedCategory) {
+        throw new Error("Selected category not found");
+      }
+
+      const productData = {
+        productName: values.productName,
+        category: {
+          categoryId: values.categoryId,
+          categoryName: selectedCategory.name,
+        },
+        price: Number(values.price),
+        quantity: Number(values.quantity),
+        description: values.description,
+        brand: values.brand,
+        delivery: values.delivery,
+        deliveryPrice: values.delivery === "FREE" ? 0 : Number(values.deliveryPrice),
+        KilometerPerPrice: values.delivery === "PERKM" ? Number(values.KilometerPerPrice) : undefined,
+        KilogramPerPrice: values.delivery === "PERKG" ? Number(values.KilogramPerPrice) : undefined,
+        variant: variants,
+        size: sizes,
+        images: images,
+        location: {
+          type: "Point",
+          coordinates: [Number(values.longitude) || 0, Number(values.latitude) || 0],
+        },
+      };
+
+      const url = mode === "add" ? "/api/products" : `/api/products?productId=${product._id}`;
+      const response = await fetch(url, {
+        method: mode === "add" ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to save product");
+      }
+
+      toast({
+        title: `Product ${mode === "add" ? "added" : "updated"}`,
+        description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,11 +229,10 @@ export function AddEditProductForm({
         <DialogHeader>
           <DialogTitle>{mode === "add" ? "Add New Product" : "Edit Product"}</DialogTitle>
           <DialogDescription>
-            {mode === "add"
-              ? "Fill in the details to add a new product to your inventory."
-              : "Update the details of your existing product."}
+            {mode === "add" ? "Fill in the details to add a new product to your inventory" : "Update your existing product details"}
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -205,7 +255,7 @@ export function AddEditProductForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -213,7 +263,7 @@ export function AddEditProductForm({
                     </FormControl>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category._id} value={category._id}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -347,6 +397,27 @@ export function AddEditProductForm({
             </div>
 
             {/* Location */}
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <LocationMap 
+                        location={[
+                          Number(form.watch("longitude") || 0),
+                          Number(form.watch("latitude") || 0)
+                        ]}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -355,7 +426,16 @@ export function AddEditProductForm({
                   <FormItem>
                     <FormLabel>Latitude</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. 40.7128" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.000001"
+                        placeholder="e.g. 40.7128" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          form.trigger("location");
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -369,7 +449,16 @@ export function AddEditProductForm({
                   <FormItem>
                     <FormLabel>Longitude</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. -74.0060" {...field} />
+                      <Input 
+                        type="number" 
+                        step="0.000001"
+                        placeholder="e.g. -74.0060" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          form.trigger("location");
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -389,17 +478,17 @@ export function AddEditProductForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Delivery Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select delivery type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="FLAT">Flat Rate</SelectItem>
+                        <SelectItem value="FREE">Free Delivery</SelectItem>
                         <SelectItem value="PERPIECE">Per Piece</SelectItem>
                         <SelectItem value="PERKG">Per Kilogram</SelectItem>
-                        <SelectItem value="FREE">Free Delivery</SelectItem>
+                        <SelectItem value="PERKM">Per Kilometer</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -421,6 +510,40 @@ export function AddEditProductForm({
                 )}
               />
             </div>
+
+            {/* Conditional Price Per Kilogram Input for PERKG */}
+            {form.watch("delivery") === "PERKG" && (
+              <FormField
+                control={form.control}
+                name="KilogramPerPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter Kilogram</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Enter kilogram per the delivery price" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Conditional Price Per Kilometer Input for PERKM */}
+            {form.watch("delivery") === "PERKM" && (
+              <FormField
+                control={form.control}
+                name="KilometerPerPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter Kilometer</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Enter kilometer per the delivery price" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Images */}
             <div>
@@ -462,7 +585,11 @@ export function AddEditProductForm({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="gradient-bg border-0">
+              <Button
+                type="submit"
+                className="gradient-bg border-0"
+                disabled={mode === "edit" && !isDirty}
+              >
                 {mode === "add" ? "Add Product" : "Update Product"}
               </Button>
             </DialogFooter>
@@ -470,6 +597,5 @@ export function AddEditProductForm({
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

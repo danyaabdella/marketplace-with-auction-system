@@ -49,10 +49,10 @@ export async function connectToDB() {
     }
   }
   
-export async function isMerchant() {
-    const userData = await userInfo();
+export async function isMerchant(req) {
+    const userData = await userInfo(req);
 
-    if (userData.role !== "merchant" || userData.isMerchant !== true) {
+    if (!userData || userData.role !== "merchant") {
         console.log("Unauthorized: Only Merchants can perform this operation");
 
         return new Response(
@@ -60,23 +60,90 @@ export async function isMerchant() {
             { status: 403 }
         );
     }
+    return {
+      merchantId: userData._id,
+      merchantEmail: userData.email,
+      merchantName: userData.fullName || userData.username // Use appropriate field
+    }
 }
 
-export async function userInfo() {
-  const session = await getServerSession(options)
-  console.log("email: ",session);
-  const userEmail = session?.user?.email;
-  if (!userEmail) {
-    return false;
-  }
-    connectToDB();
-    let userInfo = await User.findOne({email: userEmail})
 
-    if(!userInfo) {
-      return false;
+/**
+ * Verify session and check user role
+ * @param {Request} req - The incoming request object
+ * @param {string} [requiredRole] - Optional required role to check
+ * @returns {Promise<{user: object, session: object}>} - Returns user and session data
+ * @throws {Error} - Throws error if authentication or authorization fails
+ */
+export async function verifySessionAndRole(req, requiredRole) {
+  try {
+    await connectToDB();
+    
+    // Get the server session
+    const session = await getServerSession(
+      req,
+      {
+        getHeader: (name) => req.headers.get(name),
+        setHeader: () => {} // No-op for API routes
+      },
+      options
+    );
+
+    if (!session?.user?.email) {
+      throw new Error("Not authenticated - Please log in");
     }
-  
-    return userInfo;
+
+    // Fetch complete user data from database
+    const user = await User.findOne({ email: session.user.email }).lean();
+    
+    if (!user) {
+      throw new Error("User not found in database");
+    }
+
+    // Check role if required
+    if (requiredRole && user.role !== requiredRole) {
+      throw new Error(`Unauthorized - Requires ${requiredRole} role`);
+    }
+
+    return {
+      user,
+      session
+    };
+    
+  } catch (error) {
+    console.error("Auth verification error:", error.message);
+    throw error; // Re-throw for the calling function to handle
+  }
+}
+
+export async function userInfo(req) {
+    try {
+        const mockRes = {
+            getHeader: () => null,
+            setHeader: () => {},
+            };
+        
+        const session = await getServerSession(req, mockRes, options);
+      console.log("Session data:", session);
+      
+      if (!session?.user?.email) {
+        return null;
+      }
+      
+      await connectToDB();
+      let userInfo = await User.findOne({ email: session.user.email })
+            .select('-image ')
+            .lean();
+      
+      if (!userInfo) {
+        return null;
+      }
+      
+      return userInfo;
+    } catch (error) {
+      console.error("Error in userInfo:", error);
+      return null;
+    }
   }
 
 export async function checkSession(email) {

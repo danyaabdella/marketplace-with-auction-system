@@ -31,10 +31,16 @@ const productSchema = new Schema({
             createdDate: { type: Date, default: Date.now }
         }
     ],
-    delivery: { type: String, enum: ['FLAT', 'PERPIECE', 'PERKG', 'FREE'], required: true },
+    delivery: { type: String, enum: [ 'PERPIECE', 'PERKG', 'FREE', 'PERKM'], required: true },
     deliveryPrice: { type: Number, required: true },
+    KilogramPerPrice: { type: Number, default: null},
+    KilometerPerPrice: { type: Number, default: null }, // Price per kilometer for PERKM delivery type
     isBanned: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false }, 
+    offer: {
+        price: { type: Number, default: null },
+        offerEndDate: { type: Date, default: null }
+    },
     trashDate: { 
         type: Date, 
         default: null, 

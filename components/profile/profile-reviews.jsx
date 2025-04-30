@@ -8,67 +8,70 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, Star } from "lucide-react"
 
 // Mock reviews data - in a real app, you would fetch this from your API
-const mockReviews = [
-  {
-    id: "review1",
-    reviewerId: "user1",
-    reviewerName: "Alice Johnson",
-    reviewerImage: "/placeholder.svg?height=40&width=40",
-    rating: 5,
-    comment: "Great seller! The item was exactly as described and shipping was fast. Would definitely buy from again.",
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    auctionId: "auction1",
-    auctionTitle: "Vintage Camera Collection",
-  },
-  {
-    id: "review2",
-    reviewerId: "user2",
-    reviewerName: "Bob Smith",
-    reviewerImage: "/placeholder.svg?height=40&width=40",
-    rating: 4,
-    comment:
-      "Good experience overall. The item was in good condition as described. Shipping took a bit longer than expected, but still within reasonable time.",
-    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    auctionId: "auction2",
-    auctionTitle: "Antique Wooden Desk",
-  },
-  {
-    id: "review3",
-    reviewerId: "user3",
-    reviewerName: "Carol Davis",
-    reviewerImage: "/placeholder.svg?height=40&width=40",
-    rating: 5,
-    comment:
-      "Excellent seller! Very responsive and helpful. The item was carefully packaged and arrived in perfect condition.",
-    date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    auctionId: "auction3",
-    auctionTitle: "Rare Coin Collection",
-  },
-]
+// const mockReviews = [
+//   {
+//     id: "review1",
+//     reviewerId: "user1",
+//     reviewerName: "Alice Johnson",
+//     reviewerImage: "/placeholder.svg?height=40&width=40",
+//     rating: 5,
+//     comment: "Great seller! The item was exactly as described and shipping was fast. Would definitely buy from again.",
+//     date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+//     auctionId: "auction1",
+//     auctionTitle: "Vintage Camera Collection",
+//   },
+//   {
+//     id: "review2",
+//     reviewerId: "user2",
+//     reviewerName: "Bob Smith",
+//     reviewerImage: "/placeholder.svg?height=40&width=40",
+//     rating: 4,
+//     comment:
+//       "Good experience overall. The item was in good condition as described. Shipping took a bit longer than expected, but still within reasonable time.",
+//     date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+//     auctionId: "auction2",
+//     auctionTitle: "Antique Wooden Desk",
+//   },
+//   {
+//     id: "review3",
+//     reviewerId: "user3",
+//     reviewerName: "Carol Davis",
+//     reviewerImage: "/placeholder.svg?height=40&width=40",
+//     rating: 5,
+//     comment:
+//       "Excellent seller! Very responsive and helpful. The item was carefully packaged and arrived in perfect condition.",
+//     date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+//     auctionId: "auction3",
+//     auctionTitle: "Rare Coin Collection",
+//   },
+// ]
 
 export function ProfileReviews({ userId }) {
   const [reviews, setReviews] = useState([])
+  const [averageRating, setAverageRating] = useState()
   const [isLoading, setIsLoading] = useState(true)
 
+
   useEffect(() => {
-    // In a real app, you would fetch reviews from your API
-    // async function fetchReviews() {
-    //   try {
-    //     const response = await fetch(`/api/users/${userId}/reviews`)
-    //     const data = await response.json()
-    //     setReviews(data)
-    //   } catch (error) {
-    //     console.error('Error fetching reviews:', error)
-    //   } finally {
-    //     setIsLoading(false)
-    //   }
-    // }
-    //
-    // fetchReviews()
+    //In a real app, you would fetch reviews from your API
+    async function fetchReviews() {
+      try {
+        const response = await fetch(`/api/merchant/reviews`)
+        const data = await response.json()
+        setReviews(data.reviews)
+      } catch (error) {
+        console.error('Error fetching reviews:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchReviews()
 
     // Using mock data for demonstration
     setTimeout(() => {
-      setReviews(mockReviews)
+      setReviews(data.review)
+      setAverageRating(data.averageRating)
       setIsLoading(false)
     }, 1000)
   }, [userId])
@@ -90,7 +93,7 @@ export function ProfileReviews({ userId }) {
   }
 
   // Calculate average rating
-  const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+  //const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
 
   return (
     <Card>
@@ -102,7 +105,7 @@ export function ProfileReviews({ userId }) {
         {/* Rating Summary */}
         <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
           <div className="flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold">{averageRating.toFixed(1)}</span>
+            <span className="text-3xl font-bold">{averageRating}</span>
             <div className="flex items-center mt-1">
               {[...Array(5)].map((_, i) => (
                 <Star

@@ -1,7 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';  // Import uuid
-import { checkSession, userInfo } from "@/libs/functions";
-
-const CHAPA_SECRET_KEY = "CHASECK_TEST-s6oBbGS04bRkcXLT7P6x2do2EKcCXfJ6";
+import { v4 as uuidv4 } from 'uuid';
+import { userInfo } from "@/libs/functions";
 
 export async function POST(req) {
   try {
@@ -10,12 +8,16 @@ export async function POST(req) {
     const { amount, orderData } = body;
 
     const tx_ref = `tx_${uuidv4().split('-')[0]}`;
-    
-    if (!amount || !tx_ref) {
+
+    if (!amount || !orderData) {
       return new Response(JSON.stringify({ message: "Missing required fields" }), { status: 400 });
     }
 
-    const user = await userInfo();
+    if (!chapaKey) {
+      return new Response(JSON.stringify({ message: "Chapa secret key not configured" }), { status: 500 });
+    }
+
+    const user = await userInfo(req);
     if (!user) {
       return new Response(JSON.stringify({ message: "User not authenticated" }), { status: 401 });
     }
@@ -35,6 +37,32 @@ export async function POST(req) {
       return new Response(JSON.stringify({ message: "User phone number is missing" }), { status: 400 });
     }
 
+    // Create order with Pending status
+    const orderResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${user?.token || ""}`,
+      },
+      body: JSON.stringify({
+        ...orderData,
+        transactionRef: tx_ref,
+        paymentStatus: "Pending",
+        userId: user._id,
+      }),
+    });
+
+    if (!orderResponse.ok) {
+      const orderError = await orderResponse.text();
+      return new Response(
+        JSON.stringify({ message: "Order creation failed", details: orderError }),
+        { status: 400 }
+      );
+    }
+
+    const orderDataResponse = await orderResponse.json();
+    const orderId = orderDataResponse.order._id;
+
     const requestBody = {
       amount,
       currency: "ETB",
@@ -43,8 +71,8 @@ export async function POST(req) {
       last_name,
       phone_number,
       tx_ref,
-      callback_url: "https://yourdomain.com/api/callback",
-      return_url: `http://localhost:3000/order?${tx_ref}`,
+      callback_url: process.env.CHAPA_CALLBACK_URL || "http://localhost:3000/api/callback",
+      return_url: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/verifyPayment?tx_ref=${tx_ref}&orderId=${orderId}`,
       customization: {
         title: "Order Payment",
         description: "Pay for your selected items",
@@ -62,48 +90,40 @@ export async function POST(req) {
 
     if (!chapaResponse.ok) {
       const errorDetails = await chapaResponse.text();
+      // Optionally delete the pending order if Chapa fails
+      await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/order`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token || ""}`,
+        },
+        body: JSON.stringify({ _id: orderId }),
+      });
       return new Response(JSON.stringify({ message: "Chapa API error", details: errorDetails }), { status: 400 });
     }
 
     const data = await chapaResponse.json();
 
     if (data.status === "success") {
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"; 
-    
-      // Create order request
-      const orderResponse = await fetch(`${baseUrl}/api/order`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user.token}` // Pass the session token
-        },
-        body: JSON.stringify({ 
-          ...orderData, 
-          transactionRef: tx_ref, 
-          totalPrice: amount,
-          userId: user._id // Pass the user ID
-        }),
-      });
-    
-      if (!orderResponse.ok) {
-        const orderError = await orderResponse.text();
-        return new Response(
-          JSON.stringify({ message: "Order creation failed", details: orderError }),
-          { status: 400 }
-        );
-      }
-    
       return new Response(
-        JSON.stringify({ checkout_url: data.data.checkout_url }),
+        JSON.stringify({ checkout_url: data.data.checkout_url, tx_ref, orderId }),
         { status: 200 }
       );
     } else {
+      // Delete pending order on failure
+      await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/order`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${user?.token || ""}`,
+        },
+        body: JSON.stringify({ _id: orderId }),
+      });
       return new Response(
         JSON.stringify({ message: data.message }),
         { status: 400 }
       );
     }
-    
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ message: "Internal Server Error", error: error.message }), { status: 500 });

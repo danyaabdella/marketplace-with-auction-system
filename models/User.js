@@ -9,15 +9,15 @@ const UserSchema = new Schema(
       unique: true
     }, 
     password: { type: String, required: true },
+    bio: {type: String},
     role: { 
       type: String, 
       enum: ['customer', 'merchant'],
       default: 'customer' 
     },
-    image: { type: String, default: " " },
+    image: { type: String, default: '/default-avatar.png'},
     isBanned: { type: Boolean, default: false },
     bannedBy: { type: String, required: function() { return this.isBanned === true; } },
-    isEmailVerified: { type: Boolean, default: false },
     stateName: { type: String, required: false },
     cityName: { type: String, required: false },
     phoneNumber: { type: String, required: false },
@@ -40,7 +40,8 @@ const UserSchema = new Schema(
     },
     uniqueTinNumber: { 
       type: String, 
-      required: function() { return this.approvalStatus === "approved"; } 
+      required: function() { return this.role === "merchant"; } ,
+      default: function() { return this.tinNumber; }
     },
     nationalId: { 
       type: String, 
@@ -59,7 +60,8 @@ const UserSchema = new Schema(
       required: function() { return this.role === "merchant"; } 
     },
     otp: { type: String, default: null },
-    otpExpires: { type: Date, default: null },
+    otpExpiry: { type: Date, default: null },
+    isEmailVerified: { type: Boolean, default: false}
   },
   { timestamps: true }
 );

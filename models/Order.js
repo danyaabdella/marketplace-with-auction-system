@@ -27,8 +27,9 @@ const orderSchema = new mongoose.Schema({
             productName: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
-            delivery: { type: String, enum: ['FLAT', 'PERPIECS', 'PERKG', 'FREE'], required: true },
-            deliveryPrice: { type: Number, required: true }
+            delivery: { type: String, enum: ['PERKM', 'PERPIECS', 'PERKG', 'FREE'], required: true },
+            deliveryPrice: { type: Number, required: true },
+            categoryName: { type: String }
         }
     ],
     auction: {
@@ -69,6 +70,7 @@ const orderSchema = new mongoose.Schema({
         coordinates: { type: [Number], required: true }
     },
     transactionRef: { type: String, required: true }, 
+    reference: { type: String, required: false },
     orderDate: { type: Date, default: Date.now },
     refundReason: { type: String, required: false }
 });

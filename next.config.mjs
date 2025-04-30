@@ -3,7 +3,8 @@ const nextConfig = {
   images: {
     domains: [
       "hebbkx1anhila5yf.public.blob.vercel-storage.com", 
-      "firebasestorage.googleapis.com" // Add Firebase Storage domain
+      "firebasestorage.googleapis.com",// Add Firebase Storage domain
+      "example.com",
     ], 
   },
 };

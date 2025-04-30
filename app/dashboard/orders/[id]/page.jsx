@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Package, Truck, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { format } from "date-fns"
+import { useSession } from "next-auth/react"
 
 // Demo data based on schema
 const demoOrder = {
@@ -84,29 +85,58 @@ const statusColors = {
 }
 
 export default function OrderDetailPage({ params }) {
-  const [order, setOrder] = useState(demoOrder)
+  const { data: session } = useSession()
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [showUpdateDialog, setShowUpdateDialog] = useState(false)
   const [refundReason, setRefundReason] = useState("")
   const [refundDescription, setRefundDescription] = useState("")
-  const [updatedCustomerDetails, setUpdatedCustomerDetails] = useState(order.customerDetail)
+  const [updatedCustomerDetails, setUpdatedCustomerDetails] = useState(null)
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const response = await fetch(`/api/orders/${params.id}`)
+        const data = await response.json()
+        if (data.success) {
+          setOrder(data.order)
+          setUpdatedCustomerDetails(data.order.customerDetail)
+        }
+      } catch (error) {
+        console.error("Failed to fetch order:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrder()
+  }, [params.id])
 
   const handleRefundSubmit = async () => {
     if (!refundReason) return
 
     try {
-      // Replace with actual API call
-      // await fetch(`/api/orders/${params.id}/refund`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ reason: refundReason, description: refundDescription }),
-      // })
+      const response = await fetch(`/api/orders/${params.id}/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          reason: refundReason, 
+          description: refundDescription 
+        }),
+      })
 
-      setOrder((prev) => ({
-        ...prev,
-        paymentStatus: "Pending Refund",
-        refundReason,
-      }))
-      setShowRefundDialog(false)
+      const data = await response.json()
+      if (data.success) {
+        setOrder(prev => ({
+          ...prev,
+          paymentStatus: "Pending Refund",
+          refundReason,
+        }))
+        setShowRefundDialog(false)
+      }
     } catch (error) {
       console.error("Failed to submit refund request:", error)
     }
@@ -114,21 +144,72 @@ export default function OrderDetailPage({ params }) {
 
   const handleUpdateCustomerDetails = async () => {
     try {
-      // Replace with actual API call
-      // await fetch(`/api/orders/${params.id}/customer-details`, {
-      //   method: 'PUT',
-      //   body: JSON.stringify(updatedCustomerDetails),
-      // })
+      const response = await fetch(`/api/orders/${params.id}/customer-details`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedCustomerDetails),
+      })
 
-      setOrder((prev) => ({
-        ...prev,
-        customerDetail: updatedCustomerDetails,
-      }))
-      setShowUpdateDialog(false)
+      const data = await response.json()
+      if (data.success) {
+        setOrder(prev => ({
+          ...prev,
+          customerDetail: updatedCustomerDetails,
+        }))
+        setShowUpdateDialog(false)
+      }
     } catch (error) {
       console.error("Failed to update customer details:", error)
     }
   }
+
+  const handleDispatch = async () => {
+    try {
+      const response = await fetch(`/api/order`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          _id: order._id,
+          status: 'Dispatched'
+        }),
+      })
+
+      const data = await response.json()
+      if (data.message === "Order updated successfully") {
+        setOrder(prev => ({
+          ...prev,
+          status: 'Dispatched'
+        }))
+      }
+    } catch (error) {
+      console.error("Failed to dispatch order:", error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-4">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return <div>Order not found</div>
+  }
+
+  const isCustomer = session?.user?.role === 'customer'
+  const isMerchant = session?.user?.role === 'merchant'
+  const canRequestRefund = isCustomer && order.status === 'Pending' && order.paymentStatus === 'Paid'
+  const canEditDetails = isCustomer && order.status === 'Pending'
+  const canDispatch = isMerchant && order.status === 'Pending'
 
   return (
     <div className="container py-8">
@@ -137,7 +218,7 @@ export default function OrderDetailPage({ params }) {
           <h1 className="text-3xl font-bold mb-2">Order {order.transactionRef}</h1>
           <p className="text-muted-foreground">Placed on {format(new Date(order.orderDate), "MMMM d, yyyy")}</p>
         </div>
-        {order.status !== "Received" && order.paymentStatus === "Paid" && (
+        {canRequestRefund && (
           <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
             <DialogTrigger asChild>
               <Button variant="outline">Request Refund</Button>
@@ -181,6 +262,16 @@ export default function OrderDetailPage({ params }) {
               <div className="flex items-center gap-2">
                 <Badge variant={statusColors[order.status]}>{order.status}</Badge>
                 <Badge variant={statusColors[order.paymentStatus]}>{order.paymentStatus}</Badge>
+                {canDispatch && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDispatch}
+                  >
+                    <Truck className="h-4 w-4 mr-2" />
+                    Dispatch Order
+                  </Button>
+                )}
               </div>
               <div className="relative flex gap-2">
                 <div className="flex flex-col items-center">
@@ -221,7 +312,7 @@ export default function OrderDetailPage({ params }) {
             <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold whitespace-nowrap">Customer Details</h2>
-                {order.status === "Pending" && (
+                {canEditDetails && (
                   <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm">

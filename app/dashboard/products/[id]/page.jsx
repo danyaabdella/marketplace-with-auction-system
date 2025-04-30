@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
@@ -8,65 +8,188 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, MapPin, Truck, Star, Edit } from "lucide-react"
+import { ArrowLeft, MapPin, Truck, Star, Edit, Tag, Megaphone } from "lucide-react"
 import { AddEditProductForm } from "@/components/dashboard/addEditProductForm"
-
-// Mock product data based on the MongoDB schema
-const productData = {
-  id: "1",
-  merchantDetail: {
-    merchantId: "user123",
-    merchantName: "Vintage Treasures",
-    merchantEmail: "vintage@example.com",
-  },
-  productName: "Vintage Polaroid Camera",
-  category: {
-    categoryId: "cat1",
-    categoryName: "Electronics",
-  },
-  price: 120.0,
-  quantity: 5,
-  soldQuantity: 8,
-  description:
-    "Original Polaroid camera from the 1970s in excellent condition. This rare piece comes with its original leather case and user manual. The camera has been tested and is in perfect working condition, producing the classic Polaroid look that photographers love. The lens is clear with no fungus or haze, and all mechanical parts operate smoothly.",
-  images: ["/placeholder.svg", "/placeholder.svg", "/placeholder.svg"],
-  variant: ["Black", "Brown"],
-  size: [],
-  brand: "Polaroid",
-  location: {
-    type: "Point",
-    coordinates: [40.7128, -74.006],
-  },
-  delivery: "FLAT",
-  deliveryPrice: 10.0,
-  status: "In Stock",
-  review: [
-    {
-      customerId: "cust1",
-      customerName: "John Doe",
-      comment: "Great vintage camera! Works perfectly and arrived in excellent condition.",
-      rating: 5,
-      createdDate: "2023-12-10T10:30:00Z",
-    },
-    {
-      customerId: "cust2",
-      customerName: "Sarah Smith",
-      comment: "Beautiful camera, exactly as described. Fast shipping too!",
-      rating: 4,
-      createdDate: "2023-12-05T14:20:00Z",
-    },
-  ],
-  createdAt: "2023-11-15T09:00:00Z",
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/components/ui/use-toast"
+import { format } from "date-fns"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function ProductDetailPage({ params }) {
   const router = useRouter()
+  const { toast } = useToast()
   const [isEditProductOpen, setIsEditProductOpen] = useState(false)
+  const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false)
+  const [isAdDialogOpen, setIsAdDialogOpen] = useState(false)
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [offerPrice, setOfferPrice] = useState("")
+  const [offerEndDate, setOfferEndDate] = useState("")
+  const [isHomeAd, setIsHomeAd] = useState(false)
+  const [adPrice, setAdPrice] = useState("")
+  const [adStartDate, setAdStartDate] = useState("")
+  const [adEndDate, setAdEndDate] = useState("")
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`/api/products/${params.id}`)
+        if (!response.ok) throw new Error("Failed to fetch product")
+        const data = await response.json()
+        setProduct(data)
+      } catch (error) {
+        console.error("Error fetching product:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load product details",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [params.id, toast])
+
+  const handleOfferSubmit = async () => {
+    try {
+      // Ensure the date is properly formatted in ISO string
+      const formattedDate = new Date(offerEndDate).toISOString()
+
+      const response = await fetch(`/api/products/${params.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          offer: {
+            price: parseFloat(offerPrice),
+            offerEndDate: formattedDate,
+          },
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update offer")
+
+      const updatedProduct = await response.json()
+      setProduct(updatedProduct)
+      setIsOfferDialogOpen(false)
+      toast({
+        title: "Success",
+        description: "Offer has been set successfully",
+      })
+    } catch (error) {
+      console.error("Error setting offer:", error)
+      toast({
+        title: "Error",
+        description: "Failed to set offer",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleRemoveOffer = async () => {
+    try {
+      const response = await fetch(`/api/products/${params.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          offer: {
+            price: null,
+            offerEndDate: null,
+          },
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to remove offer")
+
+      const updatedProduct = await response.json()
+      setProduct(updatedProduct)
+      toast({
+        title: "Success",
+        description: "Offer has been removed successfully",
+      })
+    } catch (error) {
+      console.error("Error removing offer:", error)
+      toast({
+        title: "Error",
+        description: "Failed to remove offer",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCreateAd = async () => {
+    try {
+      const response = await fetch('/api/advertisement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          product,
+          merchantDetail: product.merchantDetail,
+          startsAt: new Date(adStartDate).toISOString(),
+          endsAt: new Date(adEndDate).toISOString(),
+          adPrice: parseFloat(adPrice),
+          adRegion: product.location.coordinates.join('-'),
+          isHome: isHomeAd,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create advertisement');
+      }
+
+      toast({
+        title: "Success",
+        description: "Advertisement created successfully",
+      });
+      setIsAdDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating advertisement:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="container p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Product not found</h1>
+          <Button onClick={() => router.push("/dashboard/products")} className="mt-4">
+            Back to Products
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   // Prepare data for pie chart
   const inventoryData = [
-    { name: "Sold", value: productData.soldQuantity },
-    { name: "Available", value: productData.quantity },
+    { name: "Sold", value: product.soldQuantity },
+    { name: "Available", value: product.quantity },
   ]
 
   const COLORS = ["#8884d8", "#82ca9d"]
@@ -87,25 +210,129 @@ export default function ProductDetailPage({ params }) {
   }
 
   const calculateAverageRating = () => {
-    if (!productData.review || productData.review.length === 0) return 0
-    const sum = productData.review.reduce((acc, review) => acc + review.rating, 0)
-    return (sum / productData.review.length).toFixed(1)
+    if (!product.review || product.review.length === 0) return 0
+    const sum = product.review.reduce((acc, review) => acc + review.rating, 0)
+    return (sum / product.review.length).toFixed(1)
   }
+
+  const currentPrice = product.offer?.price && new Date(product.offer.offerEndDate) > new Date()
+    ? product.offer.price
+    : product.price
 
   return (
     <div className="container p-6">
       <div className="mb-6">
-        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/')}>
+        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/dashboard/products')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
         </Button>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold">{productData.productName}</h1>
-          <Button className="mt-2 sm:mt-0 gradient-bg border-0" onClick={() => setIsEditProductOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Product
-          </Button>
+          <h1 className="text-2xl font-bold">{product.productName}</h1>
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            <Button className="gradient-bg border-0" onClick={() => setIsEditProductOpen(true)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Product
+            </Button>
+            <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Megaphone className="mr-2 h-4 w-4" />
+                  Make it Ad
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Advertisement</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="adPrice">Advertisement Price</Label>
+                    <Input
+                      id="adPrice"
+                      type="number"
+                      value={adPrice}
+                      onChange={(e) => setAdPrice(e.target.value)}
+                      placeholder="Enter advertisement price"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="adStartDate">Start Date</Label>
+                    <Input
+                      id="adStartDate"
+                      type="datetime-local"
+                      value={adStartDate}
+                      onChange={(e) => setAdStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="adEndDate">End Date</Label>
+                    <Input
+                      id="adEndDate"
+                      type="datetime-local"
+                      value={adEndDate}
+                      onChange={(e) => setAdEndDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isHomeAd"
+                      checked={isHomeAd}
+                      onCheckedChange={(checked) => setIsHomeAd(checked)}
+                    />
+                    <Label htmlFor="isHomeAd">Show on Homepage</Label>
+                  </div>
+                  <Button onClick={handleCreateAd} className="w-full">
+                    Create Advertisement
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            {product.offer?.price ? (
+              <Button variant="outline" onClick={handleRemoveOffer}>
+                <Tag className="mr-2 h-4 w-4" />
+                Remove Offer
+              </Button>
+            ) : (
+              <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Tag className="mr-2 h-4 w-4" />
+                    Provide Offer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Set Product Offer</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="offerPrice">Offer Price</Label>
+                      <Input
+                        id="offerPrice"
+                        type="number"
+                        value={offerPrice}
+                        onChange={(e) => setOfferPrice(e.target.value)}
+                        placeholder="Enter offer price"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="offerEndDate">Offer End Date</Label>
+                      <Input
+                        id="offerEndDate"
+                        type="datetime-local"
+                        value={offerEndDate}
+                        onChange={(e) => setOfferEndDate(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleOfferSubmit} className="w-full">
+                      Set Offer
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       </div>
 
@@ -118,8 +345,8 @@ export default function ProductDetailPage({ params }) {
                 {/* Main Image */}
                 <div className="relative aspect-square overflow-hidden rounded-lg border">
                   <Image
-                    src={productData.images[0] || "/placeholder.svg"}
-                    alt={productData.productName}
+                    src={product.images[0] || "/placeholder.svg"}
+                    alt={product.productName}
                     fill
                     className="object-cover"
                     priority
@@ -129,30 +356,37 @@ export default function ProductDetailPage({ params }) {
                 {/* Product Details */}
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">{productData.productName}</h2>
-                    <p className="text-muted-foreground">{productData.category.categoryName}</p>
+                    <h2 className="text-xl font-semibold">{product.productName}</h2>
+                    <p className="text-muted-foreground">{product.category.categoryName}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-2xl font-bold">${productData.price.toFixed(2)}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-2xl font-bold">${currentPrice.toFixed(2)}</p>
+                      {product.offer?.price && new Date(product.offer.offerEndDate) > new Date() && (
+                        <Badge variant="destructive" className="text-sm">
+                          Offer: ${product.price.toFixed(2)} → ${product.offer.price.toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center">
-                      <Badge variant={productData.quantity > 0 ? "success" : "destructive"}>
-                        {productData.quantity > 0 ? "In Stock" : "Out of Stock"}
+                      <Badge variant={product.quantity > 0 ? "success" : "destructive"}>
+                        {product.quantity > 0 ? "In Stock" : "Out of Stock"}
                       </Badge>
-                      <span className="ml-2 text-sm text-muted-foreground">{productData.quantity} available</span>
+                      <span className="ml-2 text-sm text-muted-foreground">{product.quantity} available</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
                     <p className="font-medium">Brand</p>
-                    <p className="text-muted-foreground">{productData.brand}</p>
+                    <p className="text-muted-foreground">{product.brand}</p>
                   </div>
 
-                  {productData.variant.length > 0 && (
+                  {product.variant.length > 0 && (
                     <div className="space-y-1">
                       <p className="font-medium">Variants</p>
                       <div className="flex flex-wrap gap-2">
-                        {productData.variant.map((variant, index) => (
+                        {product.variant.map((variant, index) => (
                           <Badge key={index} variant="outline">
                             {variant}
                           </Badge>
@@ -161,11 +395,11 @@ export default function ProductDetailPage({ params }) {
                     </div>
                   )}
 
-                  {productData.size.length > 0 && (
+                  {product.size.length > 0 && (
                     <div className="space-y-1">
                       <p className="font-medium">Sizes</p>
                       <div className="flex flex-wrap gap-2">
-                        {productData.size.map((size, index) => (
+                        {product.size.map((size, index) => (
                           <Badge key={index} variant="outline">
                             {size}
                           </Badge>
@@ -179,8 +413,8 @@ export default function ProductDetailPage({ params }) {
                     <div className="flex items-center">
                       <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span>
-                        {getDeliveryLabel(productData.delivery)}
-                        {productData.delivery !== "FREE" && ` - $${productData.deliveryPrice.toFixed(2)}`}
+                        {getDeliveryLabel(product.delivery)}
+                        {product.delivery !== "FREE" && ` - $${product.deliveryPrice.toFixed(2)}`}
                       </span>
                     </div>
                   </div>
@@ -190,7 +424,7 @@ export default function ProductDetailPage({ params }) {
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span>
-                        {productData.location.coordinates[0]}, {productData.location.coordinates[1]}
+                        {product.location.coordinates[0]}, {product.location.coordinates[1]}
                       </span>
                     </div>
                   </div>
@@ -198,13 +432,13 @@ export default function ProductDetailPage({ params }) {
               </div>
 
               {/* Additional Images */}
-              {productData.images.length > 1 && (
+              {product.images.length > 1 && (
                 <div className="mt-6 grid grid-cols-4 gap-2">
-                  {productData.images.slice(0, 4).map((image, index) => (
+                  {product.images.slice(0, 4).map((image, index) => (
                     <div key={index} className="relative aspect-square overflow-hidden rounded-md border">
                       <Image
                         src={image || "/placeholder.svg"}
-                        alt={`${productData.productName} - Image ${index + 1}`}
+                        alt={`${product.productName} - Image ${index + 1}`}
                         fill
                         className="object-cover"
                       />
@@ -216,7 +450,7 @@ export default function ProductDetailPage({ params }) {
               {/* Description */}
               <div className="mt-6">
                 <h3 className="font-semibold mb-2">Description</h3>
-                <p className="text-muted-foreground whitespace-pre-line">{productData.description}</p>
+                <p className="text-muted-foreground whitespace-pre-line">{product.description}</p>
               </div>
             </CardContent>
           </Card>
@@ -226,15 +460,15 @@ export default function ProductDetailPage({ params }) {
             <CardHeader>
               <CardTitle>Customer Reviews</CardTitle>
               <CardDescription>
-                {productData.review.length > 0
-                  ? `${productData.review.length} reviews with an average rating of ${calculateAverageRating()} stars`
+                {product.review.length > 0
+                  ? `${product.review.length} reviews with an average rating of ${calculateAverageRating()} stars`
                   : "No reviews yet"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {productData.review.length > 0 ? (
+              {product.review.length > 0 ? (
                 <div className="space-y-4">
-                  {productData.review.map((review, index) => (
+                  {product.review.map((review, index) => (
                     <div key={index} className="border-b pb-4 last:border-0 last:pb-0">
                       <div className="flex justify-between items-start">
                         <div>
@@ -297,11 +531,11 @@ export default function ProductDetailPage({ params }) {
               <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Sold</p>
-                  <p className="text-2xl font-bold">{productData.soldQuantity}</p>
+                  <p className="text-2xl font-bold">{product.soldQuantity}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Available</p>
-                  <p className="text-2xl font-bold">{productData.quantity}</p>
+                  <p className="text-2xl font-bold">{product.quantity}</p>
                 </div>
               </div>
             </CardContent>
@@ -315,7 +549,7 @@ export default function ProductDetailPage({ params }) {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Revenue</span>
-                  <span className="font-medium">${(productData.price * productData.soldQuantity).toFixed(2)}</span>
+                  <span className="font-medium">${(product.price * product.soldQuantity).toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
@@ -328,12 +562,12 @@ export default function ProductDetailPage({ params }) {
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Listed Date</span>
-                  <span className="font-medium">{new Date(productData.createdAt).toLocaleDateString()}</span>
+                  <span className="font-medium">{new Date(product.createdAt).toLocaleDateString()}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Merchant</span>
-                  <span className="font-medium">{productData.merchantDetail.merchantName}</span>
+                  <span className="font-medium">{product.merchantDetail.merchantName}</span>
                 </div>
               </div>
             </CardContent>
@@ -345,7 +579,7 @@ export default function ProductDetailPage({ params }) {
       <AddEditProductForm
         open={isEditProductOpen}
         onOpenChange={setIsEditProductOpen}
-        product={productData}
+        product={product}
         mode="edit"
       />
     </div>

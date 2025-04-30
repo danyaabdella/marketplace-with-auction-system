@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Bell, Check, Filter, Search, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
+import { socket } from "@/libs/socketClient"
+import { useSession } from "next-auth/react"
 
 const Notification = {
   id: "",
@@ -23,118 +25,119 @@ const Notification = {
 
 export default function NotificationsPage() {
   const { toast } = useToast()
+  const { data: session } = useSession()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedNotifications, setSelectedNotifications] = useState([])
-  const [notifications, setNotifications] = useState([
-    {
-      id: "1",
-      title: "New bid on Vintage Camera",
-      description: "Someone placed a bid of $120 on your item",
-      time: "5 min ago",
-      read: false,
-      type: "bid",
-    },
-    {
-      id: "2",
-      title: "You've been outbid",
-      description: "Someone outbid you on Antique Watch",
-      time: "10 min ago",
-      read: false,
-      type: "outbid",
-    },
-    {
-      id: "3",
-      title: "Auction ending soon",
-      description: "Art Deco Lamp auction ends in 1 hour",
-      time: "30 min ago",
-      read: true,
-      type: "ending",
-    },
-    {
-      id: "4",
-      title: "Congratulations! You won the auction",
-      description: "You won the Vintage Vinyl Records auction",
-      time: "2 hours ago",
-      read: true,
-      type: "won",
-    },
-    {
-      id: "5",
-      title: "Welcome to AuctionHub",
-      description: "Thanks for joining our marketplace",
-      time: "1 day ago",
-      read: true,
-      type: "system",
-    },
-    {
-      id: "6",
-      title: "New bid on Antique Desk",
-      description: "Someone placed a bid of $350 on your item",
-      time: "1 day ago",
-      read: false,
-      type: "bid",
-    },
-    {
-      id: "7",
-      title: "Auction ending soon",
-      description: "Vintage Watch auction ends in 2 hours",
-      time: "1 day ago",
-      read: false,
-      type: "ending",
-    },
-    {
-      id: "8",
-      title: "Payment received",
-      description: "Payment for Art Print has been processed",
-      time: "2 days ago",
-      read: true,
-      type: "system",
-    },
-    {
-      id: "9",
-      title: "You've been outbid",
-      description: "Someone outbid you on Leather Bag",
-      time: "2 days ago",
-      read: true,
-      type: "outbid",
-    },
-    {
-      id: "10",
-      title: "Shipping update",
-      description: "Your item has been shipped",
-      time: "3 days ago",
-      read: true,
-      type: "system",
-    },
-  ])
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  useEffect(() => {
+    // Fetch initial notifications
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications')
+        const data = await response.json()
+        setNotifications(data.notifications)
+        setUnreadCount(data.unreadCount)
+      } catch (error) {
+        console.error('Error fetching notifications:', error)
+      }
+    }
 
-  const markAsRead = (ids) => {
-    setNotifications(notifications.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n)))
-    setSelectedNotifications([])
-    toast({
-      title: "Notifications marked as read",
-      description: `${ids.length} notification${ids.length > 1 ? "s" : ""} marked as read`,
+    fetchNotifications()
+
+    // Socket event listeners
+    socket.on('newBid', (data) => {
+      const newNotification = {
+        id: Date.now().toString(),
+        title: "New Bid Placed",
+        description: `${data.bidderName} placed a bid of $${data.bidAmount}`,
+        time: "Just now",
+        read: false,
+        type: "bid"
+      }
+      
+      setNotifications(prev => [newNotification, ...prev])
+      setUnreadCount(prev => prev + 1)
     })
+
+    socket.on('outbid', (data) => {
+      const newNotification = {
+        id: Date.now().toString(),
+        title: "You've been outbid",
+        description: `${data.bidderName} outbid you with $${data.bidAmount}`,
+        time: "Just now",
+        read: false,
+        type: "outbid"
+      }
+      
+      setNotifications(prev => [newNotification, ...prev])
+      setUnreadCount(prev => prev + 1)
+    })
+
+    return () => {
+      socket.off('newBid')
+      socket.off('outbid')
+    }
+  }, [])
+
+  const markAsRead = async (ids) => {
+    try {
+      await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids }),
+      })
+      setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n))
+      setSelectedNotifications([])
+      setUnreadCount(prev => prev - ids.length)
+      toast({
+        title: "Notifications marked as read",
+        description: `${ids.length} notification${ids.length > 1 ? "s" : ""} marked as read`,
+      })
+    } catch (error) {
+      console.error('Error marking notifications as read:', error)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })))
-    setSelectedNotifications([])
-    toast({
-      title: "All notifications marked as read",
-      description: "All notifications have been marked as read",
-    })
+  const markAllAsRead = async () => {
+    try {
+      await fetch('/api/notifications/mark-all-read', {
+        method: 'POST'
+      })
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      setSelectedNotifications([])
+      setUnreadCount(0)
+      toast({
+        title: "All notifications marked as read",
+        description: "All notifications have been marked as read",
+      })
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error)
+    }
   }
 
-  const deleteNotifications = (ids) => {
-    setNotifications(notifications.filter((n) => !ids.includes(n.id)))
-    setSelectedNotifications([])
-    toast({
-      title: "Notifications deleted",
-      description: `${ids.length} notification${ids.length > 1 ? "s" : ""} deleted`,
-    })
+  const deleteNotifications = async (ids) => {
+    try {
+      await fetch('/api/notifications/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids }),
+      })
+      setNotifications(prev => prev.filter(n => !ids.includes(n.id)))
+      setSelectedNotifications([])
+      setUnreadCount(prev => prev - ids.filter(id => !notifications.find(n => n.id === id)?.read).length)
+      toast({
+        title: "Notifications deleted",
+        description: `${ids.length} notification${ids.length > 1 ? "s" : ""} deleted`,
+      })
+    } catch (error) {
+      console.error('Error deleting notifications:', error)
+    }
   }
 
   const toggleSelectNotification = (id) => {

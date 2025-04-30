@@ -5,71 +5,87 @@ import { ShoppingCart, Heart } from 'lucide-react'
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-// import { useToast } from "@/components/ui/use-toast"
+import { useCart } from "./cart-provider"
+import toast from "react-hot-toast"
+import { useSession } from "next-auth/react"
 
 export function ProductCard({ product }) {
-  const [isFavorite, setIsFavorite] = useState(false)
-  // const { toast } = useToast()
 
-  const toggleFavorite = async (e) => {
+  if (!product || !product?._id) {
+    console.error("Product missing ID or invalid:", {
+      product,
+      hasProduct: !!product,
+      hasId: product?._id,
+    });
+    // Return a fallback UI instead of null
+    return (
+      <div className="group relative rounded-lg border p-4 bg-gray-100 text-center">
+        <p className="text-sm text-muted-foreground">Invalid product data</p>
+      </div>
+    );
+  }
+  
+  const [isFavorite, setIsFavorite] = useState(false)
+  
+  // Ensure we have fallback values for missing data
+  const { data: session } = useSession()
+  const productName = product.productName || "Unnamed Product"
+  const originalPrice = product.price || 0
+  const offerPrice = product.offer?.price
+  const offerEndDate = product.offer?.offerEndDate ? new Date(product.offer.offerEndDate) : null
+  const isOfferActive = offerPrice && offerEndDate && offerEndDate > new Date()
+  const displayPrice = isOfferActive ? offerPrice : originalPrice
+  const soldCount = product.soldQuantity || 0
+  const image = product.images?.[0] || "/placeholder.svg"
+  const quantity = product.quantity || 0
+  const isOutOfStock = quantity === 0
+  const { addToCart } = useCart()
+  const averageRating = product.review?.length 
+      ? product.review.reduce((acc, curr) => acc + curr.rating, 0) / product.review.length
+      : 0
+  const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
     
-    try {
-      // Replace with actual API call
-      // await fetch(`/api/wishlist/${product.id}`, {
-      //   method: isFavorite ? 'DELETE' : 'POST',
-      // })
-      
-      setIsFavorite(!isFavorite)
-      // toast({
-      //   title: isFavorite ? "Removed from wishlist" : "Added to wishlist",
-      //   description: isFavorite 
-      //     ? "The item has been removed from your wishlist"
-      //     : "The item has been added to your wishlist",
-      // })
-    } catch (error) {
-      // toast({
-      //   title: "Error",
-      //   description: "Failed to update wishlist",
-      //   variant: "destructive",
-      // })
-    }
+    addToCart({
+      id: product._id,
+      name: product.productName,
+      price: displayPrice,
+      image: product.images?.[0] || "/placeholder.svg",
+      quantity: 1,
+      merchantId: product.merchantDetail.merchantId,
+      merchantName: product.merchantDetail.merchantName,
+      delivery: product.delivery,
+      deliveryPrice: product.deliveryPrice,
+      email: session.user.email 
+    })
+    toast.success(`${product.productName} has been added to your cart`)
   }
-
   return (
     <div className="group relative rounded-lg border p-4 hover:shadow-lg">
-      <Button
-        size="icon"
-        variant="ghost"
-        className="absolute right-6 top-6 z-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white"
-        onClick={toggleFavorite}
-      >
-        <Heart 
-          className={`h-5 w-5 transition-colors ${
-            isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"
-          }`} 
-        />
-      </Button>
-      
-      <Link href={`/products/${product.id}`}>
+      {isOutOfStock && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+          <p className="text-white font-medium">Out of Stock</p>
+        </div>
+      )}
+      <Link href={`/products/${product._id}`} passHref>
         <div className="aspect-square overflow-hidden rounded-lg">
           <Image
-            src={product.image || "/placeholder.svg"}
-            alt={product.name}
+            src={image}
+            alt={productName}
             width={300}
             height={300}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
         </div>
         <div className="mt-4 space-y-2">
-          <h3 className="font-medium line-clamp-2">{product.name}</h3>
+          <h3 className="font-medium line-clamp-2">{productName}</h3>
           <div className="flex items-center gap-2">
             <div className="flex">
               {Array.from({ length: 5 }).map((_, i) => (
                 <svg
                   key={i}
-                  className={`h-4 w-4 ${i < Math.floor(product.rating) ? "text-yellow-400" : "text-gray-300"}`}
+                  className={`h-4 w-4 ${i < Math.floor(averageRating) ? "text-yellow-400" : "text-gray-300"}`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -78,25 +94,27 @@ export function ProductCard({ product }) {
               ))}
             </div>
             <span className="text-sm text-muted-foreground">
-              {product.rating} | {product.soldCount} sold
+              {averageRating.toFixed(1)} | {soldCount} sold
             </span>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-bold">${product.price.toFixed(2)}</p>
-              {product.originalPrice && (
-                <p className="text-sm text-muted-foreground line-through">
-                  ${product.originalPrice.toFixed(2)}
-                </p>
+              {isOfferActive ? (
+                <>
+                  <p className="text-lg font-bold text-red-600">${offerPrice.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${originalPrice.toFixed(2)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-bold">${originalPrice.toFixed(2)}</p>
               )}
             </div>
             <Button
               size="icon"
-              className="rounded-full h-10 w-10 hover:bg-primary/90 " 
-              onClick={(e) => {
-                e.preventDefault()
-                // Add to cart logic here
-              }}
+              className="rounded-full h-10 w-10 hover:bg-primary/90"
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
             >
               <ShoppingCart className="h-5 w-5 text-primary-foreground" />
             </Button>

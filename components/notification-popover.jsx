@@ -1,25 +1,79 @@
 'use client'
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
+import { socket } from "@/libs/socketClient";
+import { useSession } from "next-auth/react";
 
 export function NotificationPopover() {
-  const [notifications, setNotifications] = useState([
-    { id: "1", title: "New bid on Vintage Camera", description: "Someone placed a bid of $120 on your item", time: "5 min ago", read: false, type: "bid" },
-    { id: "2", title: "You've been outbid", description: "Someone outbid you on Antique Watch", time: "10 min ago", read: false, type: "outbid" },
-    { id: "3", title: "Auction ending soon", description: "Art Deco Lamp auction ends in 1 hour", time: "30 min ago", read: true, type: "ending" },
-    { id: "4", title: "Congratulations! You won the auction", description: "You won the Vintage Vinyl Records auction", time: "2 hours ago", read: true, type: "won" },
-    { id: "5", title: "Welcome to AuctionHub", description: "Thanks for joining our marketplace", time: "1 day ago", read: true, type: "system" },
-  ]);
+  const { data: session } = useSession();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    // Fetch initial notifications
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications');
+        const data = await response.json();
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    fetchNotifications();
+
+    // Socket event listeners
+    socket.on('newBid', (data) => {
+      const newNotification = {
+        id: Date.now().toString(),
+        title: "New Bid Placed",
+        description: `${data.bidderName} placed a bid of $${data.bidAmount}`,
+        time: "Just now",
+        read: false,
+        type: "bid"
+      };
+      
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    socket.on('outbid', (data) => {
+      const newNotification = {
+        id: Date.now().toString(),
+        title: "You've been outbid",
+        description: `${data.bidderName} outbid you with $${data.bidAmount}`,
+        time: "Just now",
+        read: false,
+        type: "outbid"
+      };
+      
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    return () => {
+      socket.off('newBid');
+      socket.off('outbid');
+    };
+  }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      await fetch('/api/notifications/mark-all-read', {
+        method: 'POST'
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
   };
 
   const getTypeColor = type => {

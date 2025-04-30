@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { fetchUserData } from "../libs/ui_functions";
 
 export default function Home() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -15,28 +14,29 @@ export default function Home() {
   const [loggedUser, setLoggedUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false); // New loading state
 
-  // Fetch user data when session changes
   useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
         setIsLoadingUser(true); // Start loading
         console.log("Session: ", session.user.email);
         try {
-          const user = await fetchUserData(session.user.email);
-          console.log("User: ", user);
-          setLoggedUser(user);
+          const response = await fetch('/api/user'); 
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          const user = await response.json(); 
+          setLoggedUser(user); 
         } catch (error) {
           console.error("Error fetching user data:", error);
         } finally {
-          setIsLoadingUser(false); // Stop loading
+            setIsLoadingUser(false); // Stop loading
+          }  
         }
-      }
-    };
-
-    fetchUser();
-  }, [session]);
-
-  // Dynamic items per page based on screen size
+      };
+      fetchUser();
+    }, [session])
+  
+  // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
   useEffect(() => {
     const updateItemsPerPage = () => {
       setItemsPerPage(window.innerWidth < 1024 ? 6 : 10);
@@ -96,7 +96,7 @@ export default function Home() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const categoriesResponse = await fetch("/api/category");
+      const categoriesResponse = await fetch("/api/categories");
       if (!categoriesResponse.ok) throw new Error("Failed to fetch categories");
       const fetchedCategories = await categoriesResponse.json();
       setCategories(fetchedCategories);
@@ -216,6 +216,17 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8 justify-between">
       <div className="grid grid-cols-1 gap-6">
+        {/* User Info Display */}
+        {isLoadingUser ? (
+          <p>Loading user data...</p>
+        ) : loggedUser ? (
+          <div>
+            <h2 className="text-xl font-bold">
+              Welcome, {loggedUser.fullName || "User"}!
+            </h2>
+          </div>
+        ) : null}
+
         {/* Search Form */}
         <div className="mb-8">
           <form className="flex gap-4 max-w-2xl w-full mx-auto">
@@ -255,9 +266,9 @@ export default function Home() {
           <div className="flex overflow-x-auto gap-4 justify-between">
             {displayedCategories.map((category) => (
               <Button
-                key={category.id}
+                key={category._id}
                 variant="outline"
-                onClick={() => scrollToSection(category.id)}
+                onClick={() => scrollToSection(category._id)}
               >
                 {category.name}
               </Button>
@@ -339,7 +350,7 @@ export default function Home() {
           })}
         </div>
 
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed bottom-6 right-4 z-50">
           <Button variant="outline" size="icon" onClick={scrollToTop}>
             <ChevronUp className="h-4 w-4" />
           </Button>

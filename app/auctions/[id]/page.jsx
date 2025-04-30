@@ -1,252 +1,15 @@
-// 'use client'
-// import { useState, useEffect } from 'react';
-// import Image from "next/image"
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-// import { Button } from "@/components/ui/button"
-// import { Card } from "@/components/ui/card"
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-// import { Clock, Heart, Share2 } from "lucide-react"
-// import { BidHistory } from "@/components/bid-history"
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogDescription,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-//   DialogTrigger,
-// } from "@/components/ui/dialog"
-// import { Input } from "@/components/ui/input"
-// import { Label } from "@/components/ui/label"
-// import { useToast } from '@/components/ui/use-toast';
+"use client";
 
-// const auctionData = {
-//   id: "1",
-//   title: "Vintage Polaroid Camera",
-//   description:
-//     "Original Polaroid camera from the 1970s in excellent condition. This rare piece comes with its original leather case and user manual. The camera has been tested and is in perfect working condition, producing the classic Polaroid look that photographers love. The lens is clear with no fungus or haze, and all mechanical parts operate smoothly.",
-//   currentBid: 120,
-//   bids: 8,
-//   timeLeft: "2 hours",
-//   startingPrice: 50,
-//   reservePrice: 100,
-//   incrementAmount: 10,
-//   images: [
-//     "/image.png",
-//     "/image.png",    
-//     "/image.png"
-//   ],
-//   seller: {
-//     name: "Camera Collector",
-//     avatar: "/placeholder.svg?height=40&width=40",
-//     rating: 4.8,
-//     totalSales: 156,
-//   },
-//   condition: "Excellent",
-//   category: "Cameras & Photography",
-//   location: "New York, NY",
-//   shippingCost: 15,
-//   endDate: "2024-03-15T18:00:00",
-// }
-
-// export default function AuctionDetailPage({ params }) {
-//   const [bidAmount, setBidAmount] = useState(auctionData.currentBid + 10)
-//   const { toast } = useToast();
-  
-//   const handleBid = () => {
-//     toast({
-//       title: "Bid placed successfully!",
-//       description: `You placed a bid of $${bidAmount} on ${auctionData.title}`,
-//     })
-//   }
-
-//   return (
-//     <div className="container mx-auto px-4 py-8">
-//       <div className="grid gap-8 md:grid-cols-2">
-//         {/* Image Gallery */}
-//         <div className="space-y-4">
-//           <div className="relative aspect-4/3 overflow-hidden rounded-lg border">
-//             <Image
-//               src={'/image.png' || "/placeholder.svg"}
-//               alt={auctionData.title}
-//               fill
-//               className="object-cover"
-//               priority
-//             />
-//           </div>
-//           <div className="grid grid-cols-3 gap-4">
-//             {auctionData.images.slice(1).map((image, index) => (
-//               <div key={index} className="relative aspect-4/3 overflow-hidden rounded-lg border">
-//                 <Image
-//                   src={'/image.png' || "/placeholder.svg"}
-//                   alt={`${auctionData.title} - Image ${index + 2}`}
-//                   fill
-//                   className="object-cover"
-//                 />
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-
-//         {/* Auction Details */}
-//         <div className="space-y-6 mt-4">
-//           <div>
-//             <h1 className="text-3xl font-bold">{auctionData.title}</h1>
-//             <div className="mt-2 flex items-center gap-4">
-//               <div className="flex items-center gap-2 text-muted-foreground">
-//                 <Clock className="h-4 w-4" />
-//                 {auctionData.timeLeft} left
-//               </div>
-//               <div className="flex items-center gap-2">
-//                 <Button variant="ghost" size="icon" className="hover:text-primary">
-//                   <Heart className="h-5 w-5" />
-//                 </Button>
-//                 <Button variant="ghost" size="icon" className="hover:text-primary">
-//                   <Share2 className="h-5 w-5" />
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//           <div className="min-w-[200px]">
-//             <Card className="p-6 w-full">
-//               <div className="space-y-4">
-//                 <div>
-//                   <p className="text-sm font-medium text-muted-foreground">Current Bid</p>
-//                   <p className="text-3xl font-bold text-primary">${auctionData.currentBid}</p>
-//                   <p className="text-sm text-muted-foreground">{auctionData.bids} bids</p>
-//                 </div>
-//                 <div className="flex gap-4">
-//                   <div>
-//                     <p className="text-sm font-medium text-muted-foreground">Starting Price</p>
-//                     <p className="font-medium">${auctionData.startingPrice}</p>
-//                   </div>
-//                   <div>
-//                     <p className="text-sm font-medium text-muted-foreground">Reserve Price</p>
-//                     <p className="font-medium">${auctionData.reservePrice}</p>
-//                   </div>
-//                   <div>
-//                     <p className="text-sm font-medium text-muted-foreground">Increment</p>
-//                     <p className="font-medium">${auctionData.incrementAmount}</p>
-//                   </div>
-//                 </div>
-//                 <Dialog>
-//                   <DialogTrigger asChild>
-//                     <Button size="sm" className="gradient-bg border-0 w-full">
-//                       Place Bid
-//                     </Button>
-//                   </DialogTrigger>
-//                   <DialogContent>
-//                     <DialogHeader>
-//                       <DialogTitle>Place a Bid</DialogTitle>
-//                       <DialogDescription>
-//                         Current highest bid is ${auctionData.currentBid}. Your bid must be higher.
-//                       </DialogDescription>
-//                     </DialogHeader>
-//                     <div className="grid gap-4 py-4">
-//                       <div className="grid gap-2">
-//                         <Label htmlFor="bid-amount">Bid Amount ($)</Label>
-//                         <Input
-//                           id="bid-amount"
-//                           type="number"
-//                           min={auctionData.currentBid + 1}
-//                           value={bidAmount}
-//                           onChange={(e) => setBidAmount(Number(e.target.value))}
-//                           className="border-primary/20"
-//                         />
-//                       </div>
-//                     </div>
-//                     <DialogFooter>
-//                       <Button onClick={handleBid} className="gradient-bg border-0">
-//                         Place Bid
-//                       </Button>
-//                     </DialogFooter>
-//                   </DialogContent>
-//                 </Dialog>
-//               </div>
-//             </Card>
-//           </div>
-          
-
-//           <div className="space-y-4">
-//             <div className="flex items-center gap-4">
-//               <Avatar>
-//                 <AvatarImage src={auctionData.seller.avatar} alt={auctionData.seller.name} />
-//                 <AvatarFallback>{auctionData.seller.name[0]}</AvatarFallback>
-//               </Avatar>
-//               <div>
-//                 <p className="font-medium">{auctionData.seller.name}</p>
-//                 <p className="text-sm text-muted-foreground">
-//                   {auctionData.seller.rating} ★ · {auctionData.seller.totalSales} sales
-//                 </p>
-//               </div>
-//             </div>
-//           </div>
-
-//           <Tabs defaultValue="details">
-//             <TabsList>
-//               <TabsTrigger value="details">Details</TabsTrigger>
-//               <TabsTrigger value="shipping">Shipping</TabsTrigger>
-//               <TabsTrigger value="seller">Seller</TabsTrigger>
-//             </TabsList>
-//             <TabsContent value="details" className="space-y-4">
-//               <div>
-//                 <h3 className="font-medium">Description</h3>
-//                 <p className="text-muted-foreground">{auctionData.description}</p>
-//               </div>
-//               <div className="grid grid-cols-2 gap-4">
-//                 <div>
-//                   <p className="font-medium">Condition</p>
-//                   <p className="text-muted-foreground">{auctionData.condition}</p>
-//                 </div>
-//                 <div>
-//                   <p className="font-medium">Category</p>
-//                   <p className="text-muted-foreground">{auctionData.category}</p>
-//                 </div>
-//               </div>
-//             </TabsContent>
-//             <TabsContent value="shipping">
-//               <div className="space-y-4">
-//                 <div>
-//                   <p className="font-medium">Location</p>
-//                   <p className="text-muted-foreground">{auctionData.location}</p>
-//                 </div>
-//                 <div>
-//                   <p className="font-medium">Shipping Cost</p>
-//                   <p className="text-muted-foreground">${auctionData.shippingCost}</p>
-//                 </div>
-//               </div>
-//             </TabsContent>
-//             <TabsContent value="seller">
-//               <div className="space-y-4">
-//                 <div>
-//                   <p className="font-medium">Seller Rating</p>
-//                   <p className="text-muted-foreground">{auctionData.seller.rating} out of 5 stars</p>
-//                 </div>
-//                 <div>
-//                   <p className="font-medium">Total Sales</p>
-//                   <p className="text-muted-foreground">{auctionData.seller.totalSales} items sold</p>
-//                 </div>
-//               </div>
-//             </TabsContent>
-//           </Tabs>
-//         </div>
-//       </div>
-
-//       <div className="mt-12 grid gap-8">
-//         <BidHistory auctionId={params.id} />
-//       </div>
-//     </div>
-//   )
-// }
-'use client'
-import { useState, useEffect } from 'react';
-import Image from "next/image"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Clock, Heart, Share2 } from "lucide-react"
-import { BidHistory } from "@/components/bid-history"
+import { useState, useEffect, use } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Clock, Heart, Share2 } from "lucide-react";
+import { BidHistory } from "@/components/bid-history";
 import {
   Dialog,
   DialogContent,
@@ -255,49 +18,155 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useToast } from '@/components/ui/use-toast';
-
-const auctionData = {
-  id: "1",
-  title: "Vintage Polaroid Camera",
-  description:
-    "Original Polaroid camera from the 1970s in excellent condition. This rare piece comes with its original leather case and user manual. The camera has been tested and is in perfect working condition, producing the classic Polaroid look that photographers love. The lens is clear with no fungus or haze, and all mechanical parts operate smoothly.",
-  currentBid: 120,
-  bids: 8,
-  timeLeft: "2 hours",
-  startingPrice: 50,
-  reservePrice: 100,
-  incrementAmount: 10,
-  images: [
-    "/bag.jpeg",
-    "/bag.jpeg",    
-    "/bag.jpeg"
-  ],
-  seller: {
-    name: "Camera Collector",
-    avatar: "/placeholder.svg?height=40&width=40",
-    rating: 4.8,
-    totalSales: 156,
-  },
-  condition: "Excellent",
-  category: "Cameras & Photography",
-  location: "New York, NY",
-  shippingCost: 15,
-  endDate: "2024-03-15T18:00:00",
-}
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { socket } from "@/libs/socketClient";
+import { calculateTimeLeft } from "@/libs/utils";
 
 export default function AuctionDetailPage({ params }) {
-  const [bidAmount, setBidAmount] = useState(auctionData.currentBid + 10)
+  const {id} = use(params);
+  const [auctionData, setAuctionData] = useState(null);
+  const [bidAmount, setBidAmount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
-  
-  const handleBid = () => {
-    toast({
-      title: "Bid placed successfully!",
-      description: `You placed a bid of $${bidAmount} on ${auctionData.title}`,
-    })
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  // Fetch auction data when the component mounts
+  useEffect(() => {
+    const fetchAuction = async () => {
+      try {
+        const response = await fetch(`/api/auctions/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch auction data");
+        }
+        const data = await response.json();
+        setAuctionData(data);
+        setBidAmount(data.highestBid + data.bidIncrement || data.startingPrice + data.bidIncrement);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchAuction();
+  }, [id]);
+
+  // Calculate time left when auctionData is available
+  useEffect(() => {
+    if (auctionData) {
+      const updateTimeLeft = () => {
+        const timeString = calculateTimeLeft(auctionData.endTime);
+        setTimeLeft(timeString);
+      };
+      updateTimeLeft();
+      const timer = setInterval(updateTimeLeft, 60000); // Update every minute
+      return () => clearInterval(timer);
+    }
+  }, [auctionData]);
+
+  // Listen for real-time bid updates
+  useEffect(() => {
+    if (auctionData) {
+      socket.on("newBidIncrement", (data) => {
+        if (data.auctionId === auctionData._id) {
+          setAuctionData((prev) => ({
+            ...prev,
+            highestBid: data.bidAmount,
+            totalBids: prev.totalBids + 1,
+          }));
+          setBidAmount(data.bidAmount + auctionData.bidIncrement);
+        }
+      });
+
+      return () => socket.off("newBidIncrement");
+    }
+  }, [auctionData]);
+
+  const handleBid = async () => {
+    if (!session) {
+      router.push("/login");
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to place a bid.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!auctionData) return;
+
+    const minBidAmount = (auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement;
+    if (bidAmount < minBidAmount) {
+      toast({
+        title: "Invalid bid amount",
+        description: `Your bid must be at least $${minBidAmount}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/bid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auctionId: auctionData._id,
+          bidAmount,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to place bid");
+      }
+
+      toast({
+        title: "Bid placed successfully!",
+        description: `You placed a bid of $${bidAmount} on ${auctionData.auctionTitle}`,
+      });
+
+      // Update local state
+      setAuctionData((prev) => ({
+        ...prev,
+        highestBid: bidAmount,
+        totalBids: prev.totalBids + 1,
+      }));
+      setBidAmount(bidAmount + auctionData.bidIncrement);
+
+      // Emit socket event
+      socket.emit("newBidIncrement", {
+        auctionId: auctionData._id,
+        bidAmount,
+        bidderName: session.user.name,
+        bidderEmail: session.user.email,
+      });
+    } catch (error) {
+      toast({
+        title: "Error placing bid",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          
+        </div>
+      </div>
+    ) 
+  }
+
+  if (error || !auctionData) {
+    return <div className="container mx-auto px-4 py-8">Error: {error || "Auction not found"}</div>;
   }
 
   return (
@@ -307,19 +176,19 @@ export default function AuctionDetailPage({ params }) {
         <div className="space-y-4">
           <div className="relative aspect-4/3 overflow-hidden rounded-lg border">
             <Image
-              src={'/image.png' || "/placeholder.svg"}
-              alt={auctionData.title}
+              src={auctionData.itemImg[0] || "/placeholder.svg"}
+              alt={auctionData.auctionTitle}
               fill
               className="object-cover"
               priority
             />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            {auctionData.images.slice(1).map((image, index) => (
+            {auctionData.itemImg.slice(1).map((image, index) => (
               <div key={index} className="relative aspect-4/3 overflow-hidden rounded-lg border">
                 <Image
-                  src={'/image.png' || "/placeholder.svg"}
-                  alt={`${auctionData.title} - Image ${index + 2}`}
+                  src={image || "/placeholder.svg"}
+                  alt={`${auctionData.auctionTitle} - Image ${index + 2}`}
                   fill
                   className="object-cover"
                 />
@@ -331,11 +200,11 @@ export default function AuctionDetailPage({ params }) {
         {/* Auction Details */}
         <div className="space-y-6 mt-4">
           <div>
-            <h1 className="text-3xl font-bold">{auctionData.title}</h1>
+            <h1 className="text-3xl font-bold">{auctionData.auctionTitle}</h1>
             <div className="mt-2 flex items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                {auctionData.timeLeft} left
+                {timeLeft}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" className="hover:text-primary">
@@ -349,13 +218,15 @@ export default function AuctionDetailPage({ params }) {
           </div>
 
           {/* Current Bid Section */}
-          <div className="w-full"> {/* Set a minimum height */}
-            <Card className="p-6 w-full"> {/* Ensure the card takes full height */}
+          <div className="w-full">
+            <Card className="p-6 w-full">
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Current Bid</p>
-                  <p className="text-3xl font-bold text-primary">${auctionData.currentBid}</p>
-                  <p className="text-sm text-muted-foreground">{auctionData.bids} bids</p>
+                  <p className="text-3xl font-bold text-primary">
+                    ${auctionData.highestBid || auctionData.startingPrice}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{auctionData.totalBids || 0} bids</p>
                 </div>
                 <div className="flex gap-4">
                   <div>
@@ -364,11 +235,11 @@ export default function AuctionDetailPage({ params }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Reserve Price</p>
-                    <p className="font-medium">${auctionData.reservePrice}</p>
+                    <p className="font-medium">${auctionData.reservedPrice}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Increment</p>
-                    <p className="font-medium">${auctionData.incrementAmount}</p>
+                    <p className="font-medium">${auctionData.bidIncrement}</p>
                   </div>
                 </div>
                 <Dialog>
@@ -381,7 +252,8 @@ export default function AuctionDetailPage({ params }) {
                     <DialogHeader>
                       <DialogTitle>Place a Bid</DialogTitle>
                       <DialogDescription>
-                        Current highest bid is ${auctionData.currentBid}. Your bid must be higher.
+                        Current highest bid is ${auctionData.highestBid || auctionData.startingPrice}. Your bid must be
+                        at least ${(auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement}.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -390,7 +262,7 @@ export default function AuctionDetailPage({ params }) {
                         <Input
                           id="bid-amount"
                           type="number"
-                          min={auctionData.currentBid + 1}
+                          min={(auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement}
                           value={bidAmount}
                           onChange={(e) => setBidAmount(Number(e.target.value))}
                           className="border-primary/20"
@@ -411,13 +283,13 @@ export default function AuctionDetailPage({ params }) {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <Avatar>
-                <AvatarImage src={auctionData.seller.avatar} alt={auctionData.seller.name} />
-                <AvatarFallback>{auctionData.seller.name[0]}</AvatarFallback>
+                <AvatarImage src={auctionData.merchantId?.avatar} alt={auctionData.merchantId?.name} />
+                <AvatarFallback>{auctionData.merchantId?.name?.[0]}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{auctionData.seller.name}</p>
+                <p className="font-medium">{auctionData.merchantId?.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {auctionData.seller.rating} ★ · {auctionData.seller.totalSales} sales
+                  {auctionData.merchantId?.rating} ★ · {auctionData.merchantId?.totalSales} sales
                 </p>
               </div>
             </div>
@@ -449,11 +321,11 @@ export default function AuctionDetailPage({ params }) {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">Location</p>
-                  <p className="text-muted-foreground">{auctionData.location}</p>
+                  <p className="text-muted-foreground">{auctionData.location || "Not specified"}</p>
                 </div>
                 <div>
                   <p className="font-medium">Shipping Cost</p>
-                  <p className="text-muted-foreground">${auctionData.shippingCost}</p>
+                  <p className="text-muted-foreground">${auctionData.shippingCost || "TBD"}</p>
                 </div>
               </div>
             </TabsContent>
@@ -461,11 +333,11 @@ export default function AuctionDetailPage({ params }) {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">Seller Rating</p>
-                  <p className="text-muted-foreground">{auctionData.seller.rating} out of 5 stars</p>
+                  <p className="text-muted-foreground">{auctionData.merchantId?.rating} out of 5 stars</p>
                 </div>
                 <div>
                   <p className="font-medium">Total Sales</p>
-                  <p className="text-muted-foreground">{auctionData.seller.totalSales} items sold</p>
+                  <p className="text-muted-foreground">{auctionData.merchantId?.totalSales} items sold</p>
                 </div>
               </div>
             </TabsContent>
@@ -474,8 +346,8 @@ export default function AuctionDetailPage({ params }) {
       </div>
 
       <div className="mt-12 grid gap-8">
-        <BidHistory auctionId={params.id} />
+        <BidHistory auctionId={id} />
       </div>
     </div>
-  )
+  );
 }
