@@ -1,6 +1,6 @@
 import User from "@/models/User";
 import { generateOtp, sendOtpEmail, storeOtp } from "../../../../libs/sendOtp";
-import { connectToDB } from "../../../../libs/functions";
+import { connectToDB } from "@/libs/functions";
 import argon2 from 'argon2';
 
 export async function POST(req) {
