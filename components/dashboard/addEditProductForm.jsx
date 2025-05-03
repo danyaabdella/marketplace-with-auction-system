@@ -205,7 +205,16 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       });
 
       const data = await response.json();
+      
       if (!response.ok) {
+        if (response.status === 400 && data.error === "Product listing appears to be fraudulent") {
+          toast({
+            title: "Fraud Detection Alert",
+            description: data.details.message,
+            variant: "destructive",
+          });
+          return;
+        }
         throw new Error(data.message || "Failed to save product");
       }
 

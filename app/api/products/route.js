@@ -13,6 +13,40 @@ export async function POST(req) {
 
     const productData = await req.json();
 
+    // Check for fraud using the Python API
+    const fraudCheckResponse = await fetch('http://localhost:8000/check-product', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        productName: productData.productName,
+        description: productData.description
+      })
+    });
+
+    if (!fraudCheckResponse.ok) {
+      return new Response(
+        JSON.stringify({ error: "Failed to perform fraud check" }),
+        { status: 500 }
+      );
+    }
+
+    const fraudResult = await fraudCheckResponse.json();
+    
+    if (!fraudResult.isSafe) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Product listing appears to be fraudulent",
+          details: {
+            fraudProbability: fraudResult.fraudProbability,
+            message: "Your product listing has been flagged as potentially fraudulent. Please review and modify your listing."
+          }
+        }),
+        { status: 400 }
+      );
+    }
+
     await connectToDB();
 
     const newProduct = await Product.create({
@@ -25,7 +59,14 @@ export async function POST(req) {
     });
 
     return new Response(
-      JSON.stringify({ message: "Product added successfully", product: newProduct }),
+      JSON.stringify({ 
+        message: "Product added successfully", 
+        product: newProduct,
+        fraudCheck: {
+          passed: true,
+          probability: fraudResult.fraudProbability
+        }
+      }),
       { status: 201 }
     );
   } catch (error) {
