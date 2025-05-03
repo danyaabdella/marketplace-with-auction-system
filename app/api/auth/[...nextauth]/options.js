@@ -1,50 +1,57 @@
-
-import CredentialsProvider from 'next-auth/providers/credentials';
-import mongoose from 'mongoose';
-import argon2 from 'argon2';
-import User from '@/models/User';
+import CredentialsProvider from "next-auth/providers/credentials";
+import mongoose from "mongoose";
+import argon2 from "argon2";
+import User from "@/models/User";
+import { connectToDB } from "@/libs/functions";
 
 export const options = {
   providers: [
     CredentialsProvider({
-      name: 'Email and Password',
+      name: "Email and Password",
       credentials: {
-        email: { label: 'Email:', type: 'email', placeholder: 'your-email@example.com' },
-        password: { label: 'Password:', type: 'password', placeholder: 'your-secure-password' },
+        email: {
+          label: "Email:",
+          type: "email",
+          placeholder: "your-email@example.com",
+        },
+        password: {
+          label: "Password:",
+          type: "password",
+          placeholder: "your-secure-password",
+        },
       },
       async authorize(credentials) {
-        console.log("Mongo URI: ", process.env.MONGO_URL);
 
-        // Ensure DB connection
-        if (!mongoose.connection.readyState) {
-          await mongoose.connect(process.env.MONGO_URL);
-        }
+        await connectToDB();
 
         const user = await User.findOne({ email: credentials?.email })
-              .select('-image -tinNumber -nationalId -uniqueTinNumber')
-              .lean();
+          .select("-image -tinNumber -nationalId -uniqueTinNumber")
+          .lean();
         console.log("User found:", user);
 
         if (!user) {
-          throw new Error('No user found with this email');
+          throw new Error("No user found with this email");
         }
 
-        const isPasswordValid = await argon2.verify(user.password, credentials.password);
+        const isPasswordValid = await argon2.verify(
+          user.password,
+          credentials.password
+        );
 
         if (!isPasswordValid) {
-          throw new Error('Invalid email or password');
+          throw new Error("Invalid email or password");
         }
 
         if (!user.isEmailVerified) {
-          throw new Error('Email not verified');
+          throw new Error("Email not verified");
         }
 
-        return { 
+        return {
           id: user._id,
           email: user.email,
-          role: user.role, 
-          name: user.fullName || null, 
-         };
+          role: user.role,
+          name: user.fullName || null,
+        };
       },
     }),
   ],
@@ -66,17 +73,17 @@ export const options = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
     maxAge: 24 * 60 * 60, // 1 day
   },
   cookies: null,
   useSecureCookies: false,
-   // Enable JWT encryption
-   jwt: {
+  // Enable JWT encryption
+  jwt: {
     encryption: true,
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 24 * 60 * 60, // 1 day
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development'
+  debug: process.env.NODE_ENV === "development",
 };
