@@ -1,4 +1,4 @@
-import { userInfo } from '../../../libs/functions';
+import { userInfo } from '@/libs/functions';
 import Order from '@/models/Order';
 import { NextResponse } from 'next/server';
 
