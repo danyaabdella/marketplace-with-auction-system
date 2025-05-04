@@ -6,7 +6,6 @@ const nextConfig = {
       "firebasestorage.googleapis.com",// Add Firebase Storage domain
       "example.com",
       'images.unsplash.com',
-
     ], 
   },
 };

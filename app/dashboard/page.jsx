@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { DashboardNav } from "components/dashboard/nav";
 import { Overview } from "@/components/dashboard/overview";
-import {MerchantProducts} from "components/dashboard/merchant-products";
+import { MerchantProducts } from "components/dashboard/merchant-products";
 import { MerchantAuctions } from "components/dashboard/merchant-auctions";
-import {OrdersPage} from "components/dashboard/orders";
-import {CustomersPage} from "components/dashboard/customers";
+import { OrdersPage } from "components/dashboard/orders";
+import { CustomersPage } from "components/dashboard/customers";
 
 // Map of view names to their corresponding components
 const viewComponents = {
@@ -14,8 +14,7 @@ const viewComponents = {
   products: MerchantProducts,
   auctions: MerchantAuctions,
   orders: OrdersPage,
-  customers: CustomersPage,
- 
+  customers: CustomersPage
 };
 
 export default function DashboardPage() {
@@ -30,11 +29,11 @@ export default function DashboardPage() {
       <div>
         <DashboardNav currentView={currentView} setCurrentView={setCurrentView} />
       </div>
-      
+
       <div className="flex-1">
-       
+
         <div className={`flex-1 p-4 grid grid-cols-1 transition-all ${open ? "" : "blur-md"}`}>
-            {CurrentComponent ? <CurrentComponent /> : <p>Invalid view selected</p>}
+          {CurrentComponent ? <CurrentComponent /> : <p>Invalid view selected</p>}
         </div>
       </div>
     </div>

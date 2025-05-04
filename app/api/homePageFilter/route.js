@@ -117,5 +117,7 @@ export async function GET(req) {
   const products = result[0].data;
   const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
 
+  console.log("products: ", products);
+
   return new Response(JSON.stringify({ products, total, page, limit }), { status: 200 });
 }
