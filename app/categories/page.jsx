@@ -29,11 +29,12 @@ export default function CategoriesPage() {
           },
         })
 
+        const data = await response.json()
+
         if (!response.ok) {
           throw new Error('Failed to fetch categories')
         }
-
-        const data = await response.json()
+        console.log("Category data: ", data);
         // Transform data to match expected format
         const transformedCategories = data.map(category => ({
           id: category._id,
