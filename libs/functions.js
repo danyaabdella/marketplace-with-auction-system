@@ -3,6 +3,7 @@ import User from "@/models/User";
 import Product from "@/models/Product";
 import Auction from "@/models/Auction";
 import Bid from "@/models/Bid";
+import Order from "@/models/Order";
 import { getServerSession } from "next-auth";
 import { options } from "@/app/api/auth/[...nextauth]/options";
 import { sendEmail } from "./sendEmail";
@@ -229,18 +230,7 @@ export async function scheduleAuctionEnd(auction) {
     await agenda.now("end auction", { auctionId: auction._id });
   }
 }
-//   export async function Participant() {
-//     await connectToDB();
-//     const session = await getServerSession(options)
-//     const userEmail = session?.user?.email;
-//     const participant = await Bid.find({ bidderEmail: userEmail });
-//     if (participant && participant.length > 0) {
-//         const auctionIds = participant.map(bid => bid.auctionId);
-//         return auctionIds;
-//     } else {
-//         return false;
-//     }
-// }
+
 export async function Participant() {
   await connectToDB();
   const session = await getServerSession(options);
@@ -284,3 +274,23 @@ export async function sendOtp(email) {
     toast.error(error.message || "Failed to send OTP");
   }
 }
+export async function elligibleToAuction(req) {
+  try {
+    const merchant = await userInfo(req);
+    if (!merchant || !merchant._id) return false;
+
+    const merchantId = new mongoose.Types.ObjectId(merchant._id);
+
+    // Count orders labeled as 'Paid To Merchant' and belong to the current merchant
+    const paidOrdersCount = await Order.countDocuments({
+      "merchantDetail.merchantId": merchantId,
+      paymentStatus: "Paid To Merchant"
+    });
+
+    return paidOrdersCount >= 3;
+  } catch (error) {
+    console.error("Error checking eligibility for auction:", error);
+    return false;
+  }
+}
+

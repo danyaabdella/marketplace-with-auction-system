@@ -1,9 +1,8 @@
 import { Value } from "@/models/About";
-import { connectToDB } from "@/utils/functions";
+import { connectToDB } from "@/libs/functions";
 
 export async function GET() {
-    await connectToDB();
-    await isSuperAdmin();    
+    await connectToDB();   
 
     try {
       const data = await Value.find();

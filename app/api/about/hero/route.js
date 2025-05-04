@@ -1,9 +1,8 @@
 import { Hero } from "@/models/About";
-import { connectToDB, isSuperAdmin } from "@/utils/functions";
+import { connectToDB } from "@/libs/functions";
 
 export async function GET(req) {
     await connectToDB();
-    await isSuperAdmin();
 
     try {
       const data = await Hero.findOne();

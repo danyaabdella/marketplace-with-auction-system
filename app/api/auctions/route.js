@@ -1,5 +1,5 @@
 
-import { connectToDB, checkProductAvailability, userInfo } from "@/libs/functions";
+import { connectToDB, checkProductAvailability, userInfo, elligibleToAuction } from "@/libs/functions";
 import Auction from "@/models/Auction";
 import { scheduleAuctionEnd, isMerchant } from "@/libs/functions";
 import mongoose from "mongoose";
@@ -23,6 +23,7 @@ export async function POST(req) {
     const auth = await authenticateMerchant(req);
     if (auth instanceof Response) return auth;
 
+    await elligibleToAuction(req)
     const auctionData = await req.json();
     console.log("Received auction data:", auctionData);
 

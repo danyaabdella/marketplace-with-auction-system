@@ -1,5 +1,5 @@
 import { TimelineEvent } from "@/models/About";
-import { connectToDB,  } from "@/utils/functions";
+import { connectToDB,  } from "@/libs/functions";
 
 export async function GET() {
   await connectToDB();

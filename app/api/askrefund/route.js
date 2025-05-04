@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import { userInfo } from '@/libs/functions';
-=======
 import { connectToDB } from '@/libs/functions';
 import User from '@/models/User';
->>>>>>> b1bf7fc1bd39642412b74530a7f17afd329249b8
 import Order from '@/models/Order';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';

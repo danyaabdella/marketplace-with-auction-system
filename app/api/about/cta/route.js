@@ -1,9 +1,8 @@
 import { Cta } from "@/models/About";
-import { connectToDB, isSuperAdmin } from "@/utils/functions";
+import { connectToDB } from "@/libs/functions";
 
 export async function GET() {
   await connectToDB();
-  // await isSuperAdmin();
 
   try {
     const data = await Cta.findOne();
