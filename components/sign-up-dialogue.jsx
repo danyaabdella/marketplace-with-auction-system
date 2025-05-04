@@ -59,15 +59,22 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
       try {
         const response = await fetch("/api/bankList");
         const data = await response.json();
-        setBankAccounts(data.data);
-        if (data.data.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            bank_code: data.data[0].id, // Changed to id
-          }));
+        console.log("Bank accounts data:", data.data); // Debug API response
+        if (Array.isArray(data.data)) {
+          setBankAccounts(data.data);
+          if (data.data.length > 0) {
+            setFormData((prev) => ({
+              ...prev,
+              bank_code: data.data[0].id,
+            }));
+          }
+        } else {
+          console.error("Invalid bank accounts data format:", data);
+          toast.error("Failed to load bank accounts");
         }
       } catch (error) {
         console.error("Failed to fetch bank accounts:", error);
+        toast.error("Failed to load bank accounts");
       }
     };
     if (role === "merchant") fetchBankAccounts();
@@ -82,7 +89,7 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
       const fileRef = ref(storage, `documents/${field}/${uniqueFileName}`);
       const uploadTask = await uploadBytesResumable(fileRef, file);
       const downloadUrl = await getDownloadURL(uploadTask.ref);
-      console.log("file URL: ", downloadUrl);
+      console.log(`${field} URL:`, downloadUrl);
 
       setFormData((prev) => ({ ...prev, [field]: downloadUrl }));
       toast.success(`${field === "tinNumber" ? "TIN Number" : "National ID"} uploaded successfully!`);
@@ -104,7 +111,7 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
       return;
     }
 
-    if (formData.password.length < 4) { // Corrected to < 8
+    if (formData.password.length < 8) {
       toast.error("Password must be at least 8 characters long");
       setIsLoading(false);
       return;
@@ -143,7 +150,7 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
         formDataToSend.bank_code = formData.bank_code;
       }
 
-      console.log("Data to be sent:", formDataToSend); // Added logging
+      console.log("Data to be sent:", formDataToSend);
 
       const response = await fetch("/api/signup", {
         method: "POST",
@@ -305,7 +312,7 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
                     </SelectTrigger>
                     <SelectContent>
                       {cities.map((city) => (
-                        <SelectItem key={city.name} value={city.name}>
+                        <SelectItem key={`${formData.stateName}-${city.name}`} value={city.name}>
                           {city.name}
                         </SelectItem>
                       ))}
@@ -314,83 +321,82 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
                 </div>
               </div>
               {role === "merchant" && (
-  <div className="space-y-2">
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="grid gap-2">
-        <Label htmlFor="tinNumber">TIN Number *</Label>
-        <Input
-          id="tinNumber"
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              handleUpload(file, "tinNumber");
-            }
-          }}
-        />
-        {isUploadingTinNumber && <p className="text-sm text-muted-foreground">Uploading...</p>}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="nationalId">National ID *</Label>
-        <Input
-          id="nationalId"
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              handleUpload(file, "nationalId");
-            }
-          }}
-        />
-        {isUploadingNationalId && <p className="text-sm text-muted-foreground">Uploading...</p>}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="account_name">Bank Account *</Label>
-        <Select
-          value={formData.account_name}
-          onValueChange={(value) => {
-            const selectedAccount = bankAccounts.find((acc) => acc.name === value);
-            setFormData({
-              ...formData,
-              account_name: value,
-              account_number: "",
-              bank_code: selectedAccount?.id || "",
-              acct_length: selectedAccount?.acct_length || null,
-            });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select bank account" />
-          </SelectTrigger>
-          <SelectContent>
-            {bankAccounts.map((account) => (
-              <SelectItem key={account.id} value={account.name}>
-                {account.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="account_number">Account Number *</Label>
-        <Input
-          id="account_number"
-          value={formData.account_number}
-          onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-          maxLength={formData.acct_length || undefined}
-        />
-        {formData.acct_length && (
-          <p className="text-sm text-muted-foreground">
-            Must be exactly {formData.acct_length} digits
-          </p>
-        )}
-      </div>
-      {/* Removed: <input type="hidden" name="bank_code" value={formData.id} /> */}
-    </div>
-  </div>
-)}
+                <div className="space-y-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="tinNumber">TIN Number *</Label>
+                      <Input
+                        id="tinNumber"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleUpload(file, "tinNumber");
+                          }
+                        }}
+                      />
+                      {isUploadingTinNumber && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="nationalId">National ID *</Label>
+                      <Input
+                        id="nationalId"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleUpload(file, "nationalId");
+                          }
+                        }}
+                      />
+                      {isUploadingNationalId && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="account_name">Bank Account *</Label>
+                      <Select
+                        value={formData.account_name}
+                        onValueChange={(value) => {
+                          const selectedAccount = bankAccounts.find((acc) => acc.name === value);
+                          setFormData({
+                            ...formData,
+                            account_name: value,
+                            account_number: "",
+                            bank_code: selectedAccount?.id || "",
+                            acct_length: selectedAccount?.acct_length || null,
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bank account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((account, index) => (
+                            <SelectItem key={account.id || `account-${index}`} value={account.name}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="account_number">Account Number *</Label>
+                      <Input
+                        id="account_number"
+                        value={formData.account_number}
+                        onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                        maxLength={formData.acct_length || undefined}
+                      />
+                      {formData.acct_length && (
+                        <p className="text-sm text-muted-foreground">
+                          Must be exactly {formData.acct_length} digits
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               <Button
                 className="w-full"
                 type="submit"

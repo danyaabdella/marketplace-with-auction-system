@@ -1,7 +1,7 @@
 // app/api/banks/route.js
 import { NextResponse } from "next/server";
 
-const CHAPA_SECRET_KEY = "CHASECK_TEST-s6oBbGS04bRkcXLT7P6x2do2EKcCXfJ6"; // Replace with your actual secret key
+const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY;
 
 export async function GET() {
   try {
