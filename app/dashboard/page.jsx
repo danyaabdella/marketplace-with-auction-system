@@ -34,9 +34,7 @@ export default function DashboardPage() {
       <div className="flex-1">
        
         <div className={`flex-1 p-4 grid grid-cols-1 transition-all ${open ? "" : "blur-md"}`}>
-            {/* Render the current component, or a fallback if invalid */}
             {CurrentComponent ? <CurrentComponent /> : <p>Invalid view selected</p>}
-          
         </div>
       </div>
     </div>

@@ -50,10 +50,9 @@ auctionSchema.pre('save', function(next) {
 })
 
 // Indexes for better query performance
-auctionSchema.index({ _id: 1 })
-auctionSchema.index({ merchantId: 1, status: 1 })
-auctionSchema.index({ status: 1, endTime: 1 })
-auctionSchema.index({ category: 1, status: 1 })
+auctionSchema.index({ merchantId: 1, status: 1 });
+auctionSchema.index({ status: 1, endTime: 1 });
+auctionSchema.index({ category: 1, status: 1 });
 
 const Auction = mongoose.models.Auction || mongoose.model('Auction', auctionSchema)
 export default Auction

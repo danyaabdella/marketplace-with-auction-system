@@ -21,9 +21,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { X, Plus, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import LocationMap from "@/components/LocationMap";
+import LocationPicker from "../location-picker";
 
-// Updated schema to include mass for PERKG delivery
+// Updated schema to remove latitude and longitude
 const formSchema = z.object({
   productName: z.string().min(2, { message: "Product name must be at least 2 characters." }),
   categoryId: z.string().min(1, { message: "Please select a category." }),
@@ -41,8 +41,6 @@ const formSchema = z.object({
     if (val) return Number(val) > 0;
     return true;
   }, { message: "Kilograms per price must be a positive number." }),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
 });
 
 export function AddEditProductForm({ open, onOpenChange, product, mode }) {
@@ -53,6 +51,7 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const [newSize, setNewSize] = useState("");
   const [images, setImages] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [location, setLocation] = useState({ lat: 9.03, lng: 38.74 });
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -67,8 +66,6 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
       deliveryPrice: "0",
       KilometerPerPrice: "",
       KilogramPerPrice: "",
-      latitude: "",
-      longitude: "",
     },
   });
 
@@ -89,15 +86,16 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         deliveryPrice: product.delivery === "FREE" ? "0" : product.deliveryPrice?.toString() || "0",
         KilometerPerPrice: product.KilometerPerPrice?.toString() || "",
         KilogramPerPrice: product.KilogramPerPrice?.toString() || "",
-        latitude: product.location?.coordinates[1]?.toString() || "",
-        longitude: product.location?.coordinates[0]?.toString() || "",
       };
 
       form.reset(initialValues);
-      console.log('initialize', initialValues);
       setVariants(product.variant || []);
       setSizes(product.size || []);
       setImages(product.images || []);
+      setLocation({
+        lat: product.location?.coordinates[1] || 9.03,
+        lng: product.location?.coordinates[0] || 38.74
+      });
     } else {
       form.reset({
         productName: "",
@@ -110,12 +108,11 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         deliveryPrice: "0",
         KilometerPerPrice: "",
         KilogramPerPrice: "",
-        latitude: "",
-        longitude: "",
       });
       setVariants([]);
       setSizes([]);
       setImages([]);
+      setLocation({ lat: 9.03, lng: 38.74 });
     }
   }, [form, mode, product]);
   
@@ -193,9 +190,11 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         images: images,
         location: {
           type: "Point",
-          coordinates: [Number(values.longitude) || 0, Number(values.latitude) || 0],
+          coordinates: [location.lng, location.lat],
         },
       };
+
+      console.log("Product data: ", productData);
 
       const url = mode === "add" ? "/api/products" : `/api/products?productId=${product._id}`;
       const response = await fetch(url, {
@@ -407,72 +406,19 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
 
             {/* Location */}
             <div className="grid grid-cols-1 gap-4">
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <LocationMap 
-                        location={[
-                          Number(form.watch("longitude") || 0),
-                          Number(form.watch("latitude") || 0)
-                        ]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="latitude"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Latitude</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.000001"
-                        placeholder="e.g. 40.7128" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          form.trigger("location");
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="longitude"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Longitude</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.000001"
-                        placeholder="e.g. -74.0060" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          form.trigger("location");
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Location</FormLabel>
+                <FormControl>
+                  <LocationPicker
+                    defaultLocation={location}
+                    gpsCoords={location}
+                    onChange={(newLocation) => setLocation(newLocation)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Click on the map to set the product location
+                </FormDescription>
+              </FormItem>
             </div>
             <div className="flex items-center text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 mr-1" />
