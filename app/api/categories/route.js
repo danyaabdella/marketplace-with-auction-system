@@ -15,8 +15,19 @@ export async function GET() {
       {
         $lookup: {
           from: 'products',
-          localField: '_id',
-          foreignField: 'category.categoryId',
+          let: { categoryId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$category.categoryId', '$$categoryId'] },
+                    { $ne: ['$isDeleted', true] } // Exclude deleted products
+                  ]
+                }
+              }
+            }
+          ],
           as: 'products',
         },
       },

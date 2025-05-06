@@ -1,3 +1,5 @@
+
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -8,16 +10,62 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import toast from "react-hot-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useCart } from "@/components/cart-provider"
-import { CartProvider } from "@/components/cart-provider"
 
-
+// Function to get user location
+const getUserLocation = () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by your browser"))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve([position.coords.longitude, position.coords.latitude])
+      },
+      (error) => {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            reject(new Error("Location access denied. Please enable location services."))
+            break
+          case error.POSITION_UNAVAILABLE:
+            reject(new Error("Location information is unavailable."))
+            break
+          case error.TIMEOUT:
+            reject(new Error("The request to get location timed out."))
+            break
+          default:
+            reject(new Error("An unknown error occurred while fetching location."))
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true } // 10s timeout, high accuracy
+    )
+  })
+}
 
 export default function CartPage() {
+  const { toast } = useToast()
   const { data: session, status } = useSession()
-  const { cart, removeProduct, updateQuantity, clearMerchant } = useCart()
+  const { cart, removeProduct, updateQuantity, clearMerchant, clearCart } = useCart()
   const [processingPayment, setProcessingPayment] = useState({})
+  const [coordinates, setCoordinates] = useState([0, 0]) // Default fallback coordinates
+
+  // Fetch user location on component mount
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const location = await getUserLocation()
+        setCoordinates(location)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description:error.message })
+        setCoordinates([0, 0]) // Fallback coordinates
+      }
+    }
+    fetchLocation()
+  }, [])
 
   const calculateMerchantTotal = (merchant) => {
     return merchant.products.reduce((total, product) => {
@@ -85,20 +133,27 @@ export default function CartPage() {
         categoryName: p.categoryName || "Uncategorized",
       }))
 
+      // Prepare location
+      const location = {
+        type: "Point",
+        coordinates: coordinates,
+      }
+
       // Call /api/checkout to initialize payment
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          amount: total, 
+        body: JSON.stringify({
+          amount: total,
           orderData: {
             customerDetail,
             merchantDetail,
             products,
-            totalPrice: total
-          }
+            totalPrice: total,
+            location,
+          },
         }),
       })
 
@@ -109,15 +164,25 @@ export default function CartPage() {
 
       // Clear the cart for this merchant after successful payment initialization
       clearMerchant(merchantId)
-      
+
       // Redirect to Chapa checkout page
       window.location.href = data.checkout_url
     } catch (error) {
       console.error("Payment error:", error)
-      toast.error(error.message || "There was an error processing your payment.")
+      toast({
+        title: "Error",
+        description:error.message || "There was an error processing your payment."})
     } finally {
       setProcessingPayment((prev) => ({ ...prev, [merchantId]: false }))
     }
+  }
+
+  const handleClearCart = () => {
+    clearCart()
+    toast({
+      title: "success",
+      description: "Cart cleared successfully"
+    })
   }
 
   if (status === "loading") {
@@ -127,7 +192,7 @@ export default function CartPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!session) {
@@ -162,7 +227,17 @@ export default function CartPage() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Shopping Cart</h1>
+        <Button
+          variant="destructive"
+          onClick={handleClearCart}
+          disabled={cart.merchants.length === 0}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear All Cart
+        </Button>
+      </div>
       <div className="grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-6">
           {cart.merchants.map((merchant) => (

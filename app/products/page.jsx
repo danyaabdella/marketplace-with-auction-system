@@ -1,3 +1,5 @@
+
+
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
@@ -187,16 +189,6 @@ export default function ProductsPage() {
   const displayedProducts = filteredProducts.slice(startIndex, endIndex)
   const totalDisplayPages = Math.ceil(filteredProducts.length / displayLimit)
 
-  // Handle search form submission
-  const handleSearch = (e) => {
-    e.preventDefault()
-    const formData = new FormData(e.target)
-    setFilters((prev) => ({
-      ...prev,
-      phrase: formData.get("search") || "",
-    }))
-  }
-
   // Handle filter changes
   const handleFilterChange = (e) => {
     const { name, value } = e.target
@@ -216,20 +208,28 @@ export default function ProductsPage() {
     }))
   }
 
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    setFilters((prev) => ({
+      ...prev,
+      phrase: value,
+    }))
+  }
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="grid grid-cols-1 gap-6">
-        {/* Search Form */}
+        {/* Search Input */}
         <div className="mb-8">
-          <form onSubmit={handleSearch} className="flex gap-4 max-w-2xl w-full mx-auto">
-            <Input
-              type="search"
-              name="search"
-              placeholder="Search products..."
-              className="flex-1"
-            />
-            <Button type="submit">Search</Button>
-          </form>
+          <Input
+            type="search"
+            name="search"
+            placeholder="Search products..."
+            value={filters.phrase}
+            onChange={handleSearchChange}
+            className="max-w-2xl w-full mx-auto"
+          />
         </div>
 
         {/* Product Slider */}

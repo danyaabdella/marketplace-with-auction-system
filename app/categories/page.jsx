@@ -39,7 +39,7 @@ export default function CategoriesPage() {
         const transformedCategories = data.map(category => ({
           id: category._id,
           name: category.name,
-          description: category.description || "Category description goes here",
+          description: category.description,
           createdBy: category.createdBy || "Admin",
           productCount: category.productCount || 0, // Use actual productCount from API
         }))

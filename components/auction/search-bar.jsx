@@ -16,7 +16,7 @@ export function SearchBar({ onSearch }) {
   }, [searchQuery, onSearch])
 
   return (
-    <div className="relative">
+    <div className="flex gap-4 max-w-2xl w-full mx-auto">
       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         type="search"

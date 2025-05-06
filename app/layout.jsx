@@ -1,4 +1,4 @@
-import { Roboto } from "next/font/google";
+// import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import "@/styles/globals.css";
 import ContextProvider from "@/components/commons/ContextProvider";
@@ -9,7 +9,7 @@ import { Footer } from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 
 
-const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500", "700"] });
+// const roboto = Inter({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
 export const metadata = {
   title: "Market Place",
@@ -19,7 +19,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
       <html lang="en" className="scroll-smooth overflow-x-hidden mt-8" suppressHydrationWarning>
-        <body className={`${roboto.className} flex min-h-screen flex-col justify between`}>
+        <body className= "flex min-h-screen flex-col justify between">
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
               <ContextProvider>
                 <Navbar />

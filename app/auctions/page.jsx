@@ -10,21 +10,18 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 gap-6">
-        <ProductSlider/>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[240px_1fr]">
-          <aside className="space-y-6">
-            <SearchBar />
-            {/* <div className="space-y-6 rounded-lg border p-4 shadow-sm bg-card">
-              <CategoryFilter />
-              <PriceFilter />
-              <StatusFilter />
-            </div> */}
-          </aside>
-          <main>
-            <AuctionGrid />
-          </main>
+        <div className="mb-8">
+          <SearchBar />
         </div>
-      </div>
+        <div className="mb-8">
+          <ProductSlider/>
+        </div>
+      </div>  
+        
+        <main>
+          <AuctionGrid />
+        </main>
+        
     </div>
   )
 }

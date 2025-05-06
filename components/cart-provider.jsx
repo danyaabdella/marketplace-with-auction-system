@@ -99,6 +99,9 @@ export function CartProvider({ children, userEmail }) {
       merchants: prev.merchants.filter(m => m.merchantId !== merchantId)
     }))
   }
+  const clearCart = () => {
+    setCart({ merchants: [] })
+  }
 
   const updateQuantity = (merchantId, productId, newQuantity) => {
     if (newQuantity === 0) {
@@ -115,7 +118,7 @@ export function CartProvider({ children, userEmail }) {
   }
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeProduct, clearMerchant, updateQuantity }}>
+    <CartContext.Provider value={{ cart, addToCart, removeProduct, clearMerchant, clearCart, updateQuantity }}>
       {children}
     </CartContext.Provider>
   )

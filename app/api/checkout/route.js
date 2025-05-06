@@ -6,7 +6,7 @@ export async function POST(req) {
     const chapaKey = process.env.CHAPA_SECRET_KEY;
     const body = await req.json();
     const { amount, orderData } = body;
-
+    console.log('orderData', orderData);
     const tx_ref = `tx_${uuidv4().split('-')[0]}`;
 
     if (!amount || !orderData) {
@@ -38,7 +38,7 @@ export async function POST(req) {
     }
 
     // Create order with Pending status
-    const orderResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/order`, {
+    const orderResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/order`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

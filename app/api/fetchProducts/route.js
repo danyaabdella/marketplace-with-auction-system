@@ -8,7 +8,8 @@ export async function GET(req) {
   const limit = parseInt(url.searchParams.get("limit")) || 1000
   const lat = parseFloat(url.searchParams.get("lat"))
   const lng = parseFloat(url.searchParams.get("lng"))
-
+  const category = url.searchParams.get("category");
+  
   console.log("Fetching products with params:", { lat, lng, limit })
 
   // Base filter to exclude banned or deleted products
@@ -16,6 +17,11 @@ export async function GET(req) {
     isBanned: { $ne: true },
     isDeleted: { $ne: true },
   }
+  if (category) {
+    // The field is 'category.categoryId' in your Product model
+    filter["category.categoryId"] = category;
+  }
+
 
   try {
     let products;

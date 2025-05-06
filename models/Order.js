@@ -27,7 +27,7 @@ const orderSchema = new mongoose.Schema({
             productName: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
-            delivery: { type: String, enum: ['PERKM', 'PERPIECS', 'PERKG', 'FREE'], required: true },
+            delivery: { type: String, enum: ['PERKM', 'PERPIECS', 'PERKG', 'FREE', 'FLAT'], required: true },
             deliveryPrice: { type: Number, required: true },
             categoryName: { type: String }
         }

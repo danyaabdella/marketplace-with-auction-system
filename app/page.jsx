@@ -81,17 +81,15 @@ export default function Home() {
   };
 
   const fetchCategoryProducts = async (categoryId) => {
-    // Simulate API call for category products
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `cat-${categoryId}-${i}`,
-      name: "Product Name",
-      description: "Product description goes here",
-      price: 199.99,
-      originalPrice: 299.99,
-      rating: 4.5,
-      soldCount: 415,
-      image: "/placeholder.svg",
-    }));
+    try {
+      const response = await fetch(`/api/fetchProducts?category=${categoryId}`);
+      if (!response.ok) throw new Error("Failed to fetch category products");
+      const data = await response.json();
+      return data.products;
+    } catch (error) {
+      console.error("Error fetching category products:", error);
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -135,9 +133,9 @@ export default function Home() {
       const productData = {};
       const pages = {};
       for (const category of fetchedCategories) {
-        const products = await fetchCategoryProducts(category.id);
-        productData[category.id] = products;
-        pages[category.id] = 1;
+        const products = await fetchCategoryProducts(category._id);
+        productData[category._id] = products;
+        pages[category._id] = 1;
       }
       setCategoryProducts(productData);
       setCategoryPages(pages);
@@ -148,7 +146,7 @@ export default function Home() {
         topRated: React.createRef(),
         latest: React.createRef(),
         ...fetchedCategories.reduce((acc, cat) => {
-          acc[cat.id] = React.createRef();
+          acc[cat._id] = React.createRef();
           return acc;
         }, {}),
       };
@@ -305,8 +303,8 @@ export default function Home() {
           })}
 
           {categories.map((category) => {
-            const allProducts = categoryProducts[category.id] || [];
-            const currentCatPage = categoryPages[category.id] || 1;
+            const allProducts = categoryProducts[category._id] || [];
+            const currentCatPage = categoryPages[category._id] || 1;
             const totalCatPages = Math.ceil(allProducts.length / itemsPerPage);
             const startIndex = (currentCatPage - 1) * itemsPerPage;
             const displayedProducts = allProducts.slice(
@@ -315,8 +313,8 @@ export default function Home() {
             );
             return (
               <section
-                key={category.id}
-                ref={sectionRefs.current[category.id]}
+                key={category._id}
+                ref={sectionRefs.current[category._id]}
                 className="scroll-mt-[90px]"
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -327,7 +325,7 @@ export default function Home() {
                     variant="outline"
                     className="mt-2 md:mt-0"
                     onClick={() =>
-                      (window.location.href = `/products?category=${category.id}`)
+                      (window.location.href = `/products?categoryId=${category._id}`)
                     }
                   >
                     See More
@@ -335,14 +333,14 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                   {displayedProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product._id} product={product} />
                   ))}
                 </div>
                 {totalCatPages > 1 &&
                   renderPagination(currentCatPage, totalCatPages, (page) =>
                     setCategoryPages((prev) => ({
                       ...prev,
-                      [category.id]: page,
+                      [category._id]: page,
                     }))
                   )}
               </section>

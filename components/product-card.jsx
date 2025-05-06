@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart, Eye } from 'lucide-react'
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useCart } from "./cart-provider"
-import toast from "react-hot-toast"
+import { useToast } from "./ui/use-toast"
 import { useSession } from "next-auth/react"
 
 export function ProductCard({ product }) {
@@ -28,6 +28,7 @@ export function ProductCard({ product }) {
   const [isFavorite, setIsFavorite] = useState(false)
   
   // Ensure we have fallback values for missing data
+  const { toast } = useToast()
   const { data: session } = useSession()
   const productName = product.productName || "Unnamed Product"
   const originalPrice = product.price || 0
@@ -39,10 +40,15 @@ export function ProductCard({ product }) {
   const image = product.images?.[0] || "/placeholder.svg"
   const quantity = product.quantity || 0
   const isOutOfStock = quantity === 0
-  const { addToCart } = useCart()
+  const { addToCart, cart } = useCart()
   const averageRating = product.review?.length 
       ? product.review.reduce((acc, curr) => acc + curr.rating, 0) / product.review.length
       : 0
+
+  // Check if the product is in the cart
+  const isInCart = cart.merchants.some(merchant => 
+    merchant.products.some(p => p.id === product._id)
+  )
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -59,7 +65,16 @@ export function ProductCard({ product }) {
       deliveryPrice: product.deliveryPrice,
       email: session.user.email 
     })
-    toast.success(`${product.productName} has been added to your cart`)
+    toast({
+        title: "Product added to cart",
+        description:`${product.productName} has been added to your cart`
+    })
+  }
+
+  const handleViewCart = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    router.push('/cart')
   }
   return (
     <div className="group relative rounded-lg border p-4 hover:shadow-lg">
@@ -113,10 +128,14 @@ export function ProductCard({ product }) {
             <Button
               size="icon"
               className="rounded-full h-10 w-10 hover:bg-primary/90"
-              onClick={handleAddToCart}
+              onClick={isInCart ? handleViewCart : handleAddToCart}
               disabled={isOutOfStock}
             >
-              <ShoppingCart className="h-5 w-5 text-primary-foreground" />
+              {isInCart ? (
+                <Eye className="h-5 w-5 text-primary-foreground " />
+              ) : (
+                <ShoppingCart className="h-5 w-5 text-primary-foreground" />
+              )}
             </Button>
           </div>
         </div>
