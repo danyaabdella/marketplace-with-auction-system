@@ -46,7 +46,7 @@ const productSchema = new Schema(
     ],
     delivery: {
       type: String,
-      enum: ["PERPIECE", "PERKG", "FREE", "PERKM"],
+      enum: ["PERPIECE", "PERKG", "FREE", "PERKM", "FLAT"],
       required: true,
     },
     deliveryPrice: { type: Number, required: true },
