@@ -3,7 +3,7 @@ import { CategoryFilter } from "components/auction/category-filter"
 import { PriceFilter } from "components/auction/price-filter"
 import { SearchBar } from "components/auction/search-bar"
 import { StatusFilter } from "components/auction/status-filter"
-import { ProductSlider } from "components/product-slider"
+import { AuctionSlider } from "@/components/auction-slider"
 
 export default function Home() {
   
@@ -14,7 +14,7 @@ export default function Home() {
           <SearchBar />
         </div>
         <div className="mb-8">
-          <ProductSlider/>
+          <AuctionSlider/>
         </div>
       </div>  
         
