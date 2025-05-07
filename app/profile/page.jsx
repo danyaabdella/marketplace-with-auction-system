@@ -2,30 +2,54 @@
 
 import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ProfileActivity } from "@/components/profile/profile-activity"
 import { ProfileReviews } from "@/components/profile/profile-reviews"
 import { EditProfileDialog } from "@/components/profile/edit-profile-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, MapPin, Shield, Star, UserIcon } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { useToast } from "@/components/ui/use-toast"
+import { State, City } from "country-state-city"
 
 
+// Form schemas
+const profileFormSchema = z.object({
+  fullName: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  phoneNumber: z.string().optional(),
+  stateName: z.string().min(1, { message: "State is required." }),
+  cityName: z.string().min(1, { message: "City is required." }),
+})
 
-// Mock user data - in a real app, you would fetch this from your API
-const userData = {
-  
-  
-}
-
+const passwordFormSchema = z
+  .object({
+    currentPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
+    confirmPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
 export default function ProfilePage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [loggedUser, setLoggedUser] = useState(null);
-  const { data: session, status } = useSession();
-  const [stats, setStats] = useState([]);
+  const { toast } = useToast()
+  const { data: session } = useSession()
+  const [isLoading, setIsLoading] = useState(true)
+  const [loggedUser, setLoggedUser] = useState(null)
+  const [stats, setStats] = useState({})
+  const [states, setStates] = useState([])
+  const [cities, setCities] = useState([])
+  const [selectedStateIsoCode, setSelectedStateIsoCode] = useState("")
   
     // Fetch user data when session changes
     useEffect(() => {
@@ -95,6 +119,83 @@ export default function ProfilePage() {
     if (session) fetchStats()
   }, [session])
 
+  // Fetch states for Ethiopia
+  useEffect(() => {
+    const ethiopianStates = State.getStatesOfCountry("ET")
+    setStates(ethiopianStates)
+  }, [])
+
+  // Set initial selected state ISO code
+  useEffect(() => {
+    if (loggedUser?.stateName && states.length > 0) {
+      const stateObj = states.find((state) => state.name === loggedUser.stateName)
+      setSelectedStateIsoCode(stateObj ? stateObj.isoCode : "")
+    }
+  }, [loggedUser, states])
+
+  // Fetch cities when state changes
+  useEffect(() => {
+    if (selectedStateIsoCode) {
+      const stateCities = City.getCitiesOfState("ET", selectedStateIsoCode)
+      setCities(stateCities)
+    } else {
+      setCities([])
+    }
+  }, [selectedStateIsoCode])
+
+  // Profile form
+  const profileForm = useForm({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      fullName: loggedUser?.fullName || "",
+      email: loggedUser?.email || "",
+      phoneNumber: loggedUser?.phoneNumber || "",
+      stateName: loggedUser?.stateName || "",
+      cityName: loggedUser?.cityName || "",
+    },
+  })
+
+  // Password form
+  const passwordForm = useForm({
+    resolver: zodResolver(passwordFormSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  })
+
+  // Form submission handlers
+  async function onProfileSubmit(values) {
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _id: loggedUser._id, ...values }),
+      })
+      if (!response.ok) throw new Error('Failed to update profile')
+      const updatedUser = await response.json()
+      setLoggedUser(updatedUser)
+      toast({ title: "Profile updated", description: "Your profile information has been updated successfully." })
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
+
+  async function onPasswordSubmit(values) {
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _id: loggedUser._id, password: values.newPassword }),
+      })
+      if (!response.ok) throw new Error('Failed to update password')
+      toast({ title: "Password updated", description: "Your password has been changed successfully." })
+      passwordForm.reset({ currentPassword: "", newPassword: "", confirmPassword: "" })
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
   if (isLoading) {
     return <ProfileSkeleton />
   }
@@ -168,7 +269,7 @@ export default function ProfilePage() {
         <Separator />
 
         {/* Profile Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        {/* <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
           <StatCard
             title="Auctions Won"
             value={stats.auctionsWon}
@@ -195,7 +296,7 @@ export default function ProfilePage() {
               />
             </>
         )}
-        </div>
+        </div> */}
 
         {/* Profile Content Tabs */}
         <Tabs defaultValue="activity" className="w-full">
@@ -204,10 +305,191 @@ export default function ProfilePage() {
             {loggedUser?.role === 'merchant' && (
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
             )}
+            <TabsTrigger value="account settings"> Account Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="activity" className="mt-6">
+          {/* <TabsContent value="activity" className="mt-6">
             <ProfileActivity userId={loggedUser?.id} />
+          </TabsContent> */}
+          <TabsContent value="account settings" className="mt-6">
+            <div className="space-y-8">
+              {/* Account Settings Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Settings</CardTitle>
+                  <CardDescription>Update your personal information</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...profileForm}>
+                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your full name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={profileForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your email address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={profileForm.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your phone number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={profileForm.control}
+                          name="stateName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>State</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value)
+                                  const stateObj = states.find((state) => state.name === value)
+                                  setSelectedStateIsoCode(stateObj ? stateObj.isoCode : "")
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your state" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {states.map((state) => (
+                                    <SelectItem key={state.isoCode} value={state.name}>
+                                      {state.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={profileForm.control}
+                          name="cityName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={!selectedStateIsoCode}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select your city" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {cities.map((city) => (
+                                    <SelectItem key={city.name} value={city.name}>
+                                      {city.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="submit" className="gradient-bg border-0">
+                          Save Changes
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              {/* Security Settings Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security Settings</CardTitle>
+                  <CardDescription>Manage your password</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...passwordForm}>
+                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                      <FormField
+                        control={passwordForm.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Enter your current password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Enter your new password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm New Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="Confirm your new password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end">
+                        <Button type="submit" className="gradient-bg border-0">
+                          Update Password
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
 
