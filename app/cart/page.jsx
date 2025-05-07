@@ -1,4 +1,4 @@
-"use client"
+// "use client"
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -67,34 +67,35 @@ export default function CartPage() {
 
   const calculateMerchantTotal = (merchant) => {
     return merchant.products.reduce((total, product) => {
-      const productTotal = product.price * product.quantity
+      const productTotal = product.price * product.quantity;
       const deliveryTotal =
-        product.delivery === "PERPIECE" ? product.deliveryPrice * product.quantity : product.deliveryPrice
-      return total + productTotal + deliveryTotal
-    }, 0)
-  }
+        product.delivery === "PERPIECE" ? product.deliveryPrice * product.quantity : product.deliveryPrice;
+      return total + productTotal + deliveryTotal;
+    }, 0);
+  };
 
   const calculateGrandTotal = () => {
     return cart.merchants.reduce((total, merchant) => {
-      return total + calculateMerchantTotal(merchant)
-    }, 0)
-  }
+      return total + calculateMerchantTotal(merchant);
+    }, 0);
+  };
 
   const handlePayment = async (merchantId, total) => {
-    setProcessingPayment((prev) => ({ ...prev, [merchantId]: true }))
+    setProcessingPayment((prev) => ({ ...prev, [merchantId]: true }));
     try {
       // Fetch customer details from /api/user
-      const customerResponse = await fetch('/api/user')
+      const customerResponse = await fetch('/api/user');
       if (!customerResponse.ok) {
-        throw new Error("Failed to fetch customer details")
+        throw new Error("Failed to fetch customer details");
       }
-      const customerData = await customerResponse.json()
+      const customerData = await customerResponse.json();
+
       // Fetch merchant details
-      const merchantResponse = await fetch(`/api/user/${merchantId}`)
+      const merchantResponse = await fetch(`/api/user/${merchantId}`);
       if (!merchantResponse.ok) {
-        throw new Error("Failed to fetch merchant details")
+        throw new Error("Failed to fetch merchant details");
       }
-      const merchantData = await merchantResponse.json()
+      const merchantData = await merchantResponse.json();
 
       // Prepare customerDetail
       const customerDetail = {
@@ -106,7 +107,7 @@ export default function CartPage() {
           state: customerData.stateName || "Default State",
           city: customerData.cityName || "Default City",
         },
-      }
+      };
 
       // Prepare merchantDetail
       const merchantDetail = {
@@ -117,10 +118,10 @@ export default function CartPage() {
         account_name: merchantData.account_name || "Merchant Account",
         account_number: merchantData.account_number || "1234567890",
         bank_code: merchantData.bank_code || "DEFAULT",
-      }
+      };
 
       // Prepare products
-      const merchant = cart.merchants.find((m) => m.merchantId === merchantId)
+      const merchant = cart.merchants.find((m) => m.merchantId === merchantId);
       const products = merchant.products.map((p) => ({
         productId: p.id,
         productName: p.name,
@@ -145,6 +146,8 @@ export default function CartPage() {
         },
         body: JSON.stringify({
           amount: total,
+        body: JSON.stringify({
+          amount: total,
           orderData: {
             customerDetail,
             merchantDetail,
@@ -153,25 +156,25 @@ export default function CartPage() {
             location,
           },
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
       if (!response.ok || !data.checkout_url) {
-        throw new Error(data.message || "Failed to initialize payment")
+        throw new Error(data.message || "Failed to initialize payment");
       }
 
       // Clear the cart for this merchant after successful payment initialization
       clearMerchant(merchantId)
 
       // Redirect to Chapa checkout page
-      window.location.href = data.checkout_url
+      window.location.href = data.checkout_url;
     } catch (error) {
       console.error("Payment error:", error)
       toast({
         title: "Error",
         description:error.message || "There was an error processing your payment."})
     } finally {
-      setProcessingPayment((prev) => ({ ...prev, [merchantId]: false }))
+      setProcessingPayment((prev) => ({ ...prev, [merchantId]: false }));
     }
   }
 
@@ -205,7 +208,7 @@ export default function CartPage() {
           <Button onClick={() => (window.location.href = "/login")}>Login to your account</Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (!cart || cart.merchants.length === 0) {
@@ -220,7 +223,7 @@ export default function CartPage() {
           <Button onClick={() => (window.location.href = "/products")}>Continue Shopping</Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -359,5 +362,5 @@ export default function CartPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

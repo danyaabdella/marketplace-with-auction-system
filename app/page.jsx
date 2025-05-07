@@ -77,6 +77,7 @@ export default function Home() {
     );
     if (!response.ok) throw new Error("Failed to fetch");
     const data = await response.json();
+    console.log("Best data: ", data)
     return { products: data.products, total: data.total };
   };
 
