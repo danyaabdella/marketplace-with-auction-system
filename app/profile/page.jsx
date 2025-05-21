@@ -1,3 +1,5 @@
+
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -9,9 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ProfileReviews } from "@/components/profile/profile-reviews"
 import { EditProfileDialog } from "@/components/profile/edit-profile-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Calendar, MapPin, Shield, Star, UserIcon } from "lucide-react"
+import { Calendar, MapPin, Shield, Star, UserIcon, Eye, EyeOff } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,7 +22,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useToast } from "@/components/ui/use-toast"
 import { State, City } from "country-state-city"
-
 
 // Form schemas
 const profileFormSchema = z.object({
@@ -41,7 +42,8 @@ const passwordFormSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   })
-export default function ProfilePage() {
+
+const ProfilePage = () => {
   const { toast } = useToast()
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(true)
@@ -50,74 +52,36 @@ export default function ProfilePage() {
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
   const [selectedStateIsoCode, setSelectedStateIsoCode] = useState("")
-  
-    // Fetch user data when session changes
-    useEffect(() => {
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  })
+
+  // Fetch user data when session changes
+  useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
-        setIsLoading(true); // Start loading
-        console.log("Session: ", session.user.email);
+        setIsLoading(true)
+        console.log("Session: ", session.user.email)
         try {
-          const response = await fetch('/api/user'); 
+          const response = await fetch('/api/user')
           if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+            throw new Error(`Server error: ${response.status}`)
           }
-          const user = await response.json(); 
-          setLoggedUser(user); 
+          const user = await response.json()
+          setLoggedUser(user)
         } catch (error) {
-          console.error("Error fetching user data:", error);
+          console.error("Error fetching user data:", error)
         } finally {
-            setIsLoading(false); // Stop loading
-          }  
+          setIsLoading(false)
         }
-      };
-
-    fetchUser();
-  }, [session]);
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [
-          wonRes,
-          reviewsRes, 
-          auctionsRes,
-          participatedRes,
-          bidsRes
-        ] = await Promise.all([
-          fetch('api/fetchAuctions/auctionById'),
-          fetch('/api/merchant/reviews'),
-          fetch('/api/user/auctions'),
-          fetch('/api/user/auctions/participated'),
-          fetch('/api/user/auctions/total-bids')
-        ])
-
-        const [ wonData, reviewsData, auctionsData, participatedData, bidsData] = 
-          await Promise.all([
-            wonRes.json(),
-            reviewsRes.json(),
-            auctionsRes.json(),
-            participatedRes.json(),
-            bidsRes.json()
-          ])
-
-        setStats({
-          auctionsWon: wonData.won.length,
-          averageRating: reviewsData.averageRating,
-          reviewsReceived: reviewsData.totalReviews,
-          auctionsCreated: auctionsData.length,
-          auctionsParticipated: participatedData.length,
-          totalBids: bidsData.totalBids
-        })
-        
-      } catch (error) {
-        console.error("Error fetching stats:", error)
-      } finally {
-        setIsLoading(false)
       }
     }
 
-    if (session) fetchStats()
+    fetchUser()
   }, [session])
+
 
   // Fetch states for Ethiopia
   useEffect(() => {
@@ -143,17 +107,7 @@ export default function ProfilePage() {
     }
   }, [selectedStateIsoCode])
 
-  // Profile form
-  const profileForm = useForm({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      fullName: loggedUser?.fullName || "",
-      email: loggedUser?.email || "",
-      phoneNumber: loggedUser?.phoneNumber || "",
-      stateName: loggedUser?.stateName || "",
-      cityName: loggedUser?.cityName || "",
-    },
-  })
+  
 
   // Password form
   const passwordForm = useForm({
@@ -165,22 +119,14 @@ export default function ProfilePage() {
     },
   })
 
-  // Form submission handlers
-  async function onProfileSubmit(values) {
-    try {
-      const response = await fetch('/api/user', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: loggedUser._id, ...values }),
-      })
-      if (!response.ok) throw new Error('Failed to update profile')
-      const updatedUser = await response.json()
-      setLoggedUser(updatedUser)
-      toast({ title: "Profile updated", description: "Your profile information has been updated successfully." })
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
-    }
+  // Function to toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }))
   }
+
 
   async function onPasswordSubmit(values) {
     try {
@@ -196,6 +142,7 @@ export default function ProfilePage() {
       toast({ title: "Error", description: err.message, variant: "destructive" })
     }
   }
+
   if (isLoading) {
     return <ProfileSkeleton />
   }
@@ -268,175 +215,60 @@ export default function ProfilePage() {
 
         <Separator />
 
-        {/* Profile Stats */}
-        {/* <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          <StatCard
-            title="Auctions Won"
-            value={stats.auctionsWon}
-            className="bg-green-50 dark:bg-green-950/20"
-          />
-          <StatCard
-            title="Participated"
-            value={stats.auctionsParticipated}
-            className="bg-blue-50 dark:bg-blue-950/20"
-          />
-          {loggedUser?.role === 'merchant' && (
-            <>
-              <StatCard
-                title="Created"
-                value={stats.auctionsCreated}
-                className="bg-purple-50 dark:bg-purple-950/20"
-              />
-              <StatCard title="Total Bids" value={stats.totalBids} className="bg-amber-50 dark:bg-amber-950/20" />
-              <StatCard title="Reviews" value={stats.reviewsReceived} className="bg-pink-50 dark:bg-pink-950/20" />
-              <StatCard
-                title="Rating"
-                value={stats.averageRating}
-                className="bg-indigo-50 dark:bg-indigo-950/20"
-              />
-            </>
-        )}
-        </div> */}
-
         {/* Profile Content Tabs */}
-        <Tabs defaultValue="activity" className="w-full">
+        <Tabs defaultValue="personal" className="w-full">
           <TabsList className="grid grid-cols-2 md:w-[400px]">
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            {loggedUser?.role === 'merchant' && (
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
-            )}
-            <TabsTrigger value="account settings"> Account Settings</TabsTrigger>
+            {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
+            <TabsTrigger value="personal">Personal Information</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
-
-          {/* <TabsContent value="activity" className="mt-6">
-            <ProfileActivity userId={loggedUser?.id} />
-          </TabsContent> */}
-          <TabsContent value="account settings" className="mt-6">
+          {/* Personal Information Tab */}
+          <TabsContent value="personal" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Full Name</p>
+                    <p className="text-sm">{loggedUser.fullName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="text-sm">{loggedUser.email}</p>
+                  </div>
+                  {loggedUser.phoneNumber && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
+                      <p className="text-sm">{loggedUser.phoneNumber}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Location</p>
+                    <p className="text-sm">{loggedUser.cityName}, {loggedUser.stateName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Joined</p>
+                    <p className="text-sm">{new Date(loggedUser.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {loggedUser.bio && (
+                    <div className="md:col-span-2">
+                      <p className="text-sm font-medium text-muted-foreground">Bio</p>
+                      <p className="text-sm">{loggedUser.bio}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="security" className="mt-6">
             <div className="space-y-8">
               {/* Account Settings Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>Update your personal information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...profileForm}>
-                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                      <FormField
-                        control={profileForm.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your full name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={profileForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your email address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={profileForm.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your phone number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="stateName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>State</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value)
-                                  const stateObj = states.find((state) => state.name === value)
-                                  setSelectedStateIsoCode(stateObj ? stateObj.isoCode : "")
-                                }}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select your state" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {states.map((state) => (
-                                    <SelectItem key={state.isoCode} value={state.name}>
-                                      {state.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="cityName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>City</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={!selectedStateIsoCode}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select your city" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {cities.map((city) => (
-                                    <SelectItem key={city.name} value={city.name}>
-                                      {city.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="flex justify-end">
-                        <Button type="submit" className="gradient-bg border-0">
-                          Save Changes
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-
-              {/* Security Settings Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>Manage your password</CardDescription>
+                  <CardTitle>Change Password</CardTitle>
+                  <CardDescription>Update your password to keep your account secure</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...passwordForm}>
@@ -448,7 +280,25 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Current Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Enter your current password" {...field} />
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.current ? "text" : "password"}
+                                  placeholder="Enter your current password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("current")}
+                                >
+                                  {showPassword.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.current ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -461,8 +311,27 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>New Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Enter your new password" {...field} />
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.new ? "text" : "password"}
+                                  placeholder="Enter your new password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("new")}
+                                >
+                                  {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.new ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
                             </FormControl>
+                            <FormDescription>Password must be at least 8 characters long.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -474,7 +343,25 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Confirm New Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Confirm your new password" {...field} />
+                              <div className="relative">
+                                <Input
+                                  type={showPassword.confirm ? "text" : "password"}
+                                  placeholder="Confirm your new password"
+                                  {...field}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
+                                  onClick={() => togglePasswordVisibility("confirm")}
+                                >
+                                  {showPassword.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  <span className="sr-only">
+                                    {showPassword.confirm ? "Hide password" : "Show password"}
+                                  </span>
+                                </Button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -492,24 +379,12 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-
           <TabsContent value="reviews" className="mt-6">
             <ProfileReviews userId={loggedUser?.id} />
           </TabsContent>
         </Tabs>
       </div>
     </div>
-  )
-}
-
-function StatCard({ title, value, className }) {
-  return (
-    <Card className={`overflow-hidden ${className}`}>
-      <CardContent className="p-4">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-2xl font-bold mt-1">{value}</p>
-      </CardContent>
-    </Card>
   )
 }
 
@@ -537,13 +412,6 @@ function ProfileSkeleton() {
 
         <Separator />
 
-        {/* Stats Skeleton */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
-
         {/* Tabs Skeleton */}
         <Skeleton className="h-10 w-[400px] mb-6" />
         <Skeleton className="h-[400px] w-full" />
@@ -551,4 +419,4 @@ function ProfileSkeleton() {
     </div>
   )
 }
-
+export default ProfilePage;

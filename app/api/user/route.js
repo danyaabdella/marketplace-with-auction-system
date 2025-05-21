@@ -34,7 +34,6 @@ export async function PUT(req) {
         const body = await req.json();
         const { 
             _id, 
-            email, 
             fullName, 
             password,
             bio, 
@@ -48,7 +47,7 @@ export async function PUT(req) {
             account_number, 
             bank_code 
         } = body;
-        const sessionError = await checkSession(email);
+        const sessionError = await checkSession(user.email);
 
         if (sessionError) {
             return new Response(JSON.stringify({ error: "You are not logged in." }), { status: 400 });
