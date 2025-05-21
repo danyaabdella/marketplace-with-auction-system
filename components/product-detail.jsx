@@ -413,32 +413,31 @@ export default function ProductDetail({ product }) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(newReview),
-          })
+          });
       
-          if (!response.ok) throw new Error('Failed to submit review')
-          
-          const {product: updatedProduct} = await response.json()
-          
-          setReviews(updatedProduct.review);
-          // Update local state with new review
-          setNewReview({ rating: 5, comment: "" })
-          setShowReviewDialog(false)
-          
-          // Add the new review to existing reviews
-          setReviews(prev => [...prev, newReviewData])
+          if (!response.ok) throw new Error('Failed to submit review');
+      
+          const { product: updatedProduct } = await response.json();
+      
+          // Update reviews with the updated product's reviews from the API
+          setReviews(updatedProduct.review || []);
+      
+          // Reset the new review form
+          setNewReview({ rating: 5, comment: "" });
+          setShowReviewDialog(false);
       
           toast({
             title: "Review submitted",
             description: "Thank you for your review!",
-          })
+          });
         } catch (error) {
           toast({
             title: "Error",
             description: error.message,
             variant: "destructive",
-          })
+          });
         }
-      }
+      };
   const averageRating = product.review?.length 
       ? product.review.reduce((acc, curr) => acc + curr.rating, 0) / product.review.length
       : 0

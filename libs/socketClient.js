@@ -1,40 +1,87 @@
 'use client'
-import { io } from "socket.io-client";
+   import { io } from "socket.io-client";
 
-let socket;
+   let socket;
+   let notificationCallbacks = [];
 
-if (typeof window !== 'undefined') {
-    // Explicitly use port 3000 for socket connection
-    const socketUrl = process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
-        : 'http://localhost:3000';
+   if (typeof window !== 'undefined') {
+       const socketUrl = process.env.NODE_ENV === 'production' 
+           ? window.location.origin 
+           : 'http://localhost:3000';
 
-    socket = io(socketUrl, {
-        path: '/socket.io/',
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 20000,
-        forceNew: true
-    });
+       socket = io(socketUrl, {
+           path: '/socket.io/',
+           transports: ['websocket', 'polling'],
+           reconnection: true,
+           reconnectionAttempts: 5,
+           reconnectionDelay: 1000,
+           timeout: 20000,
+           forceNew: true
+       });
 
-    socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        console.log('Attempting to connect to:', socketUrl);
-    });
+       socket.on('connect_error', (error) => {
+           console.error('Socket connection error:', error);
+           console.log('Attempting to connect to:', socketUrl);
+       });
 
-    socket.on('connect', () => {
-        console.log('Socket connected successfully to:', socketUrl);
-    });
+       socket.on('connect', () => {
+           console.log('Socket connected successfully to:', socketUrl);
+           const userId = localStorage.getItem('userId'); // Adjust based on your auth system
+           if (userId) {
+               socket.emit('authenticate', userId);
+           }
+       });
 
-    socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-    });
+       socket.on('disconnect', (reason) => {
+           console.log('Socket disconnected:', reason);
+       });
 
-    socket.on('error', (error) => {
-        console.error('Socket error:', error);
-    });
-}
+       socket.on('error', (error) => {
+           console.error('Socket error:', error);
+       });
 
-export { socket };
+       socket.on('newBid', (data) => {
+           console.log('Received new bid notification:', data);
+           const newNotification = {
+               _id: Date.now().toString(), // Temporary ID; will be replaced by server ID
+               title: "New Bid Placed",
+               description: `${data.bidderName} placed a bid of $${data.bidAmount}`,
+               time: "Just now",
+               read: false,
+               type: "bid",
+               data: { auctionId: data.auctionId, bidAmount: data.bidAmount, bidderName: data.bidderName, bidderEmail: data.bidderEmail }
+           };
+           notificationCallbacks.forEach(cb => cb(newNotification));
+       });
+
+       socket.on('outbid', (data) => {
+           console.log('Received outbid notification:', data);
+           const userId = localStorage.getItem('userId'); // Adjust based on your auth system
+           if (data.recipientId === userId) {
+               const newNotification = {
+                   _id: Date.now().toString(), // Temporary ID
+                   title: "You've been outbid",
+                   description: `${data.bidderName} outbid you with $${data.bidAmount}`,
+                   time: "Just now",
+                   read: false,
+                   type: "outbid",
+                   data: { auctionId: data.auctionId, bidAmount: data.bidAmount, bidderName: data.bidderName, bidderEmail: data.bidderEmail }
+               };
+               notificationCallbacks.forEach(cb => cb(newNotification));
+           }
+       });
+   }
+
+   export function addNotificationListener(callback) {
+       if (socket) {
+           notificationCallbacks.push(callback);
+       }
+   }
+
+   export function removeNotificationListener(callback) {
+       if (socket) {
+           notificationCallbacks = notificationCallbacks.filter(cb => cb !== callback);
+       }
+   }
+
+   export { socket };

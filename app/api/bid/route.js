@@ -1,343 +1,167 @@
 import Bid from '@/models/Bid';
-import Auction from '@/models/Auction';
-import GroupBid from '@/models/GroupBid';
-import { connectToDB, userInfo } from '@/libs/functions';
-import { sendEmail } from '@/libs/sendEmail';
-import { getIO } from "@/libs/socket";
+   import Auction from '@/models/Auction';
+   import { connectToDB, userInfo } from '@/libs/functions';
+   import { sendEmail } from '@/libs/sendEmail';
+   import { getIO } from "@/libs/socket";
+   import { createBidNotification } from '@/libs/createNotification';
 
-export async function POST(req) {
-    try {
-        await connectToDB();
-        // First read and parse the body
-        const rawBody = await req.text();
-        const body = JSON.parse(rawBody);
-        console.log("Received request body:", body);
+   export async function POST(req) {
+       try {
+           await connectToDB();
+           const rawBody = await req.text();
+           const body = JSON.parse(rawBody);
+           console.log("Received request body:", body);
 
-        const session = await userInfo(req);
-        if (!session || !session.email) {
-            return new Response(
-                JSON.stringify({ message: 'Unauthorized' }),
-                { status: 401 }
-            );
-        }
-        
-        const { auctionId, bidAmount} = body;
-        const bidderId = session._id;
-        const bidderEmail = session.email;
-        const bidderName = session.name;
-        // Validate input
-        if (!auctionId || !bidAmount ) {
-            return new Response(
-                JSON.stringify({ message: 'Auction ID and bid amount are required'  }),
-                { status: 400 }
-            );
-        }
+           const session = await userInfo(req);
+           if (!session || !session.email) {
+               return new Response(
+                   JSON.stringify({ message: 'Unauthorized' }),
+                   { status: 401 }
+               );
+           }
 
-        // const { bidAmount, quantity } = bids[0];
-        
-        // Get auction with proper locking to prevent race conditions
-        const auction = await Auction.findById(auctionId);
-        if (!auction || auction.status !== "active") {
-            return new Response(
-                JSON.stringify({ message: 'Auction is not active' }), 
-                { status: 400 }
-            );
-        }
+           const { auctionId, bidAmount } = body;
+           const bidderId = session._id;
+           const bidderEmail = session.email;
+           const bidderName = session.fullName;
 
-        // Validate quantity
-        // if (auction.buyByParts && quantity > auction.remainingQuantity) {
-        //     return new Response(
-        //         JSON.stringify({ message: 'Bid quantity exceeds remaining quantity' }),
-        //         { status: 400 }
-        //     );
-        // }
+           if (!auctionId || !bidAmount) {
+               return new Response(
+                   JSON.stringify({ message: 'Auction ID and bid amount are required' }),
+                   { status: 400 }
+               );
+           }
 
-        // Find or create bid document
-        let bid = await Bid.findOne({ auctionId });
-        const isNewBid = !bid;
+           const auction = await Auction.findById(auctionId);
+           if (!auction || auction.status !== "active") {
+               return new Response(
+                   JSON.stringify({ message: 'Auction is not active' }),
+                   { status: 400 }
+               );
+           }
 
-        if (isNewBid) {
-            bid = new Bid({
-                auctionId,
-                bids: []
-            });
-        }
+           let bid = await Bid.findOne({ auctionId });
+           const isNewBidDocument = !bid;
 
-        // Check for existing bid on this quantity
-        const existingBidIndex = bid.bids.findIndex(b => b.bidderId === bidderId);
-        
-        if (existingBidIndex >= 0) {
-            // User already has a bid - they should use PUT to update it
-            return new Response(
-                JSON.stringify({ 
-                    message: 'You already have a bid. Use PUT to update your bid amount.' 
-                }),
-                { status: 400 }
-            );
-        }
+           if (isNewBidDocument) {
+               bid = new Bid({
+                   auctionId,
+                   bids: []
+               });
+           }
 
-        // Add new bid
-        bid.bids.push({
-            bidderId,
-            bidAmount,
-            bidTime: new Date()
-        });
+           // Determine the current highest bid
+           const currentHighestBid = bid.bids.length > 0
+               ? Math.max(...bid.bids.map(b => b.bidAmount))
+               : auction.startingPrice;
 
-        // Save changes
-        await bid.save();
+           // Validate bid amount
+           const minBid = currentHighestBid + auction.bidIncrement;
+           if (bidAmount < minBid) {
+               return new Response(
+                   JSON.stringify({ message: `Bid amount must be at least $${minBid}` }),
+                   { status: 400 }
+               );
+           }
 
-        // Update auction remaining quantity (only for new quantities)
-        // if (existingBidIndex === -1) {
-        //     auction.remainingQuantity -= quantity;
-        //     if (auction.remainingQuantity < 0) {
-        //         return new Response(
-        //             JSON.stringify({ message: 'Not enough quantity remaining' }),
-        //             { status: 400 }
-        //         );
-        //     }
-        // }
+           const existingBidIndex = bid.bids.findIndex(b => b.bidderId.toString() === bidderId);
+           const isNewBid = existingBidIndex === -1;
 
-        // Handle group bid if applicable
-        // if (groupBidId) {
-        //     await GroupBid.findByIdAndUpdate(groupBidId, { 
-        //         status: 'active',
-        //         $inc: { currentBidAmount: bidAmount } 
-        //     });
-        // }
+           if (isNewBid) {
+               // Create new bid
+               bid.bids.push({
+                   bidderId,
+                   bidderEmail,
+                   bidderName,
+                   bidAmount,
+                   bidTime: new Date()
+               });
+           } else {
+               // Update existing bid
+               bid.bids[existingBidIndex].bidAmount = bidAmount;
+               bid.bids[existingBidIndex].bidTime = new Date();
+           }
 
-        // Save changes in transaction
-        // await Promise.all([
-        //     auction.save(),
-        //     bid.save()
-        // ]);
+           await bid.save();
 
-        // Notify previous bidders
-        const previousBidders = bid.bids
-            .filter(b => b.bidderId !== bidderId)
-            .map(b => b.bidderId);
-            
-        if (previousBidders.length > 0) {
-            sendEmail(
-                previousBidders, 
-                'New Bid Placed!', 
-                `A new bid of ${bidAmount} has been placed by ${bidderName}.`
-            );
-        }
+           // Create notification for the bidder
+           await createBidNotification({
+               userId: bidderId,
+               auctionId,
+               bidAmount,
+               bidderName,
+               bidderEmail,
+               type: 'bid'
+           });
 
-        // Emit socket event
-        getIO().to(auctionId).emit("newBidIncrement", {
-            auctionId,
-            bidAmount,
-            bidderName,
-            bidderEmail,
-        });
+           // Create notifications for previous bidders (outbid)
+           const previousBidders = bid.bids
+               .filter(b => b.bidderId.toString() !== bidderId)
+               .map(b => b.bidderId);
 
-        return new Response(
-            JSON.stringify({ 
-                message: 'Bid placed successfully',
-            }),
-            { status: 200 }
-        );
+           for (const previousBidder of previousBidders) {
+               await createBidNotification({
+                   userId: previousBidder,
+                   auctionId,
+                   bidAmount,
+                   bidderName,
+                   bidderEmail,
+                   type: 'outbid'
+               });
+           }
 
-    } catch (error) {
-        console.error('Bid placement error:', error);
-        return new Response(
-            JSON.stringify({ 
-                message: 'Failed to place bid', 
-                error: error.message 
-            }),
-            { status: 500 }
-        );
-    }
-}
+           // Emit socket events
+           const io = getIO();
+           io.to(auctionId).emit("newBid", {
+               auctionId,
+               bidAmount,
+               bidderName,
+               bidderEmail,
+               bidderId
+           });
 
+           // Find the previous highest bidder and notify them specifically
+           if (bid.bids.length > 1) {
+               const sortedBids = bid.bids.sort((a, b) => b.bidAmount - a.bidAmount);
+               const previousHighestBidder = sortedBids[1]?.bidderId;
+               if (previousHighestBidder && previousHighestBidder.toString() !== bidderId) {
+                   io.to(auctionId).emit("outbid", {
+                       auctionId,
+                       bidAmount,
+                       bidderName,
+                       bidderEmail,
+                       bidderId,
+                       recipientId: previousHighestBidder
+                   });
+               }
+           }
 
-export async function GET(req) {
-    try {
-        await connectToDB();
+           // Send email to previous bidders
+           if (previousBidders.length > 0) {
+               await sendEmail(
+                   previousBidders,
+                   'New Bid Placed!',
+                   `A new bid of ${bidAmount} has been placed by ${bidderName}.`
+               );
+           }
 
-        const user = userInfo(req);
-        const bidderEmail = user.email;
+           return new Response(
+               JSON.stringify({
+                   message: isNewBid ? 'Bid placed successfully' : 'Bid updated successfully',
+                   highestBid: bidAmount,
+                   totalBids: bid.bids.length
+               }),
+               { status: 200 }
+           );
 
-        // Find all bids where the customer has participated
-        const bids = await Bid.find({ 'bids.bidderEmail': bidderEmail });
-
-        if (!bids || bids.length === 0) {
-            return new Response(
-                JSON.stringify({ message: 'No auctions found for this customer' }),
-                { status: 404 }
-            );
-        }
-
-        // Extract relevant data (auctionId and customer's bids)
-        const customerAuctions = bids.map((bid) => {
-            const customerBids = bid.bids.filter(
-                (b) => b.bidderEmail === bidderEmail
-            );
-            return {
-                auctionId: bid.auctionId,
-                bids: customerBids,
-                highestBid: bid.highestBid,
-                highestBidderEmail: bid.highestBidderEmail,
-            };
-        });
-
-        return new Response(
-            JSON.stringify({
-                message: 'Customer auctions fetched successfully',
-                auctions: customerAuctions,
-            }),
-            { status: 200 }
-        );
-    } catch (error) {
-        return new Response(
-            JSON.stringify({
-                message: 'Failed to fetch customer auctions',
-                error: error.message,
-            }),
-            { status: 500 }
-        );
-    }
-}
-
-// PUT: Update a specific user's bid amount
-export async function PUT(req) {
-    try {
-        await connectToDB();
-        
-        const session = await userInfo(req);
-        if (!session || !session.email) {
-            return new Response(
-                JSON.stringify({ message: 'Unauthorized' }),
-                { status: 401 }
-            );
-        }
-
-        const { auctionId, newBidAmount } = await req.json();
-        const bidderId = session._id;
-        const bidderEmail = session.email;
-        const bidderName = session.name;
-
-        // Validate input
-        if (!auctionId || !newBidAmount) {
-            return new Response(JSON.stringify({ message: 'Auction Id and bid amount are required'}),
-            { status: 400 }
-            );
-        }
-        
-        // Find the bid document for the auction
-        const bid = await Bid.findOne({ auctionId });
-        // Find user's existing bid
-        const userBidIndex = bid.bids.findIndex(b => b.bidderId.equals(bidderId));
-        if (userBidIndex === -1) {
-            return new Response(
-                JSON.stringify({ message: 'No bid found for this user' }),
-                { status: 404 }
-            );
-        }
-
-
-        const userBid = bid.bids.find((bid) => bid.bidderEmail === bidderEmail);
-        
-        if (!userBid) {
-            return new Response(
-                JSON.stringify({ message: 'No bid found for this user' }),
-                { status: 404 }
-            );
-        }
-
-        // Check if new bid is higher than current
-        if (newBidAmount <= bid.bids[userBidIndex].bidAmount) {
-            return new Response(
-                JSON.stringify({ message: 'New bid amount must be higher than current bid' }),
-                { status: 400 }
-            );
-        }
-
-        // Update bid amount
-        bid.bids[userBidIndex].bidAmount = newBidAmount;
-        bid.bids[userBidIndex].bidTime = new Date();
-
-        // Save changes
-        await bid.save();
-         // Notify other bidders
-         const previousBidders = bid.bids
-         .filter(b => !b.bidderId.equals(bidderId))
-         .map(b => b.bidderEmail);
-         
-        if (previousBidders.length > 0) {
-            sendEmail(
-                previousBidders, 
-                'Bid Updated!', 
-                `A bid has been updated to $${newBidAmount} by ${bidderName}.`
-            );
-        }
-        // const io = ;
-
-        getIO().to(auctionId).emit("newBidIncrement", {
-         auctionId,
-         newBidAmount,
-         bidderEmail
-         },
-        );
-       
-
-        return new Response(JSON.stringify({ message: 'Bid updated successfully', bid }),
-        { status: 200 }
-        );
-
-        
-    } catch (error) {
-        return new Response(JSON.stringify({ message: 'Failed to update bid', error: error.message }),
-        { status: 500 }
-        );
-    }
-}
-
-// DELETE: Delete a specific bid (optional)
-export async function DELETE(req) {
-    try {
-        await connectToDB();
-    
-        const {auctionId} = await req.json();
-        const bidderEmail = user.email
-
-        if (!auctionId ) {
-            return new Response(JSON.stringify({ message: 'Auction ID is required' }),
-            { status: 400 }
-            );
-        }
-
-        // Find the bid document for the auction
-        const bid = await Bid.findOne({ auctionId });
-
-        // Remove the specific bid from the bids array
-        bid.bids = bid.bids.filter((bid) => bid.bidderEmail !== bidderEmail);
-
-        // Update the highest bid if the deleted bid was the highest
-        if (bid.highestBidderEmail === bidderEmail) {
-            if (bid.bids.length > 0) {
-                const newHighestBid = Math.max(...bid.bids.map((bid) => bid.bidAmount));
-                bid.highestBid = newHighestBid;
-                bid.highestBidderEmail = bid.bids.find(
-                    (bid) => bid.bidAmount === newHighestBid
-                ).bidderEmail;
-            } else {
-                bid.highestBid = 0;
-                bid.highestBidderEmail = null;
-            }
-        }
-
-        // Save the updated bid document
-        await bid.save();
-
-        return new Response(JSON.stringify({ message: 'Bid deleted successfully', bid }),
-        { status: 200 }
-        );
-    } catch (error) {
-        return new Response(JSON.stringify(
-        { message: 'Failed to delete bid', error: error.message }),
-        { status: 500 }
-        );
-    }
-}
+       } catch (error) {
+           console.error('Bid placement error:', error);
+           return new Response(
+               JSON.stringify({
+                   message: 'Failed to place bid',
+                   error: error.message
+               }),
+               { status: 500 }
+           );
+       }
+   }

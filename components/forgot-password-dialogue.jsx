@@ -165,7 +165,7 @@ export function ForgotPasswordPage( open, onOpenChange) {
       description: "Your password has been reset successfully",
     })
     // Redirect to login page
-    router.push("/signIn")
+    router.push("/")
   }
 
   return (

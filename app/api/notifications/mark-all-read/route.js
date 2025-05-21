@@ -16,7 +16,7 @@ export async function POST(req) {
 
         await Notification.updateMany(
             {
-                userId: user.id,
+                userId: user._id,
                 read: false
             },
             { $set: { read: true } }

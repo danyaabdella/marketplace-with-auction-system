@@ -79,6 +79,7 @@
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
+        "@types/google.maps": "^3.58.1",
         "@types/react": "19.0.10",
         "eslint": "^9",
         "eslint-config-next": "15.1.0",
