@@ -9,6 +9,7 @@ import { options } from "@/app/api/auth/[...nextauth]/options";
 import { sendEmail } from "./sendEmail";
 import { Agenda } from "agenda";
 import { getIO } from "./socket";
+import jwt from "jsonwebtoken";
 
 const agenda = new Agenda({ db: { address: process.env.MONGO_URL } });
 
@@ -94,7 +95,7 @@ export async function verifySessionAndRole(req, requiredRole) {
       req,
       {
         getHeader: (name) => req.headers.get(name),
-        setHeader: () => {}, // No-op for API routes
+        setHeader: () => {},
       },
       options
     );
@@ -127,28 +128,29 @@ export async function verifySessionAndRole(req, requiredRole) {
 
 export async function userInfo(req) {
   try {
-    const mockRes = {
-      getHeader: () => null,
-      setHeader: () => {},
-    };
+    // 1. Try to get session from web clients (Next.js)
+    const session = await getServerSession(options);
 
-    const session = await getServerSession(req, mockRes, options);
-    console.log("Session data:", session);
+    let email = null;
 
-    if (!session?.user?.email) {
-      return null;
+    if (session?.user?.email) {
+      email = session.user.email;
+    } else {
+      // 2. If no session, check Authorization header (Bearer token for mobile)
+      const authHeader = req.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET);
+        email = decoded.email;
+      }
     }
+
+    if (!email) return null;
 
     await connectToDB();
-    let userInfo = await User.findOne({ email: session.user.email })
-      .select("-image ")
-      .lean();
+    const user = await User.findOne({ email }).select("-password").lean();
 
-    if (!userInfo) {
-      return null;
-    }
-
-    return userInfo;
+    return user;
   } catch (error) {
     console.error("Error in userInfo:", error);
     return null;
@@ -284,7 +286,7 @@ export async function elligibleToAuction(req) {
     // Count orders labeled as 'Paid To Merchant' and belong to the current merchant
     const paidOrdersCount = await Order.countDocuments({
       "merchantDetail.merchantId": merchantId,
-      paymentStatus: "Paid To Merchant"
+      paymentStatus: "Paid To Merchant",
     });
 
     return paidOrdersCount >= 3;
@@ -293,4 +295,3 @@ export async function elligibleToAuction(req) {
     return false;
   }
 }
-

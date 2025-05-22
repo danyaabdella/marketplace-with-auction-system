@@ -4,7 +4,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "next dev --turbo",
+        "dev": "next dev --turbo -p 4000",
         "dev:socket": "NODE_OPTIONS='--trace-warnings' node server.mjs next dev",
         "build": "next build",
         "start": "next start",
@@ -79,6 +79,7 @@
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
+        "@types/jsonwebtoken": "^9.0.9",
         "@types/react": "19.0.10",
         "eslint": "^9",
         "eslint-config-next": "15.1.0",

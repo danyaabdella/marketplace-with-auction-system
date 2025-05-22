@@ -68,6 +68,7 @@ export const options = {
         token.id = user.id;
         token.role = user.role;
       }
+      console.log("Token in: ", token);3
       return token;
     },
   },
