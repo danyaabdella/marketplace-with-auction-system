@@ -3,27 +3,40 @@ import User from "@/models/User";
 import argon2 from "argon2";
 
 export async function GET(req) {
+  // console.log("GET request received");
+
   const user = await userInfo(req);
-  if (!user)
+  // console.log("User info fetched:", user);
+
+  if (!user) {
+    // console.log("No user found. Returning 401 Unauthorized.");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
     });
-  try {
-    await connectToDB();
+  }
 
+  try {
+    // console.log("Connecting to database...");
+    await connectToDB();
+    // console.log("Database connection established.");
+
+    // console.log("Looking for user in database with email:", user.email);
     const existingUser = await User.findOne({ email: user.email });
 
     if (existingUser) {
+      // console.log("User found in database:", existingUser);
       return new Response(JSON.stringify(existingUser), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     } else {
+      // console.log("User not found in database.");
       return new Response(JSON.stringify({ error: "User not found" }), {
         status: 404,
       });
     }
   } catch (error) {
+    console.error("Error occurred during GET request:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
     });
@@ -57,14 +70,14 @@ export async function PUT(req) {
     const sessionError = await checkSession(user.email);
 
     if (sessionError) {
-      console.log("Not logged in");
+      // console.log("Not logged in");
       return new Response(JSON.stringify({ error: "You are not logged in." }), {
         status: 400,
       });
     }
 
     if (!_id) {
-      console.log("Not id in");
+      // console.log("Not id in");
 
       return new Response(
         JSON.stringify({ error: "ID is mandatory for update." }),
@@ -136,7 +149,7 @@ export async function PUT(req) {
     );
 
     if (!updatedUser) {
-      console.log("Not updated in");
+      // console.log("Not updated in");
 
       return new Response(JSON.stringify({ error: "Failed to update user." }), {
         status: 400,

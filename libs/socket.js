@@ -1,79 +1,96 @@
-// lib/socket.js
 import { Server } from "socket.io";
 
-let io = null;
+   let io = null;
 
-export function initializeSocket(server) {
-    if (!io) {
-        io = new Server(server, {
-            cors: {
-                origin: "*",
-                methods: ["GET", "POST"],
-                credentials: true
-            },
-            path: "/socket.io/",
-            transports: ["polling", "websocket"],
-            pingTimeout: 60000,
-            pingInterval: 25000,
-            connectTimeout: 20000
-        });
+   export function initializeSocket(server) {
+       if (!io) {
+           io = new Server(server, {
+               cors: {
+                   origin: "*",
+                   methods: ["GET", "POST"],
+                   credentials: true
+               },
+               path: "/socket.io/",
+               transports: ["polling", "websocket"],
+               pingTimeout: 60000,
+               pingInterval: 25000,
+               connectTimeout: 20000
+           });
 
-        io.on("connection", (socket) => {
-            console.log(`User connected: ${socket.id}`);
+           io.on("connection", (socket) => {
+               console.log(`User connected: ${socket.id}`);
 
-            socket.on("joinAuction", (auctionId) => {
-                socket.join(auctionId);
-                console.log(`🔹 Participant ${socket.id} joined auction ${auctionId}`);
-            });
-            
-            socket.on("newBidIncrement", (data) => {
-                const { auctionId, bidAmount, bidderName, bidderEmail } = data;
-                
-                if (!socket.rooms.has(auctionId)) {
-                    socket.join(auctionId);
-                    console.log(`🔹 Automatically joined auction ${auctionId} for ${socket.id}`);
-                }
-            
-                console.log(`📢 Broadcasting bid in room: ${auctionId}`);
-                
-                // Notify all participants about the new bid
-                socket.to(auctionId).emit("newBid", {
-                    bidderName,
-                    bidAmount,
-                    bidderEmail,
-                    message: `${bidderName} placed a new bid of $${bidAmount} in the auction.`,
-                });
+               socket.on("authenticate", (userId) => {
+                   socket.userId = userId;
+                   console.log(`User ${userId} authenticated with socket ${socket.id}`);
+               });
 
-                // Notify the previous highest bidder that they've been outbid
-                socket.to(auctionId).emit("outbid", {
-                    bidderName,
-                    bidAmount,
-                    bidderEmail,
-                    message: `You've been outbid! ${bidderName} placed a higher bid of $${bidAmount}.`,
-                });
-            });
+               socket.on("joinAuction", (auctionId) => {
+                   socket.join(auctionId);
+                   console.log(`🔹 Participant ${socket.id} joined auction ${auctionId}`);
+               });
 
-            socket.on("disconnect", () => {
-                console.log(`User disconnected: ${socket.id}`);
-            });
+               socket.on("newBidIncrement", async (data) => {
+                   const { auctionId, bidAmount, bidderName, bidderEmail, bidderId } = data;
 
-            socket.on("error", (error) => {
-                console.error(`Socket error for ${socket.id}:`, error);
-            });
-        });
-    }
-    return io;
-}
+                   if (!socket.rooms.has(auctionId)) {
+                       socket.join(auctionId);
+                       console.log(`🔹 Automatically joined auction ${auctionId} for ${socket.id}`);
+                   }
 
-export function getIO() {
-    if (!io) {
-        console.warn("Socket.IO has not been initialized! Initializing with default settings...");
-        // Create a temporary server for API routes
-        const http = require('http');
-        const tempServer = http.createServer();
-        io = initializeSocket(tempServer);
-    }
-    return io;
-}
+                   console.log(`📢 Broadcasting bid in room: ${auctionId}`);
 
-export { io };
+                   io.to(auctionId).emit("newBid", {
+                       auctionId,
+                       bidAmount,
+                       bidderName,
+                       bidderEmail,
+                       bidderId
+                   });
+
+                   // Find the previous highest bidder and notify them specifically
+                   const bid = await require('@/models/Bid').findOne({ auctionId });
+                   if (bid && bid.bids.length > 1) {
+                       const sortedBids = bid.bids.sort((a, b) => b.bidAmount - a.bidAmount);
+                       const previousHighestBidder = sortedBids[1]?.bidderId;
+                       if (previousHighestBidder && previousHighestBidder.toString() !== bidderId) {
+                           const previousBidderSocket = Array.from(io.sockets.sockets.values()).find(
+                               s => s.userId === previousHighestBidder.toString()
+                           );
+                           if (previousBidderSocket) {
+                               previousBidderSocket.emit("outbid", {
+                                   auctionId,
+                                   bidAmount,
+                                   bidderName,
+                                   bidderEmail,
+                                   bidderId,
+                                   recipientId: previousHighestBidder
+                               });
+                           }
+                       }
+                   }
+               });
+
+               socket.on("disconnect", () => {
+                   console.log(`User disconnected: ${socket.id}`);
+               });
+
+               socket.on("error", (error) => {
+                   console.error(`Socket error for ${socket.id}:`, error);
+               });
+           });
+       }
+       return io;
+   }
+
+   export function getIO() {
+       if (!io) {
+           console.warn("Socket.IO has not been initialized! Initializing with default settings...");
+           const http = require('http');
+           const tempServer = http.createServer();
+           io = initializeSocket(tempServer);
+       }
+       return io;
+   }
+
+   export { io };

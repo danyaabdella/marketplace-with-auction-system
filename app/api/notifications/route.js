@@ -6,8 +6,8 @@ import { NextResponse } from 'next/server'
 export async function GET(req) {
     try {
         await connectToDB()
-        const user = userInfo(req)
-        
+        const user = await userInfo(req)
+        console.log('hello', user);
         if (!user) {
             return NextResponse.json(
                 { message: 'Unauthorized' },
@@ -15,10 +15,10 @@ export async function GET(req) {
             )
         }
 
-        const notifications = await Notification.find({ userId: user.id })
+        const notifications = await Notification.find({ userId: user._id })
             .sort({ createdAt: -1 })
             .limit(50)
-
+        console.log("Fetched notifications for user", user.id, ":", notifications);
         const unreadCount = await Notification.countDocuments({
             userId: user.id,
             read: false
@@ -38,11 +38,11 @@ export async function GET(req) {
 }
 
 // POST: Mark notifications as read
-export async function POST(req) {
+export async function PUT(req) {
     try {
         await connectToDB()
-        const user = userInfo(req)
-        
+        const user = await userInfo(req)
+        console.log('hello2', user)
         if (!user) {
             return NextResponse.json(
                 { message: 'Unauthorized' },
@@ -51,7 +51,7 @@ export async function POST(req) {
         }
 
         const { ids } = await req.json()
-
+        console.log("ids", ids);
         if (!ids || !Array.isArray(ids)) {
             return NextResponse.json(
                 { message: 'Invalid request body' },
@@ -59,13 +59,14 @@ export async function POST(req) {
             )
         }
 
-        await Notification.updateMany(
+        const result = await Notification.updateMany(
             {
                 _id: { $in: ids },
-                userId: user.id
+                userId: user._id
             },
             { $set: { read: true } }
         )
+        console.log("result", result);
 
         return NextResponse.json({ message: 'Notifications marked as read' })
     } catch (error) {
@@ -81,7 +82,7 @@ export async function POST(req) {
 export async function DELETE(req) {
     try {
         await connectToDB()
-        const user = userInfo(req)
+        const user = await userInfo(req)
         
         if (!user) {
             return NextResponse.json(
@@ -101,7 +102,7 @@ export async function DELETE(req) {
 
         await Notification.deleteMany({
             _id: { $in: ids },
-            userId: user.id
+            userId: user._id
         })
 
         return NextResponse.json({ message: 'Notifications deleted successfully' })
