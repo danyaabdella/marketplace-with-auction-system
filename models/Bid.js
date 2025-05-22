@@ -35,14 +35,6 @@ const bidSchema = new mongoose.Schema({
             type: Date, 
             default: Date.now 
         },
-        // isGroupBid: { 
-        //     type: Boolean, 
-        //     default: false 
-        // },
-        // groupId: { 
-        //     type: mongoose.Schema.Types.ObjectId, 
-        //     ref: 'Group' 
-        // },
         status: {
             type: String,
             enum: ['active', 'outbid', 'won'],

@@ -26,11 +26,6 @@ const auctionSchema = new mongoose.Schema({
     paymentDuration: { type: Number, default: 24 }, // in hours
     totalQuantity: { type: Number, default: 1 },
     remainingQuantity: { type: Number },
-    buyByParts: { type: Boolean, default: false },
-    singleItemPrice: { 
-        type: Number, 
-        required: function() { return this.buyByParts; }
-    },
     category: { type: String, required: true }
 }, { timestamps: true })
 
@@ -41,12 +36,12 @@ auctionSchema.pre('save', function(next) {
     
     // Auto-update status based on timestamps
     const now = new Date()
-    if (this.endTime < now) {
+    if (this.endTime < now && this.status !== 'ended') {
         this.status = 'ended'
     } else if (this.startTime <= now && this.status === 'pending') {
         this.status = 'active'
     }
-    next()
+    next();
 })
 
 // Indexes for better query performance

@@ -40,12 +40,6 @@ const formSchema = z.object({
   bidIncrement: z.string().min(1, "Minimum bid increment is required").transform((val) => parseFloat(val)),
   startTime: z.date({ required_error: "Start date is required" }),
   endTime: z.date({ required_error: "End date is required" }),
-  buyByParts: z.boolean().default(false),
-  singleItemPrice: z
-    .string()
-    .optional()
-    .refine((val) => !val || parseFloat(val) > 0, { message: "Single item price must be greater than 0" })
-    .transform((val) => (val ? parseFloat(val) : undefined)),
   images: z.array(z.string()).min(1, "At least one image is required"),
   productId: z.string().optional(),
 });
@@ -55,7 +49,6 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [images, setImages] = useState([]);
-  const [buyByParts, setBuyByParts] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -115,8 +108,6 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
       startingPrice: "",
       reservedPrice: "",
       bidIncrement: "",
-      buyByParts: false,
-      singleItemPrice: "",
       images: [],
       productId: "none",
     },
@@ -438,41 +429,6 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="buyByParts"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row gap-2">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setBuyByParts(e.target.checked);
-                        }}
-                        className="form-checkbox text-indigo-600"
-                      />
-                    </FormControl>
-                    <FormLabel>Allow Buy By Parts</FormLabel>
-                  </FormItem>
-                )}
-              />
-              {buyByParts && (
-                <FormField
-                  control={form.control}
-                  name="singleItemPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Single Item Price ($)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               <FormItem>
                 <FormLabel>Images</FormLabel>
                 <FormControl>

@@ -70,6 +70,29 @@
                notificationCallbacks.forEach(cb => cb(newNotification));
            }
        });
+       socket.on('auction_ended', (data) => {
+        console.log('Received auction ended notification:', data);
+        const userId = localStorage.getItem('userId');
+        const newNotification = {
+          _id: Date.now().toString(),
+          title: "Auction Ended",
+          description: data.winnerId === userId
+            ? `Congratulations! You won the auction for ${data.auctionId} with $${data.highestBid}.`
+            : `The auction for ${data.auctionId} has ended. The winner is ${data.winnerName} with $${data.highestBid}.`,
+          time: "Just now",
+          read: false,
+          type: "ending",
+          data: {
+            auctionId: data.auctionId,
+            highestBid: data.highestBid,
+            winnerId: data.winnerId,
+            winnerName: data.winnerName,
+            winnerEmail: data.winnerEmail,
+            reservedMet: data.reservedMet,
+          },
+        };
+        notificationCallbacks.forEach(cb => cb(newNotification));
+      });
    }
 
    export function addNotificationListener(callback) {

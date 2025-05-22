@@ -21,21 +21,65 @@ agenda.define("end auction", async (job) => {
     await auction.save();
 
     const bidData = await Bid.findOne({ auctionId: auction._id });
-    const bidderEmails = bidData ? bidData.bids.map((b) => b.bidderEmail) : [];
+    if (bidData && bidData.bids.length > 0) {
+      const highestBid = bidData.bids.reduce((max, bid) => 
+        bid.bidAmount > max.bidAmount ? bid : max, bidData.bids[0]
+      );
+      const winnerId = highestBid.bidderId;
+      const winnerEmail = highestBid.bidderEmail;
+      const winnerName = highestBid.bidderName;
 
-    // Send notification and email
-    if (bidderEmails.length > 0)
-      sendEmail(
-        bidderEmails,
-        "Auction Ended!",
-        `The auction for ${auction._id} has ended. The highest bid was ${bidData?.highestBid}.`
+      // Update the winner's bid status to "won"
+      await Bid.updateOne(
+        { auctionId, "bids.bidderId": winnerId },
+        { $set: { "bids.$[elem].status": "won" } },
+        { arrayFilters: [{ "elem.bidderId": winnerId }] }
       );
 
-    const io = getIO();
-    io.to(auction._id.toString()).emit("auction_ended", {
-      auctionId: auction._id,
-      highestBid: bidData?.highestBid,
-    });
+      // Update all other bids' status to "outbid"
+      await Bid.updateMany(
+        { auctionId },
+        { $set: { "bids.$[elem].status": "outbid" } },
+        { arrayFilters: [{ "elem.bidderId": { $ne: winnerId } }] }
+      );
+
+      // Send emails
+      const bidderEmails = bidData.bids.map((b) => b.bidderEmail);
+      const emailSubject = "Auction Ended!";
+      const emailMessage = bidData.highestBid >= auction.reservedPrice
+        ? `The auction for ${auction.auctionTitle} has ended. The winner is ${winnerName} with a bid of $${bidData.highestBid}.`
+        : `The auction for ${auction.auctionTitle} has ended with no winner (reserved price of $${auction.reservedPrice} not met). The highest bid was $${bidData.highestBid}.`;
+      await sendEmail(bidderEmails, emailSubject, emailMessage);
+
+      // Socket.IO notification
+      const io = getIO();
+      io.to(auctionId.toString()).emit("auction_ended", {
+        auctionId: auction._id,
+        status: "ended",
+        highestBid: bidData.highestBid,
+        winnerId,
+        winnerName,
+        winnerEmail,
+        reservedMet: bidData.highestBid >= auction.reservedPrice,
+      });
+    } else {
+      // No bids placed
+      await sendEmail(
+        [auction.merchantId], // Notify merchant if no bids
+        "Auction Ended!",
+        `The auction for ${auction.auctionTitle} has ended with no bids.`
+      );
+      const io = getIO();
+      io.to(auctionId.toString()).emit("auction_ended", {
+        auctionId: auction._id,
+        status: "ended",
+        highestBid: 0,
+        winnerId: null,
+        winnerName: null,
+        winnerEmail: null,
+        reservedMet: false,
+      });
+    }
   }
 });
 
