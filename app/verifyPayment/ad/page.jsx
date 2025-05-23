@@ -1,88 +1,162 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 
 export default function VerifyAdvertisementPayment() {
-  const [message, setMessage] = useState("Processing advertisement payment...")
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [message, setMessage] = useState("Processing advertisement payment...");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [transactionDetails, setTransactionDetails] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const verifyPayment = async () => {
-      const search = window.location.search.replace(/amp;/g, "&")
-      const urlParams = new URLSearchParams(search)
-      const tx_ref = urlParams.get("tx_ref")
-      const adId = urlParams.get("adId")
+      const search = window.location.search.replace(/amp;/g, "&");
+      const urlParams = new URLSearchParams(search);
+      const tx_ref = urlParams.get("tx_ref");
+      const adId = urlParams.get("adId");
 
       if (!tx_ref || !adId) {
-        setMessage("Invalid transaction reference or advertisement ID")
-        setError(true)
-        setLoading(false)
-        return
+        setMessage("Invalid or missing transaction reference or advertisement ID");
+        setError(true);
+        setLoading(false);
+        return;
       }
 
       try {
-        const verifyResponse = await fetch(`/api/verifyPayment/ad?tx_ref=${tx_ref}&adId=${adId}`)
-        const verifyData = await verifyResponse.json()
+        console.log("Fetching from:", `/api/verifyPayment/ad?tx_ref=${tx_ref}&adId=${adId}`);
+        const verifyResponse = await fetch(`/api/verifyPayment/ad?tx_ref=${tx_ref}&adId=${adId}`, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+        console.log("Response status:", verifyResponse.status);
+        console.log("Response headers:", Object.fromEntries(verifyResponse.headers.entries()));
 
         if (!verifyResponse.ok) {
-          setMessage(verifyData.message || "Advertisement payment verification failed")
-          setError(true)
-          setLoading(false)
-          return
+          const contentType = verifyResponse.headers.get("content-type");
+          let errorData = { message: "Advertisement payment verification failed", status: "failed" };
+          if (contentType && contentType.includes("application/json")) {
+            errorData = await verifyResponse.json();
+          } else {
+            const responseText = await verifyResponse.text();
+            console.error("Unexpected response format:", responseText);
+          }
+          setMessage(errorData.message || "Advertisement payment verification failed");
+          setError(true);
+          setTransactionDetails({ tx_ref, adId, status: errorData.status || "FAILED" });
+          setLoading(false);
+          return;
         }
 
-        setMessage("Payment successful! Your advertisement is pending admin approval.")
-        // Clean up any advertisement-related local storage if needed
-        localStorage.removeItem(`tx_ref_${adId}`)
-      } catch (err) {
-        console.error("Verification error:", err)
-        setMessage("Error verifying advertisement payment")
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
+        const contentType = verifyResponse.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          const responseText = await verifyResponse.text();
+          console.error("Unexpected response format:", responseText);
+          setMessage("Server returned an unexpected response format");
+          setError(true);
+          setTransactionDetails({ tx_ref, adId, status: "ERROR" });
+          setLoading(false);
+          return;
+        }
 
-    verifyPayment()
-  }, [])
+        const verifyData = await verifyResponse.json();
+        console.log("Verify data:", verifyData);
+        setMessage(verifyData.message || "Payment successful! Your advertisement is pending admin approval.");
+        setTransactionDetails({ tx_ref, adId, status: verifyData.status || "PAID" });
+
+        if (verifyData.status === "success") {
+          localStorage.removeItem(`tx_ref_${adId}`);
+          setTimeout(() => {
+            router.push("/dashboard/products?status=success");
+          }, 2000); // Delay to show success message
+        } else if (verifyData.status === "failed" || verifyData.status === "error") {
+          setError(true);
+        }
+      } catch (err) {
+        console.error("Verification error:", err.message, err.stack);
+        setMessage("Error verifying advertisement payment: " + err.message);
+        setError(true);
+        setTransactionDetails({ tx_ref, adId, status: "ERROR" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyPayment();
+  }, [router]);
 
   return (
-    <div className="container py-16">
-      <Card className="max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle>Advertisement Payment Status</CardTitle>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-2xl shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Advertisement Payment Verification</CardTitle>
+          <CardDescription>Check the status of your payment for the advertisement</CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent className="space-y-6">
           {loading ? (
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">{message}</p>
+              <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+              <p className="text-lg text-gray-600">{message}</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-4">
-              <XCircle className="h-8 w-8 text-destructive" />
-              <p className="text-destructive">{message}</p>
+            <div className="text-center">
+              <XCircle className="h-16 w-16 text-red-500 mx-auto" />
+              <p className="mt-4 text-xl font-semibold text-red-600">{message}</p>
+              {transactionDetails && (
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Transaction Reference:</strong> {transactionDetails.tx_ref}</p>
+                  <p><strong>Advertisement ID:</strong> {transactionDetails.adId}</p>
+                  <p><strong>Status:</strong> {transactionDetails.status}</p>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <p className="text-green-500">{message}</p>
+            <div className="text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+              <p className="mt-4 text-xl font-semibold text-green-600">{message}</p>
+              {transactionDetails && (
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>Transaction Reference:</strong> {transactionDetails.tx_ref}</p>
+                  <p><strong>Advertisement ID:</strong> {transactionDetails.adId}</p>
+                  <p><strong>Status:</strong> {transactionDetails.status}</p>
+                </div>
+              )}
             </div>
           )}
-          <Button
-            className="mt-4"
-            onClick={() => router.push("/dashboard/products")}
-          >
-            Back to Dashboard
-          </Button>
+          <div className="flex justify-center gap-4">
+            <Button
+              className="mt-4 bg-blue-500 hover:bg-blue-600"
+              onClick={() => router.push("/dashboard/products")}
+            >
+              Back to Dashboard
+            </Button>
+            {error && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => router.push("/contact")}
+              >
+                <AlertCircle className="mr-2 h-4 w-4" /> Contact Support
+              </Button>
+            )}
+          </div>
+          <div className="text-sm text-gray-500 text-center">
+            <p>If you encounter issues, please ensure the transaction reference and advertisement ID are correct.</p>
+            <p>
+              For assistance, contact our support team at{" "}
+              <a href="mailto:support@example.com" className="text-blue-500 underline">
+                support@example.com
+              </a>
+              .
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

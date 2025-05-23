@@ -29,7 +29,7 @@ export function UserNav({ user }) {
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
-        const res = await fetch('api/user');
+        const res = await fetch('/api/user');
         const data = await res.json();
         if (data.image) setAvatarUrl(data.image);
       } catch (error) {

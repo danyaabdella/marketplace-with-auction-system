@@ -91,7 +91,7 @@ export const POST = async (req) => {
   await newAd.save();
 
   try {
-    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`, {
+    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
