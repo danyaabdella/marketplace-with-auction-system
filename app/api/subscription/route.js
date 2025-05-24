@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { connectToDB } from "@/libs/db"
+import { connectToDB } from "@/libs/functions"
 import Subscription from "@/models/Subscription"
 
 export async function GET() {
@@ -13,22 +13,23 @@ export async function GET() {
 }
 
 export async function POST(req) {
-  await connectToDB()
-  const { email } = await req.json()
+  await connectToDB();
+  const { email } = await req.json();
 
-  if (!email || typeof email !== "string") {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 })
+  if (!email || typeof email !== "string" || !email.trim()) {
+    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
   try {
-    const exists = await Subscription.findOne({ email })
-    if (exists) {
-      return NextResponse.json({ message: "Already subscribed" }, { status: 200 })
-    }
-
-    const subscription = await Subscription.create({ email })
-    return NextResponse.json({ message: "Subscribed successfully", data: subscription }, { status: 201 })
+    const subscription = await Subscription.create({ email });
+    return NextResponse.json(
+      { message: "Subscribed successfully", data: subscription },
+      { status: 201 }
+    );
   } catch (err) {
-    return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 })
+    if (err.code === 11000) { // MongoDB duplicate key error
+      return NextResponse.json({ message: "Already subscribed" }, { status: 200 });
+    }
+    return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
   }
 }

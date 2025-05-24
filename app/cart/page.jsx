@@ -1,4 +1,4 @@
- "use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -42,6 +42,58 @@ const getUserLocation = () => {
   })
 }
 
+// Function to calculate distance using Haversine formula
+const calculateDistance = (coord1, coord2) => {
+  const [lon1, lat1] = coord1
+  const [lon2, lat2] = coord2
+  const R = 6371 // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1)
+  const dLon = deg2rad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const distance = R * c // Distance in km
+  return distance
+}
+
+const deg2rad = (deg) => {
+  return deg * (Math.PI / 180)
+}
+
+// Function to calculate delivery price based on delivery type
+const calculateDeliveryPrice = (product, quantity, userCoordinates) => {
+  const {
+    delivery,
+    deliveryPrice,
+    kilometerPerPrice,
+    kilogramPerPrice,
+    weight,
+    location
+  } = product
+  let deliveryCost = 0
+
+  if (delivery === "FREE") {
+    deliveryCost = 0
+  } else if (delivery === "FLAT") {
+    deliveryCost = deliveryPrice
+  } else if (delivery === "PERPIECE") {
+    deliveryCost = deliveryPrice * quantity
+  } else if (delivery === "PERKG") {
+    if (!weight) {
+      console.warn("Weight is missing for PERKG delivery; assuming 0 cost")
+      return 0
+    }
+    const weightInKg = weight // Assuming weight is in kg
+    deliveryCost = deliveryPrice * Math.ceil(weightInKg / kilogramPerPrice)
+  } else if (delivery === "PERKM") {
+    const distance = calculateDistance(userCoordinates, location.coordinates)
+    deliveryCost = deliveryPrice * Math.ceil(distance / kilometerPerPrice)
+  }
+
+  return deliveryCost
+}
+
 export default function CartPage() {
   const { toast } = useToast()
   const { data: session, status } = useSession()
@@ -69,8 +121,7 @@ export default function CartPage() {
   const calculateMerchantTotal = (merchant) => {
     return merchant.products.reduce((total, product) => {
       const productTotal = product.price * product.quantity
-      const deliveryTotal =
-        product.delivery === "PERPIECE" ? product.deliveryPrice * product.quantity : product.deliveryPrice
+      const deliveryTotal = calculateDeliveryPrice(product, product.quantity, coordinates)
       return total + productTotal + deliveryTotal
     }, 0)
   }
@@ -269,7 +320,7 @@ export default function CartPage() {
                             <h3 className="font-medium">{product.name}</h3>
                             <p className="text-sm text-muted-foreground mt-1">${product.price.toFixed(2)}</p>
                             <p className="text-sm text-muted-foreground">
-                              Delivery: {product.delivery} (${product.deliveryPrice})
+                              Delivery: {product.delivery} (${calculateDeliveryPrice(product, product.quantity, coordinates).toFixed(2)})
                             </p>
                           </div>
                           <div className="flex items-center justify-between mt-4">

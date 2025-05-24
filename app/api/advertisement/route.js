@@ -6,6 +6,31 @@ import { NextResponse } from "next/server";
 
 const chapaSecretKey = process.env.CHAPA_SECRET_KEY;
 
+let agenda = null;
+
+const initializeAgenda = async () => {
+  if (!agenda) {
+    agenda = new Agenda({ db: { address: process.env.MONGO_URL, collection: "agendaJobs" } });
+    await agenda.start();
+    console.log("Agenda initialized");
+
+    agenda.define("deactivate ad", async (job) => {
+      const { adId } = job.attrs.data;
+      try {
+        const ad = await Advertisement.findById(adId);
+        if (ad && ad.isActive) {
+          ad.isActive = false;
+          await ad.save();
+          console.log(`Ad ${adId} deactivated at ${new Date().toISOString()}`);
+        }
+      } catch (error) {
+        console.error(`Error deactivating ad ${adId}:`, error);
+      }
+    });
+  }
+  return agenda;
+};
+
 export const POST = async (req) => {
   await connectToDB();
   const user = await userInfo(req);
@@ -60,6 +85,22 @@ export const POST = async (req) => {
     isHome,
   });
 
+  // Check for existing active ad for the same product
+  const existingAd = await Advertisement.findOne({
+    "product.merchantDetail.merchantId": merchantDetail.merchantId,
+    "product.productName": product.productName,
+    isActive: true,
+    endsAt: { $gt: new Date() }, // Ensure end date hasn't passed
+  });
+
+  if (existingAd) {
+    return new Response(
+      JSON.stringify({
+        error: "This product is already an active advertisement. Wait until the end date is reached.",
+      }),
+      { status: 400 }
+    );
+  }
   if (regionAdCount >= 5) {
     return new Response(
       JSON.stringify({
@@ -89,6 +130,10 @@ export const POST = async (req) => {
   });
 
   await newAd.save();
+  const agendaInstance = await initializeAgenda();
+
+  // Schedule the job to deactivate the ad at endsAt
+  await agendaInstance.schedule(endDate, "deactivate ad", { adId: newAd._id });
 
   try {
     const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`, {
@@ -123,6 +168,7 @@ export const POST = async (req) => {
 
     if (!checkoutResponse.ok) {
       await Advertisement.findByIdAndDelete(newAd._id);
+      await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
       return new Response(
         JSON.stringify({ error: "Payment initialization failed", details: checkoutData.message }),
         { status: 400 }
@@ -141,6 +187,7 @@ export const POST = async (req) => {
   } catch (error) {
     console.error("Error initializing payment:", error);
     await Advertisement.findByIdAndDelete(newAd._id);
+    await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
     return new Response(
       JSON.stringify({
         error: "Error creating ad or initializing payment",
@@ -160,13 +207,15 @@ export const GET = async (req) => {
   const center = url.searchParams.get("center");
   const radius = parseInt(url.searchParams.get("radius")) || 50000;
   const page = parseInt(url.searchParams.get("page")) || 1;
-  const limit = parseInt(url.searchParams.get("limit")) || 15;
+  const limit = parseInt(url.searchParams.get("limit")) || 15; // Keep dynamic limit for pagination
   const status = url.searchParams.get("status");
 
   console.log("Filters: ", center, radius, page, limit, status);
 
-  const filter = {};
-  if (status) filter.approvalStatus = status;
+  const filter = {
+    isActive: true, // Ensure only active ads are returned
+    approvalStatus: "APPROVED", // Default to APPROVED if no status provided
+  };
 
   try {
     if (center) {
@@ -184,7 +233,7 @@ export const GET = async (req) => {
         },
         { $sort: { createdAt: -1 } },
         { $skip: (page - 1) * limit },
-        { $limit: limit },
+        { $limit: limit }, // Removed hardcoded limit of 5, using dynamic limit
         {
           $facet: {
             metadata: [{ $count: "total" }],
@@ -217,7 +266,7 @@ export const GET = async (req) => {
       const ads = await Advertisement.find(filter)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit);
+        .limit(limit); // Removed hardcoded limit of 5, using dynamic limit
 
       const total = await Advertisement.countDocuments(filter);
 

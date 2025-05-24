@@ -1,9 +1,66 @@
+"use client"
 import Link from "next/link"
 import { Facebook, Instagram, Twitter } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-
+import { useState } from "react"
+import { useToast } from "./ui/use-toast"
 export function Footer() {
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email || isSubscribing) return;
+    setIsSubscribing(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMessage(data.message);
+        if (data.message === "Subscribed successfully") {
+          setEmail(""); // Clear input only for new subscriptions
+          toast({
+            title: "Success",
+            description: data.message
+          });
+        } else if (data.message === "Already subscribed") {
+          toast({
+            title: "Duplication Subscription",
+            description: data.message
+          });
+        }
+      } else {
+        setMessage(data.error);
+        toast({
+          title: "Error",
+          description: data.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setMessage("An error occurred. Please try again.");
+      toast({
+        title: "Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubscribing(false); // Re-enable button
+    }
+  };
+
   return (
     <footer className="grid md:grid-cols-1 pattern-bg">
       <div className="container px-4 py-8 md:py-12">
@@ -88,10 +145,16 @@ export function Footer() {
             <p className="mb-4 text-sm text-muted-foreground">
               Subscribe to our newsletter for the latest auctions and updates.
             </p>
-            <form className="flex space-x-2">
-              <Input type="email" placeholder="Your email" className="h-9 border-primary/20" />
-              <Button type="submit" className="h-9 gradient-bg border-0">
-                Subscribe
+            <form className="flex space-x-2" onSubmit={handleSubscribe}>
+              <Input
+                  type="email"
+                  placeholder="Your email"
+                  className="h-9 border-primary/20"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              <Button type="submit" className="h-9 gradient-bg border-0" disabled={isSubscribing}>
+                {isSubscribing ? "Subscribing..." : "Subscribe"}
               </Button>
             </form>
           </div>

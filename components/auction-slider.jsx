@@ -28,6 +28,7 @@ export function AuctionSlider() {
             }, 4000)
             return () => clearInterval(timer)
         }
+        
     }, [auctions.length])
 
     const nextSlide = () => {
@@ -36,6 +37,13 @@ export function AuctionSlider() {
 
     const prevSlide = () => {
         setCurrentSlide((prev) => (prev - 1 + auctions.length) % auctions.length)
+    }
+    if(auctions.length === 0) {
+        return (
+            <div className="relative overflow-hidden bg-gray-100 py-8">
+              <div className="container text-center text-gray-500">No available auction.</div>
+            </div>
+          );
     }
 
     return (

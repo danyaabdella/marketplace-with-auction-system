@@ -50,6 +50,7 @@ const productSchema = new Schema(
       required: true,
     },
     deliveryPrice: { type: Number, required: true },
+    weight: { type: Number, default: 0 },
     KilogramPerPrice: { type: Number, default: null },
     KilometerPerPrice: { type: Number, default: null }, // Price per kilometer for PERKM delivery type
     isBanned: { type: Boolean, default: false },
