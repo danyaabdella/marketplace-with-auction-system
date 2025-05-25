@@ -9,7 +9,6 @@ export async function GET(req) {
     const tx_ref = searchParams.get("tx_ref");
     const chapaKey = process.env.CHAPA_SECRET_KEY;
 
-    // Validate the transaction reference
     if (!tx_ref) {
       return NextResponse.json(
         { message: "Transaction reference (tx_ref) is required" },
@@ -38,6 +37,8 @@ export async function GET(req) {
 
     const result = await response.json();
 
+    console.log("Verify result: ", result);
+
     // Handle Chapa's response
     if (result.status === "success") {
       await connectToDB();
@@ -52,7 +53,6 @@ export async function GET(req) {
       }
 
       console.log("verification/: ", result.data);
-      // Update order status and chapaRef
       if (result.data.reference){
         order.chapaRef = result.data.reference;
         order.paymentStatus = "Paid";

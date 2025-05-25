@@ -84,7 +84,6 @@ export const POST = async (req) => {
     paymentStatus: "PAID",
     isHome,
   });
-
   // Check for existing active ad for the same product
   const existingAd = await Advertisement.findOne({
     "product.merchantDetail.merchantId": merchantDetail.merchantId,
@@ -130,6 +129,9 @@ export const POST = async (req) => {
   });
 
   await newAd.save();
+
+  try {
+    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`, {
   const agendaInstance = await initializeAgenda();
 
   // Schedule the job to deactivate the ad at endsAt
@@ -168,6 +170,7 @@ export const POST = async (req) => {
 
     if (!checkoutResponse.ok) {
       await Advertisement.findByIdAndDelete(newAd._id);
+
       await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
       return new Response(
         JSON.stringify({ error: "Payment initialization failed", details: checkoutData.message }),
@@ -187,6 +190,7 @@ export const POST = async (req) => {
   } catch (error) {
     console.error("Error initializing payment:", error);
     await Advertisement.findByIdAndDelete(newAd._id);
+
     await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
     return new Response(
       JSON.stringify({

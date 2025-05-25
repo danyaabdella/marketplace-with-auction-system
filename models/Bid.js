@@ -21,11 +21,6 @@ const bidSchema = new mongoose.Schema({
             type: String,
             required: true
         },
-        // quantity: { 
-        //     type: Number, 
-        //     required: true,
-        //     min: 1
-        // },
         bidAmount: { 
             type: Number, 
             required: true,

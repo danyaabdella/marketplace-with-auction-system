@@ -49,11 +49,9 @@ const UserSchema = new Schema(
     },
     uniqueTinNumber: {
       type: String,
-      unique: true,
-      sparse: true, // 👈 This is the key!
-      required: function () {
-        return this.approvalStatus === "approved";
-      },
+      // unique: true,
+      // sparse: true, // important for unique index on possibly missing fields
+      // Removed required, validate in app logic instead
     },
     nationalId: {
       type: String,
@@ -85,6 +83,14 @@ const UserSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Pre-save hook to unset uniqueTinNumber if not approved merchant
+UserSchema.pre("save", function (next) {
+  if (this.role !== "merchant" || this.approvalStatus !== "approved") {
+    this.uniqueTinNumber = undefined;
+  }
+  next();
+});
 
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 export default User;
