@@ -15,7 +15,7 @@ export async function POST(req) {
     const productData = await req.json();
 
     // Check for fraud using the Python API
-    const fraudCheckResponse = await fetch('http://localhost:8000/check-product', {
+    const fraudCheckResponse = await fetch('https://fraud-detection-gcmn.onrender.com/check-product', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -234,7 +234,7 @@ export default function ProductsPage() {
 
         {/* Product Slider */}
         <div className="mb-8">
-          <ProductSlider />
+          <ProductSlider isHomePage={false} />
         </div>
       </div>
 

@@ -1,64 +1,96 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-// Sample featured products - replace with API data
-const featuredProducts = [
-  {
-    id: 1,
-    title: "New iPhone 15 Pro",
-    description: "Experience the latest in mobile technology",
-    image: "/placeholder.svg",
-    price: 999.99,
-  },
-  {
-    id: 2,
-    title: "MacBook Pro M2",
-    description: "Powerful performance for professionals",
-    image: "/placeholder.svg",
-    price: 1499.99,
-  },
-  {
-    id: 3,
-    title: "Sony WH-1000XM5",
-    description: "Premium noise-cancelling headphones",
-    image: "/placeholder.svg",
-    price: 399.99,
-  },
-  {
-    id: 4,
-    title: "Samsung QLED 4K TV",
-    description: "Immersive viewing experience",
-    image: "/placeholder.svg",
-    price: 1299.99,
-  },
-  {
-    id: 5,
-    title: "iPad Air",
-    description: "Versatility in a lightweight design",
-    image: "/placeholder.svg",
-    price: 599.99,
-  },
-]
-
-export function ProductSlider() {
-  const [currentSlide, setCurrentSlide] = useState(0)
+export function ProductSlider({ isHomePage = false }) {
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    const fetchFeaturedAds = async () => {
+      try {
+        setLoading(true);
+        // Get user's location for regional filtering
+        let userLocation = null;
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0,
+            });
+          });
+          userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+        } catch (geoError) {
+          console.log("Could not get user location:", geoError);
+          // Fallback to a default location if geolocation fails
+          userLocation = { lat: 0, lng: 0 }; // Adjust as needed
+        }
+
+        const center = `${userLocation.lat}-${userLocation.lng}`;
+        console.log("location:", center);
+        const url = `/api/advertisement?center=${center}&radius=50000&limit=5&${isHomePage ? "isHome=true" : "isHome=false"}`;
+        console.log("Fetching from URL:", url);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch advertisements");
+        const data = await response.json();
+        console.log("API rrr:", data);
+        setFeaturedProducts(data.ads);
+      } catch (err) {
+        console.error("Error fetching featured ads:", err);
+        setError("Failed to load featured ads. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedAds();
+
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredProducts.length)
-    }, 4000)
-    return () => clearInterval(timer)
-  }, [])
+      setCurrentSlide((prev) => (prev + 1) % featuredProducts.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isHomePage, featuredProducts.length]); // Re-run if isHomePage or product length changes
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % featuredProducts.length)
-  }
+    setCurrentSlide((prev) => (prev + 1) % featuredProducts.length);
+  };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length)
+    setCurrentSlide((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length);
+  };
+
+  if (loading) {
+    return (
+      <div className="relative overflow-hidden bg-gray-100 py-8">
+        <div className="container flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="relative overflow-hidden bg-gray-100 py-8">
+        <div className="container text-center text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (featuredProducts.length === 0) {
+    return (
+      <div className="relative overflow-hidden bg-gray-100 py-8">
+        <div className="container text-center text-gray-500">No featured ads available.</div>
+      </div>
+    );
   }
 
   return (
@@ -68,21 +100,21 @@ export function ProductSlider() {
           className="flex transition-transform duration-500 ease-in-out"
           style={{ transform: `translateX(-${currentSlide * 100}%)` }}
         >
-          {featuredProducts.map((product) => (
-            <div key={product.id} className="min-w-full flex justify-center px-4">
+          {featuredProducts.map((ad) => (
+            <div key={ad._id} className="min-w-full flex justify-center px-4">
               <div className="bg-white rounded-lg shadow-lg overflow-hidden max-w-4xl w-full">
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-1/2">
                     <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.title}
+                      src={ad.product.images?.[0] || "/placeholder.svg"}
+                      alt={ad.product.productName}
                       className="w-full h-64 md:h-full object-cover"
                     />
                   </div>
                   <div className="p-8 md:w-1/2 flex flex-col justify-center">
-                    <h3 className="text-2xl font-bold mb-2">{product.title}</h3>
-                    <p className="text-gray-600 mb-4">{product.description}</p>
-                    <p className="text-3xl font-bold mb-6">${product.price}</p>
+                    <h3 className="text-2xl font-bold mb-2">{ad.product.productName}</h3>
+                    <p className="text-gray-600 mb-4">{ad.product.description}</p>
+                    <p className="text-3xl font-bold mb-6">${ad.product.price}</p>
                     <div className="flex gap-4">
                       <Button>Buy Now</Button>
                       <Button variant="outline">Learn More</Button>
@@ -99,6 +131,7 @@ export function ProductSlider() {
           size="icon"
           className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40"
           onClick={prevSlide}
+          disabled={featuredProducts.length <= 1}
         >
           <ChevronLeft className="h-6 w-6" />
         </Button>
@@ -107,6 +140,7 @@ export function ProductSlider() {
           size="icon"
           className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40"
           onClick={nextSlide}
+          disabled={featuredProducts.length <= 1}
         >
           <ChevronRight className="h-6 w-6" />
         </Button>
@@ -124,5 +158,5 @@ export function ProductSlider() {
         </div>
       </div>
     </div>
-  )
+  );
 }

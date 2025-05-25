@@ -14,9 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CreditCard, LayoutDashboard, LogOut, Settings, User, Package } from "lucide-react";
+import { CreditCard, LayoutDashboard, LogOut, User, Package } from "lucide-react";
 
-export function UserNav({ user }) {
+export function UserNav() {
   // Helper function to generate initials from the user's name
   const getInitials = (name) => {
     if (!name) return "U";
@@ -25,19 +25,21 @@ export function UserNav({ user }) {
     return initials.toUpperCase().slice(0, 2); // e.g., "John Doe" -> "JD"
   };
   const [avatarUrl, setAvatarUrl] = useState('/default-avatar.png');
+  const [user, setUser] = useState("");
 
   useEffect(() => {
-    const fetchAvatar = async () => {
+    const fetchUser = async () => {
       try {
-        const res = await fetch('api/user');
+        const res = await fetch('/api/user');
         const data = await res.json();
+        setUser(data);
         if (data.image) setAvatarUrl(data.image);
       } catch (error) {
         console.error('Error fetching avatar:', error);
       }
     };
     
-    fetchAvatar();
+    fetchUser();
   }, []);
 
 
@@ -48,11 +50,12 @@ export function UserNav({ user }) {
           <Avatar className="h-8 w-8 border border-primary/20 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
             <AvatarImage
               src={avatarUrl}
-              alt={user?.name || "User"}
+              alt={user?.fullName || "User"}
               className="object-fit"
             />
             <AvatarFallback className=" text-primary">
               {getInitials(user?.name)}
+              {getInitials(user?.fullName)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -61,10 +64,10 @@ export function UserNav({ user }) {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {user?.name || "User"}
+              {user?.fullName }
             </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user?.email || ""}
+              {user?.email }
             </p>
           </div>
         </DropdownMenuLabel>

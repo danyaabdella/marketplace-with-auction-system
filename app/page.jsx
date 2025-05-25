@@ -12,31 +12,48 @@ export default function Home() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { data: session, status } = useSession();
   const [loggedUser, setLoggedUser] = useState(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(false); // New loading state
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
-        setIsLoadingUser(true); // Start loading
-        console.log("Session: ", session.user.email);
+        setIsLoadingUser(true);
         try {
-          const response = await fetch('/api/user'); 
-          if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-          }
-          const user = await response.json(); 
-          setLoggedUser(user); 
+          const response = await fetch("/api/user");
+          if (!response.ok) throw new Error(`Server error: ${response.status}`);
+          const user = await response.json();
+          setLoggedUser(user);
         } catch (error) {
           console.error("Error fetching user data:", error);
         } finally {
-            setIsLoadingUser(false); // Stop loading
-          }  
+          setIsLoadingUser(false);
         }
-      };
-      fetchUser();
-    }, [session])
-  
-  // Dynamically set items per page: 6 for mobile/tablet (<1024px), else 10.
+      }
+    };
+    fetchUser();
+  }, [session]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error.message);
+          setUserLocation(null);
+        }
+      );
+    } else {
+      console.log("Geolocation not supported");
+      setUserLocation(null);
+    }
+  }, []);
+
   useEffect(() => {
     const updateItemsPerPage = () => {
       setItemsPerPage(window.innerWidth < 1024 ? 6 : 10);
@@ -71,26 +88,26 @@ export default function Home() {
 
   const sectionRefs = useRef({});
 
-  const fetchSpecialProducts = async (type, page = 1, limit) => {
-    const response = await fetch(
-      `/api/homePageFilter?type=${type}&page=${page}&limit=${limit}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch");
+  const fetchSpecialProducts = async (type, page = 1, limit, lat, lng) => {
+    let url = `/api/homePageFilter?type=${type}&page=${page}&limit=${limit}`;
+    if (lat && lng) {
+      url += `&center=${lat}-${lng}`;
+    }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch special products");
     const data = await response.json();
-    console.log("Best data: ", data)
     return { products: data.products, total: data.total };
   };
 
-  const fetchCategoryProducts = async (categoryId) => {
-    try {
-      const response = await fetch(`/api/fetchProducts?category=${categoryId}`);
-      if (!response.ok) throw new Error("Failed to fetch category products");
-      const data = await response.json();
-      return data.products;
-    } catch (error) {
-      console.error("Error fetching category products:", error);
-      return [];
+  const fetchCategoryProducts = async (categoryId, lat, lng) => {
+    let url = `/api/fetchProducts?category=${categoryId}`;
+    if (lat && lng) {
+      url += `&lat=${lat}&lng=${lng}`;
     }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch category products");
+    const data = await response.json();
+    return data.products;
   };
 
   useEffect(() => {
@@ -101,7 +118,13 @@ export default function Home() {
       setCategories(fetchedCategories);
 
       const { products: bestSellerProducts, total: bestSellerTotal } =
-        await fetchSpecialProducts("bestSellers", 1, itemsPerPage);
+        await fetchSpecialProducts(
+          "bestSellers",
+          1,
+          itemsPerPage,
+          userLocation?.lat,
+          userLocation?.lng
+        );
       setSpecialProducts({
         popular: bestSellerProducts,
         bestSeller: bestSellerProducts,
@@ -122,19 +145,35 @@ export default function Home() {
       });
 
       const { products: topRatedProducts, total: topRatedTotal } =
-        await fetchSpecialProducts("topRated", 1, itemsPerPage);
+        await fetchSpecialProducts(
+          "topRated",
+          1,
+          itemsPerPage,
+          userLocation?.lat,
+          userLocation?.lng
+        );
       setSpecialProducts((prev) => ({ ...prev, topRated: topRatedProducts }));
       setSpecialTotals((prev) => ({ ...prev, topRated: topRatedTotal }));
 
       const { products: latestProducts, total: latestTotal } =
-        await fetchSpecialProducts("latestProducts", 1, itemsPerPage);
+        await fetchSpecialProducts(
+          "latestProducts",
+          1,
+          itemsPerPage,
+          userLocation?.lat,
+          userLocation?.lng
+        );
       setSpecialProducts((prev) => ({ ...prev, latest: latestProducts }));
       setSpecialTotals((prev) => ({ ...prev, latest: latestTotal }));
 
       const productData = {};
       const pages = {};
       for (const category of fetchedCategories) {
-        const products = await fetchCategoryProducts(category._id);
+        const products = await fetchCategoryProducts(
+          category._id,
+          userLocation?.lat,
+          userLocation?.lng
+        );
         productData[category._id] = products;
         pages[category._id] = 1;
       }
@@ -154,7 +193,7 @@ export default function Home() {
     };
 
     loadInitialData();
-  }, [itemsPerPage]);
+  }, [itemsPerPage, userLocation]);
 
   const scrollToSection = (sectionId) => {
     sectionRefs.current[sectionId]?.current?.scrollIntoView({
@@ -175,7 +214,9 @@ export default function Home() {
     const { products, total } = await fetchSpecialProducts(
       apiType,
       page,
-      itemsPerPage
+      itemsPerPage,
+      userLocation?.lat,
+      userLocation?.lng
     );
     setSpecialProducts((prev) => ({ ...prev, [type]: products }));
     setSpecialTotals((prev) => ({ ...prev, [type]: total }));
@@ -215,7 +256,6 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8 justify-between">
       <div className="grid grid-cols-1 gap-6">
-        {/* User Info Display */}
         {isLoadingUser ? (
           <p>Loading user data...</p>
         ) : loggedUser ? (
@@ -226,7 +266,6 @@ export default function Home() {
           </div>
         ) : null}
 
-        {/* Search Form */}
         <div className="mb-8">
           <form className="flex gap-4 max-w-2xl w-full mx-auto">
             <Input
@@ -238,9 +277,8 @@ export default function Home() {
           </form>
         </div>
 
-        <ProductSlider />
+        <ProductSlider isHomePage={true} />
 
-        {/* Special Categories Navigation */}
         <nav className="my-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 overflow-x-auto gap-4 mb-4">
             {["Popular", "Best Seller", "Top Rated", "Latest"].map((type) => {

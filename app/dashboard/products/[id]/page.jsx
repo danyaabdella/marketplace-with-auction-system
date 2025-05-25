@@ -212,6 +212,8 @@ export default function ProductDetailPage({ params }) {
 
       const data = await response.json()
 
+      const data = await response.json()
+      console.log("fff:", data);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create advertisement')
       }
@@ -307,7 +309,7 @@ export default function ProductDetailPage({ params }) {
             </Button>
             <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={isAdActive && !adEndDateReached}>
                   <Megaphone className="mr-2 h-4 w-4" />
                   Make it Ad
                 </Button>
