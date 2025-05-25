@@ -5,9 +5,10 @@
    let notificationCallbacks = [];
 
    if (typeof window !== 'undefined') {
-       const socketUrl = process.env.NODE_ENV === 'production' 
-           ? window.location.origin 
-           : 'http://localhost:3000';
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                     (process.env.NODE_ENV === 'production' 
+                         ? window.location.origin 
+                         : 'http://localhost:3000');
 
        socket = io(socketUrl, {
            path: '/socket.io/',

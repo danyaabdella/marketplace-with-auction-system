@@ -27,6 +27,7 @@ const AdSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    chapaRef: { type: String },
     approvalStatus: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
@@ -36,6 +37,10 @@ const AdSchema = new mongoose.Schema(
       type: String,
       enum: ["PENDING", "PAID", "FAILED"],
       default: "PENDING",
+    },
+    rejectionReason: {
+      reason: { type: String },
+      description: { type: String },
     },
     isActive: {
       type: Boolean,
