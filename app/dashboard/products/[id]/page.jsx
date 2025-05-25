@@ -14,8 +14,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { format } from "date-fns"
+import { format, differenceInWeeks } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
+import { adRegions } from "@/libs/adRegion"
+
+// Haversine formula to calculate distance between two coordinates in kilometers
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// Find the closest region based on coordinates
+const findClosestRegion = (coordinates) => {
+  let minDistance = Infinity;
+  let closestRegion = null;
+
+  for (const [region, [lon, lat]] of Object.entries(adRegions)) {
+    const distance = getDistance(coordinates[1], coordinates[0], lat, lon);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestRegion = region;
+    }
+  }
+
+  return closestRegion;
+};
 
 export default function ProductDetailPage({ params }) {
   const router = useRouter()
@@ -28,9 +58,9 @@ export default function ProductDetailPage({ params }) {
   const [offerPrice, setOfferPrice] = useState("")
   const [offerEndDate, setOfferEndDate] = useState("")
   const [isHomeAd, setIsHomeAd] = useState(false)
-  const [adPrice, setAdPrice] = useState("")
   const [adStartDate, setAdStartDate] = useState("")
   const [adEndDate, setAdEndDate] = useState("")
+  const [calculatedAdPrice, setCalculatedAdPrice] = useState(0)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -54,10 +84,34 @@ export default function ProductDetailPage({ params }) {
     fetchProduct()
   }, [params.id, toast])
 
+  useEffect(() => {
+    if (adStartDate && adEndDate) {
+      const start = new Date(adStartDate)
+      const end = new Date(adEndDate)
+      if (end <= start) {
+        toast({
+          title: "Invalid Dates",
+          description: "End date must be after start date",
+          variant: "destructive",
+        })
+        setCalculatedAdPrice(0)
+        return
+      }
+      const weeks = Math.max(1, differenceInWeeks(end, start))
+      const basePrice = isHomeAd ? 100 : 50
+      const totalPrice = basePrice * weeks
+      setCalculatedAdPrice(totalPrice)
+    } else {
+      setCalculatedAdPrice(0)
+    }
+  }, [adStartDate, adEndDate, isHomeAd, toast])
+
   const handleOfferSubmit = async () => {
     try {
-      // Ensure the date is properly formatted in ISO string
       const formattedDate = new Date(offerEndDate).toISOString()
+      if (new Date(offerEndDate) <= new Date()) {
+        throw new Error("Offer end date must be in the future")
+      }
 
       const response = await fetch(`/api/products/${params.id}`, {
         method: "PUT",
@@ -85,7 +139,7 @@ export default function ProductDetailPage({ params }) {
       console.error("Error setting offer:", error)
       toast({
         title: "Error",
-        description: "Failed to set offer",
+        description: error.message || "Failed to set offer",
         variant: "destructive",
       })
     }
@@ -125,7 +179,21 @@ export default function ProductDetailPage({ params }) {
   }
 
   const handleCreateAd = async () => {
+    if (!adStartDate || !adEndDate) {
+      toast({
+        title: "Error",
+        description: "Please select start and end dates",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
+      const adRegion = findClosestRegion(product.location.coordinates);
+      if (!adRegion) {
+        throw new Error("No matching region found for product location");
+      }
+
       const response = await fetch('/api/advertisement', {
         method: 'POST',
         headers: {
@@ -136,32 +204,36 @@ export default function ProductDetailPage({ params }) {
           merchantDetail: product.merchantDetail,
           startsAt: new Date(adStartDate).toISOString(),
           endsAt: new Date(adEndDate).toISOString(),
-          adPrice: parseFloat(adPrice),
-          adRegion: product.location.coordinates.join('-'),
+          adPrice: calculatedAdPrice,
+          adRegion,
           isHome: isHomeAd,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create advertisement');
+        throw new Error(data.error || 'Failed to create advertisement')
       }
 
-      toast({
-        title: "Success",
-        description: "Advertisement created successfully",
-      });
-      setIsAdDialogOpen(false);
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url // Redirect to Chapa checkout
+      } else {
+        toast({
+          title: "Success",
+          description: "Advertisement created successfully",
+        })
+        setIsAdDialogOpen(false)
+      }
     } catch (error) {
-      console.error("Error creating advertisement:", error);
+      console.error("Error creating advertisement:", error)
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -186,7 +258,6 @@ export default function ProductDetailPage({ params }) {
     )
   }
 
-  // Prepare data for pie chart
   const inventoryData = [
     { name: "Sold", value: product.soldQuantity },
     { name: "Available", value: product.quantity },
@@ -247,22 +318,13 @@ export default function ProductDetailPage({ params }) {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="adPrice">Advertisement Price</Label>
-                    <Input
-                      id="adPrice"
-                      type="number"
-                      value={adPrice}
-                      onChange={(e) => setAdPrice(e.target.value)}
-                      placeholder="Enter advertisement price"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="adStartDate">Start Date</Label>
                     <Input
                       id="adStartDate"
                       type="datetime-local"
                       value={adStartDate}
                       onChange={(e) => setAdStartDate(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -272,7 +334,14 @@ export default function ProductDetailPage({ params }) {
                       type="datetime-local"
                       value={adEndDate}
                       onChange={(e) => setAdEndDate(e.target.value)}
+                      min={adStartDate || new Date().toISOString().slice(0, 16)}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Advertisement Price</Label>
+                    <p className="text-sm">
+                      {isHomeAd ? "100 ETB/week" : "50 ETB/week"} = {calculatedAdPrice} ETB
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -282,7 +351,7 @@ export default function ProductDetailPage({ params }) {
                     />
                     <Label htmlFor="isHomeAd">Show on Homepage</Label>
                   </div>
-                  <Button onClick={handleCreateAd} className="w-full">
+                  <Button onClick={handleCreateAd} className="w-full" disabled={!calculatedAdPrice}>
                     Create Advertisement
                   </Button>
                 </div>
@@ -323,6 +392,7 @@ export default function ProductDetailPage({ params }) {
                         type="datetime-local"
                         value={offerEndDate}
                         onChange={(e) => setOfferEndDate(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
                       />
                     </div>
                     <Button onClick={handleOfferSubmit} className="w-full">
@@ -337,12 +407,10 @@ export default function ProductDetailPage({ params }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Product Images and Details */}
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Main Image */}
                 <div className="relative aspect-square overflow-hidden rounded-lg border">
                   <Image
                     src={product.images[0] || "/placeholder.svg"}
@@ -352,14 +420,11 @@ export default function ProductDetailPage({ params }) {
                     priority
                   />
                 </div>
-
-                {/* Product Details */}
                 <div className="space-y-4">
                   <div>
                     <h2 className="text-xl font-semibold">{product.productName}</h2>
                     <p className="text-muted-foreground">{product.category.categoryName}</p>
                   </div>
-
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <p className="text-2xl font-bold">${currentPrice.toFixed(2)}</p>
@@ -376,12 +441,10 @@ export default function ProductDetailPage({ params }) {
                       <span className="ml-2 text-sm text-muted-foreground">{product.quantity} available</span>
                     </div>
                   </div>
-
                   <div className="space-y-1">
                     <p className="font-medium">Brand</p>
                     <p className="text-muted-foreground">{product.brand}</p>
                   </div>
-
                   {product.variant.length > 0 && (
                     <div className="space-y-1">
                       <p className="font-medium">Variants</p>
@@ -394,7 +457,6 @@ export default function ProductDetailPage({ params }) {
                       </div>
                     </div>
                   )}
-
                   {product.size.length > 0 && (
                     <div className="space-y-1">
                       <p className="font-medium">Sizes</p>
@@ -407,7 +469,6 @@ export default function ProductDetailPage({ params }) {
                       </div>
                     </div>
                   )}
-
                   <div className="space-y-1">
                     <p className="font-medium">Delivery</p>
                     <div className="flex items-center">
@@ -418,7 +479,6 @@ export default function ProductDetailPage({ params }) {
                       </span>
                     </div>
                   </div>
-
                   <div className="space-y-1">
                     <p className="font-medium">Location</p>
                     <div className="flex items-center">
@@ -430,8 +490,6 @@ export default function ProductDetailPage({ params }) {
                   </div>
                 </div>
               </div>
-
-              {/* Additional Images */}
               {product.images.length > 1 && (
                 <div className="mt-6 grid grid-cols-4 gap-2">
                   {product.images.slice(0, 4).map((image, index) => (
@@ -446,16 +504,12 @@ export default function ProductDetailPage({ params }) {
                   ))}
                 </div>
               )}
-
-              {/* Description */}
               <div className="mt-6">
                 <h3 className="font-semibold mb-2">Description</h3>
                 <p className="text-muted-foreground whitespace-pre-line">{product.description}</p>
               </div>
             </CardContent>
           </Card>
-
-          {/* Reviews */}
           <Card>
             <CardHeader>
               <CardTitle>Customer Reviews</CardTitle>
@@ -496,8 +550,6 @@ export default function ProductDetailPage({ params }) {
             </CardContent>
           </Card>
         </div>
-
-        {/* Sales Analytics */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -527,7 +579,6 @@ export default function ProductDetailPage({ params }) {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-
               <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Sold</p>
@@ -540,7 +591,6 @@ export default function ProductDetailPage({ params }) {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Product Stats</CardTitle>
@@ -574,8 +624,6 @@ export default function ProductDetailPage({ params }) {
           </Card>
         </div>
       </div>
-
-      {/* Edit Product Form Dialog */}
       <AddEditProductForm
         open={isEditProductOpen}
         onOpenChange={setIsEditProductOpen}
@@ -585,4 +633,3 @@ export default function ProductDetailPage({ params }) {
     </div>
   )
 }
-

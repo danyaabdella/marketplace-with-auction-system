@@ -2,10 +2,10 @@ import { connectToDB, userInfo } from '@/libs/functions'
 import Notification from '@/models/Notification'
 import { NextResponse } from 'next/server'
 
-export async function POST(req) {
+export async function PUT(req) {
     try {
         await connectToDB()
-        const user = userInfo(req)
+        const user = await userInfo(req)
         
         if (!user) {
             return NextResponse.json(

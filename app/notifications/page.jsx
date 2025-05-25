@@ -54,31 +54,33 @@
            }
        }, [session, onNewBid, onOutbid]);
 
-       const markAsRead = async (ids) => {
-           try {
-               await fetch('/api/notifications', {
-                   method: 'PUT',
-                   headers: {
-                       'Content-Type': 'application/json',
-                   },
-                   body: JSON.stringify({ ids }),
-               })
-               setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n))
-               setSelectedNotifications([])
-               setUnreadCount(prev => prev - ids.length)
-               toast({
-                   title: "Notifications marked as read",
-                   description: `${ids.length} notification${ids.length > 1 ? "s" : ""} marked as read`,
-               })
-           } catch (error) {
-               console.error('Error marking notifications as read:', error)
-           }
-       }
+       // In NotificationPopover component
+        const markAsRead = async (ids) => {
+            try {
+            await fetch('/api/notifications', {
+                method: 'PUT',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids }),
+            });
+            // Calculate how many of the selected notifications were unread
+            const unreadMarked = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
+            setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n));
+            setUnreadCount(prev => prev - unreadMarked);
+            toast({
+                title: "Notifications marked as read",
+                description: `${ids.length} notification${ids.length > 1 ? "s" : ""} marked as read`,
+            });
+            } catch (error) {
+            console.error('Error marking notifications as read:', error);
+            }
+        };
 
        const markAllAsRead = async () => {
            try {
                await fetch('/api/notifications/mark-all-read', {
-                   method: 'POST'
+                   method: 'PUT'
                })
                setNotifications(prev => prev.map(n => ({ ...n, read: true })))
                setSelectedNotifications([])

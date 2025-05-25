@@ -44,14 +44,14 @@ export function UserNav({ user }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full ">
           <Avatar className="h-8 w-8 border border-primary/20 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
             <AvatarImage
               src={avatarUrl}
               alt={user?.name || "User"}
               className="object-fit"
             />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className=" text-primary">
               {getInitials(user?.name)}
             </AvatarFallback>
           </Avatar>
@@ -76,9 +76,7 @@ export function UserNav({ user }) {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {/* {user?.role === 'customer' && (
-            
-          )} */}
+         
           {user?.role == 'merchant' && 
             <DropdownMenuItem asChild>
             <Link href="/dashboard" className="flex items-center gap-2">
@@ -99,12 +97,6 @@ export function UserNav({ user }) {
                 <span>My Orders</span>
               </Link>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem asChild>
-            <Link href="/settings" className="flex items-center gap-2">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </Link>
-          </DropdownMenuItem> */}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

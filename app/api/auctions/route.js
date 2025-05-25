@@ -60,8 +60,6 @@ export async function POST(req) {
       status: "pending",
       adminApproval: "pending",
       totalQuantity: parseInt(auctionData.totalQuantity) || 1,
-      buyByParts: auctionData.buyByParts || false,
-      singleItemPrice: auctionData.buyByParts ? parseFloat(auctionData.singleItemPrice) : undefined,
       category: auctionData.category,
     };
 

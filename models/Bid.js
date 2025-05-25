@@ -21,11 +21,6 @@ const bidSchema = new mongoose.Schema({
             type: String,
             required: true
         },
-        // quantity: { 
-        //     type: Number, 
-        //     required: true,
-        //     min: 1
-        // },
         bidAmount: { 
             type: Number, 
             required: true,
@@ -35,14 +30,6 @@ const bidSchema = new mongoose.Schema({
             type: Date, 
             default: Date.now 
         },
-        // isGroupBid: { 
-        //     type: Boolean, 
-        //     default: false 
-        // },
-        // groupId: { 
-        //     type: mongoose.Schema.Types.ObjectId, 
-        //     ref: 'Group' 
-        // },
         status: {
             type: String,
             enum: ['active', 'outbid', 'won'],

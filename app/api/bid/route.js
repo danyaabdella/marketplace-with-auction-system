@@ -13,6 +13,7 @@ export async function POST(req) {
         console.log("Received request body:", body);
 
         const session = await userInfo(req);
+        console.log("User sesion: ", session);
         if (!session || !session.email) {
             return new Response(
                 JSON.stringify({ message: 'Unauthorized' }),

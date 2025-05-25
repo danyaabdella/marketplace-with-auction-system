@@ -34,26 +34,15 @@ export async function createBidNotification({
     bidAmount,
     bidderName,
     bidderEmail,
-    type = 'bid'
+    type,
+    title,
+    description
 }) {
-    const title = type === 'bid' 
-        ? 'New Bid Placed' 
-        : "You've been outbid"
-    
-    const description = type === 'bid'
-        ? `${bidderName} placed a bid of $${bidAmount}`
-        : `${bidderName} outbid you with $${bidAmount}`
-
     return createNotification({
         userId,
         title,
         description,
         type,
-        data: {
-            auctionId,
-            bidAmount,
-            bidderName,
-            bidderEmail
-        }
-    })
-} 
+        data: { auctionId, bidAmount, bidderName, bidderEmail }
+    });
+}

@@ -18,16 +18,17 @@ export async function GET(req) {
         const notifications = await Notification.find({ userId: user._id })
             .sort({ createdAt: -1 })
             .limit(50)
-        console.log("Fetched notifications for user", user.id, ":", notifications);
+        console.log("Fetched notifications for user", user._id, ":", notifications);
         const unreadCount = await Notification.countDocuments({
-            userId: user.id,
+            userId: user._id,
             read: false
         })
-
+        console.log("nnn;", unreadCount);
         return NextResponse.json({
             notifications,
             unreadCount
         })
+        
     } catch (error) {
         console.error('Error fetching notifications:', error)
         return NextResponse.json(
