@@ -16,7 +16,6 @@ export async function GET() {
 
 export async function POST(req) {
   await connectToDB();
-  // await isSuperAdmin();
 
   try {
     const body = await req.json();
@@ -31,7 +30,6 @@ export async function POST(req) {
 
 export async function PUT(req) {
   await connectToDB();
-  // await isSuperAdmin();
 
   try {
     const body = await req.json();
@@ -49,7 +47,7 @@ export async function PUT(req) {
 
 export async function DELETE() {
   await connectToDB();
-  // await isSuperAdmin();
+ 
 
   try {
     await Cta.deleteMany();
