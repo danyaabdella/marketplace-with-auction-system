@@ -54,6 +54,7 @@ export function UserNav() {
               className="object-fit"
             />
             <AvatarFallback className=" text-primary">
+              {getInitials(user?.name)}
               {getInitials(user?.fullName)}
             </AvatarFallback>
           </Avatar>

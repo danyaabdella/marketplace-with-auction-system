@@ -81,7 +81,7 @@ export async function GET(request) {
                 timeLeft: Math.floor((auction.endTime - new Date()) / (1000 * 60 * 60)) // hours remaining
             };
         });
-
+        console.log("Fetched auctions1: ", auctions)
         return NextResponse.json(auctions);
     } catch (error) {
         console.error("Error fetching auctions:", error)

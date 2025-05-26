@@ -1,106 +1,126 @@
-import { connectToDB } from "@/libs/functions"
-import Product from "@/models/Product"
+import { connectToDB } from "@/libs/functions";
+import Product from "@/models/Product";
 
 export async function GET(req) {
-  await connectToDB()
+  console.log("Connecting to database...");
+  await connectToDB();
 
-  const url = new URL(req.url)
-  const limit = parseInt(url.searchParams.get("limit")) || 1000
-  const lat = parseFloat(url.searchParams.get("lat"))
-  const lng = parseFloat(url.searchParams.get("lng"))
+  const url = new URL(req.url);
+  const limit = parseInt(url.searchParams.get("limit")) || 10;
+  const page = parseInt(url.searchParams.get("page")) || 1;
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lng = parseFloat(url.searchParams.get("lng"));
   const category = url.searchParams.get("category");
-  
-  console.log("Fetching products with params:", { lat, lng, limit })
 
-  // Base filter to exclude banned or deleted products
+  console.log("Request parameters extracted:", {
+    lat,
+    lng,
+    limit,
+    page,
+    category,
+  });
+
+  // Build base filter
   const filter = {
     isBanned: { $ne: true },
     isDeleted: { $ne: true },
-  }
+  };
+
   if (category) {
-    // The field is 'category.categoryId' in your Product model
+    console.log("Applying category filter:", category);
     filter["category.categoryId"] = category;
   }
 
-
   try {
+    const skip = (page - 1) * limit;
     let products;
     let total;
 
-    // If location is provided, use geoNear for distance-based sorting
     if (lat && lng) {
-      console.log("Using location-based sorting")
-      
-      // First, let's check if we have any products with valid coordinates
-      const productsWithCoords = await Product.find({
-        ...filter,
-        'location.coordinates': { $exists: true, $ne: null }
-      }).select('location.coordinates').lean();
-      
-      console.log(`Found ${productsWithCoords.length} products with coordinates`)
-      console.log("Sample coordinates:", productsWithCoords.slice(0, 3).map(p => p.location.coordinates))
+      console.log("Lat & Lng provided, using geoNear aggregation");
 
       const aggregationPipeline = [
         {
           $geoNear: {
-            near: {
-              type: "Point",
-              coordinates: [lng, lat]
-            },
+            near: { type: "Point", coordinates: [lng, lat] },
             distanceField: "distance",
             spherical: true,
-            maxDistance: 100000, // Increased to 100km
-            query: filter
-          }
+            maxDistance: 100000,
+            query: filter,
+          },
         },
+        { $sort: { distance: 1 } },
+        { $skip: skip },
+        { $limit: limit },
         {
-          $sort: { distance: 1 } // Sort by distance ascending (nearest first)
+          $project: {
+            _id: 1,
+            productName: 1,
+            category: 1,
+            price: 1,
+            offer: 1,
+            images: { $slice: ["$images", 1] },
+            merchantDetail: { merchantId: 1, merchantName: 1 },
+            location: 1,
+            delivery: 1,
+            distance: 1,
+            createdAt: 1,
+          },
         },
-        {
-          $limit: limit
-        }
       ];
 
-      console.log("Aggregation pipeline:", JSON.stringify(aggregationPipeline, null, 2))
+      console.log("Running geoNear aggregation...");
       products = await Product.aggregate(aggregationPipeline);
-      console.log("Found products with location:", products.length)
-      
-      // If no products found with location, fall back to regular find
+      console.log(`GeoNear aggregation returned ${products.length} products`);
+
       if (products.length === 0) {
-        console.log("No products found with location, falling back to regular find")
+        console.log("No geo-located products found, falling back to default find()");
         products = await Product.find(filter)
+          .select(
+            "_id productName category price offer images merchantDetail delivery createdAt"
+          )
           .sort({ createdAt: -1 })
+          .skip(skip)
           .limit(limit)
           .lean();
+        console.log(`Fallback query returned ${products.length} products`);
       }
     } else {
-      console.log("Using default sorting")
-      // If no location, use regular find with default sort
+      console.log("No location provided, using default sorting with find()");
       products = await Product.find(filter)
-        .sort({ createdAt: -1 }) // Sort by creation date (newest first)
+        .select(
+          "_id productName category price offer images merchantDetail delivery createdAt"
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
         .limit(limit)
         .lean();
-      console.log("Found products without location:", products.length)
+      console.log(`Find() query returned ${products.length} products`);
     }
 
+    console.log("Counting total matching products...");
     total = await Product.countDocuments(filter);
+    console.log(`Total products matching filter: ${total}`);
 
+    console.log("Returning successful response...");
     return new Response(
-      JSON.stringify({ 
-        products, 
+      JSON.stringify({
+        products,
         total,
-        message: `Found ${products.length} products${lat && lng ? ' sorted by distance' : ''}`
+        message: `Found ${products.length} products${
+          lat && lng ? " sorted by distance" : ""
+        }`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
-    )
+    );
   } catch (error) {
-    console.error("Error fetching products:", error)
+    console.error("Error during GET request:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Failed to fetch products",
-        details: error.message 
+        details: error.message,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
-    )
+    );
   }
 }

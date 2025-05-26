@@ -3,6 +3,7 @@ import Advertisement from "@/models/Advertisement";
 import { connectToDB } from "@/libs/functions";
 import mongoose from "mongoose";
 
+
 export async function GET(req) {
   await connectToDB();
 
@@ -12,6 +13,10 @@ export async function GET(req) {
     return NextResponse.json({ message: "Server configuration error" }, { status: 500 });
   }
 
+  try {
+    const { searchParams } = new URL(req.url);
+    const tx_ref = searchParams.get("tx_ref");
+    const adId = searchParams.get("adId");
   let adId;
   try {
     const { searchParams } = new URL(req.url);
@@ -34,6 +39,20 @@ export async function GET(req) {
       return NextResponse.json({ message: "Advertisement not found" }, { status: 404 });
     }
 
+    // Check if payment is already processed
+    if (advertisement.paymentStatus !== "PENDING") {
+      console.log("Payment already processed:", {
+        adId,
+        paymentStatus: advertisement.paymentStatus,
+      });
+      return NextResponse.redirect(
+        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/products?status=${
+          advertisement.paymentStatus === "PAID" ? "success" : "failed"
+        }`
+      );
+    }
+
+    // Verify payment with Chapa
     if (advertisement.paymentStatus !== "PENDING") {
       return NextResponse.json(
         {
@@ -75,6 +94,17 @@ export async function GET(req) {
       });
       await Advertisement.findByIdAndUpdate(adId, {
         paymentStatus: "FAILED",
+        rejectionReason: { reason: "Payment verification failed", description: data.message || "Unknown error" },
+      });
+      return NextResponse.redirect(
+        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/products?status=failed`
+      );
+    }
+
+    // Payment verified successfully
+    await Advertisement.findByIdAndUpdate(adId, {
+      paymentStatus: "PAID",
+      approvalStatus: "PENDING", // Still pending admin approval
         rejectionReason: {
           reason: "Payment verification failed",
           description: data.message || "Unknown error",
@@ -94,6 +124,12 @@ export async function GET(req) {
 
     console.log("Payment verified successfully:", { adId, tx_ref });
 
+    return NextResponse.redirect(
+      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/products?status=success`
+    );
+  } catch (error) {
+    console.error("VerifyPayment error:", error);
+    if (adId) {
     return NextResponse.json(
       { message: "Payment verified successfully", status: "success" },
       { status: 200 }
@@ -106,6 +142,7 @@ export async function GET(req) {
         rejectionReason: { reason: "Server error", description: error.message },
       });
     }
+    return NextResponse.json({ message: "Internal Server Error", error: error.message }, { status: 500 });
     return NextResponse.json(
       { message: "Internal Server Error", error: error.message, status: "error" },
       { status: 500 }

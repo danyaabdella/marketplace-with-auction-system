@@ -38,7 +38,6 @@ export async function POST(req) {
 
     const tx_ref = `tx_${uuidv4().split('-')[0]}`;
 
-    
     const requestBody = {
       amount,
       currency: "ETB",
@@ -47,7 +46,7 @@ export async function POST(req) {
       last_name,
       phone_number,
       tx_ref,
-      callback_url: process.env.CHAPA_CALLBACK_URL || "http://localhost:3001/api/adCallback",
+      callback_url: process.env.CHAPA_CALLBACK_URL || "http://localhost:3001/api/callback",
       return_url: `${process.env.NEXTAUTH_URL || "http://localhost:3001"}/verifyPayment/ad?tx_ref=${tx_ref}&adId=${adData.adId}`,
       customization: {
         title: "Ad Payment",
