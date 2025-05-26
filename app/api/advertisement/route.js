@@ -3,14 +3,19 @@ import Advertisement from "@/models/Advertisement";
 import { v4 as uuidv4 } from "uuid";
 import { adRegions } from "@/libs/adRegion";
 import { NextResponse } from "next/server";
+import Agenda from "agenda";
 
+// Initialize environment variable for Chapa secret key
 const chapaSecretKey = process.env.CHAPA_SECRET_KEY;
 
+// Initialize Agenda instance
 let agenda = null;
 
 const initializeAgenda = async () => {
   if (!agenda) {
-    agenda = new Agenda({ db: { address: process.env.MONGO_URL, collection: "agendaJobs" } });
+    agenda = new Agenda({
+      db: { address: process.env.MONGO_URL, collection: "agendaJobs" },
+    });
     await agenda.start();
     console.log("Agenda initialized");
 
@@ -32,171 +37,206 @@ const initializeAgenda = async () => {
 };
 
 export const POST = async (req) => {
-  await connectToDB();
-  const user = await userInfo(req);
-  if (!user || user.role !== "merchant") {
-    return NextResponse.json({ error: "Unauthorized: User must be a merchant" }, { status: 401 });
-  }
-
-  const {
-    product,
-    merchantDetail,
-    startsAt,
-    endsAt,
-    adPrice,
-    adRegion,
-    isHome = false,
-  } = await req.json();
-
-  if (!product || !merchantDetail || !startsAt || !endsAt || !adPrice || !adRegion) {
-    return new Response(JSON.stringify({ error: "Missing required fields" }), {
-      status: 400,
-    });
-  }
-
-  const regionCoordinates = adRegions[adRegion];
-  if (!regionCoordinates) {
-    return new Response(JSON.stringify({ error: "Invalid adRegion" }), {
-      status: 400,
-    });
-  }
-
-  const startDate = new Date(startsAt);
-  const endDate = new Date(endsAt);
-  if (endDate <= startDate) {
-    return new Response(JSON.stringify({ error: "End date must be after start date" }), {
-      status: 400,
-    });
-  }
-
-  const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
-  const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
-  if (adPrice !== expectedPrice) {
-    return new Response(JSON.stringify({ error: "Invalid advertisement price" }), {
-      status: 400,
-    });
-  }
-
-  const regionAdCount = await Advertisement.countDocuments({
-    adRegion,
-    isActive: true,
-    approvalStatus: "APPROVED",
-    paymentStatus: "PAID",
-    isHome,
-  });
-  // Check for existing active ad for the same product
-  const existingAd = await Advertisement.findOne({
-    "product.merchantDetail.merchantId": merchantDetail.merchantId,
-    "product.productName": product.productName,
-    isActive: true,
-    endsAt: { $gt: new Date() }, // Ensure end date hasn't passed
-  });
-
-  if (existingAd) {
-    return new Response(
-      JSON.stringify({
-        error: "This product is already an active advertisement. Wait until the end date is reached.",
-      }),
-      { status: 400 }
-    );
-  }
-  if (regionAdCount >= 5) {
-    return new Response(
-      JSON.stringify({
-        error: `Limit reached: Maximum of 5 active ${isHome ? "home" : "non-home"} ads in ${adRegion}`,
-      }),
-      { status: 400 }
-    );
-  }
-
-  const tx_ref = uuidv4().replace(/-/g, "").slice(0, 15);
-
-  const newAd = new Advertisement({
-    product,
-    merchantDetail,
-    startsAt,
-    endsAt,
-    adPrice,
-    tx_ref,
-    approvalStatus: "PENDING",
-    paymentStatus: "PENDING",
-    isHome,
-    adRegion,
-    location: {
-      type: "Point",
-      coordinates: regionCoordinates,
-    },
-  });
-
-  await newAd.save();
-
   try {
-    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`, {
-  const agendaInstance = await initializeAgenda();
+    // Connect to the database
+    await connectToDB();
 
-  // Schedule the job to deactivate the ad at endsAt
-  await agendaInstance.schedule(endDate, "deactivate ad", { adId: newAd._id });
+    // Verify user and role
+    const user = await userInfo(req);
+    if (!user || user.role !== "merchant") {
+      return NextResponse.json(
+        { error: "Unauthorized: User must be a merchant" },
+        { status: 401 }
+      );
+    }
 
-  try {
-    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": req.headers.get('authorization') || `Bearer ${user.token || ""}`,
-      },
-      body: JSON.stringify({
-        amount: adPrice,
-        adData: {
-          adId: newAd._id,
-          product,
-          merchantDetail,
-          startsAt,
-          endsAt,
-          adRegion,
-          isHome,
-        },
-        user: {
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-          fullName: user.fullName,
-          phoneNumber: user.phoneNumber,
-        },
-      }),
-      credentials: 'include',
-    });
+    // Parse request body
+    const {
+      product,
+      merchantDetail,
+      startsAt,
+      endsAt,
+      adPrice,
+      adRegion,
+      isHome = false,
+    } = await req.json();
 
-    const checkoutData = await checkoutResponse.json();
-
-    if (!checkoutResponse.ok) {
-      await Advertisement.findByIdAndDelete(newAd._id);
-
-      await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
-      return new Response(
-        JSON.stringify({ error: "Payment initialization failed", details: checkoutData.message }),
+    // Validate required fields
+    if (!product || !merchantDetail || !startsAt || !endsAt || !adPrice || !adRegion) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    return new Response(
-      JSON.stringify({
-        message: "Ad created and payment initialized successfully",
-        checkout_url: checkoutData.checkout_url,
-        tx_ref,
-        adId: newAd._id,
-      }),
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Error initializing payment:", error);
-    await Advertisement.findByIdAndDelete(newAd._id);
+    // Validate ad region
+    const regionCoordinates = adRegions[adRegion];
+    if (!regionCoordinates) {
+      return NextResponse.json({ error: "Invalid adRegion" }, { status: 400 });
+    }
 
-    await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
-    return new Response(
-      JSON.stringify({
-        error: "Error creating ad or initializing payment",
+    // Validate dates
+    const startDate = new Date(startsAt);
+    const endDate = new Date(endsAt);
+    if (endDate <= startDate) {
+      return NextResponse.json(
+        { error: "End date must be after start date" },
+        { status: 400 }
+      );
+    }
+
+    // Calculate and validate price
+    const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
+    const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
+    if (adPrice !== expectedPrice) {
+      return NextResponse.json(
+        { error: "Invalid advertisement price" },
+        { status: 400 }
+      );
+    }
+
+    // Check active ad count for the region
+    const regionAdCount = await Advertisement.countDocuments({
+      adRegion,
+      isActive: true,
+      approvalStatus: "APPROVED",
+      paymentStatus: "PAID",
+      isHome,
+    });
+
+    // Check for existing active ad for the same product
+    const existingAd = await Advertisement.findOne({
+      "product.merchantDetail.merchantId": merchantDetail.merchantId,
+      "product.productName": product.productName,
+      isActive: true,
+      endsAt: { $gt: new Date() },
+    });
+
+    if (existingAd) {
+      return NextResponse.json(
+        {
+          error:
+            "This product is already an active advertisement. Wait until the end date is reached.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (regionAdCount >= 5) {
+      return NextResponse.json(
+        {
+          error: `Limit reached: Maximum of 5 active ${
+            isHome ? "home" : "non-home"
+          } ads in ${adRegion}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate transaction reference
+    const tx_ref = uuidv4().replace(/-/g, "").slice(0, 15);
+
+    // Create new advertisement
+    const newAd = new Advertisement({
+      product,
+      merchantDetail,
+      startsAt,
+      endsAt,
+      adPrice,
+      tx_ref,
+      approvalStatus: "PENDING",
+      paymentStatus: "PENDING",
+      isHome,
+      adRegion,
+      location: {
+        type: "Point",
+        coordinates: regionCoordinates,
+      },
+    });
+
+    await newAd.save();
+
+    // Initialize Agenda and schedule deactivation job
+    const agendaInstance = await initializeAgenda();
+    await agendaInstance.schedule(endDate, "deactivate ad", { adId: newAd._id });
+
+    // Initialize payment
+    try {
+      const checkoutResponse = await fetch(
+        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: req.headers.get("authorization") || `Bearer ${user.token || ""}`,
+          },
+          body: JSON.stringify({
+            amount: adPrice,
+            adData: {
+              adId: newAd._id,
+              product,
+              merchantDetail,
+              startsAt,
+              endsAt,
+              adRegion,
+              isHome,
+            },
+            user: {
+              _id: user._id,
+              email: user.email,
+              role: user.role,
+              fullName: user.fullName,
+              phoneNumber: user.phoneNumber,
+            },
+          }),
+          credentials: "include",
+        }
+      );
+
+      const checkoutData = await checkoutResponse.json();
+
+      if (!checkoutResponse.ok) {
+        // Clean up on failure
+        await Advertisement.findByIdAndDelete(newAd._id);
+        await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
+        return NextResponse.json(
+          {
+            error: "Payment initialization failed",
+            details: checkoutData.message,
+          },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          message: "Ad created and payment initialized successfully",
+          checkout_url: checkoutData.checkout_url,
+          tx_ref,
+          adId: newAd._id,
+        },
+        { status: 201 }
+      );
+    } catch (error) {
+      // Clean up on error
+      console.error("Error initializing payment:", error);
+      await Advertisement.findByIdAndDelete(newAd._id);
+      await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
+      return NextResponse.json(
+        {
+          error: "Error creating ad or initializing payment",
+          details: error.message,
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error("Error in POST handler:", error);
+    return NextResponse.json(
+      {
+        error: "Internal server error",
         details: error.message,
-      }),
+      },
       { status: 500 }
     );
   }
@@ -270,7 +310,7 @@ export const GET = async (req) => {
       const ads = await Advertisement.find(filter)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit); // Removed hardcoded limit of 5, using dynamic limit
+        .limit(limit);
 
       const total = await Advertisement.countDocuments(filter);
 

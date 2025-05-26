@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
-
 import Order from "@/models/Order";
 import User from "@/models/User";
 import Product from "@/models/Product";
-import { userInfo } from "@/libs/functions";
+import { connectToDB } from "@/libs/functions";
 
 export async function POST(req) {
   try {
+    // Connect to the database
+    await connectToDB();
+
+    // Parse request body
     const body = await req.json();
-    const { userId, merchantId } = body;
+    const { userId, merchantId, products = [], auction, transactionRef, total, status, paymentStatus, chapaRef, location } = body;
+
+    // Validate userId and fetch user
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
 
     const sessionUser = await User.findById(userId);
     if (
@@ -17,62 +25,55 @@ export async function POST(req) {
       sessionUser.isDeleted ||
       !sessionUser.isEmailVerified
     ) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized or invalid user." }),
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized or invalid user" }, { status: 401 });
     }
 
-    const customerDetail = body.customerDetail || {
-      customerId: sessionUser._id,
-      customerName: sessionUser.fullName,
-      phoneNumber: sessionUser.phoneNumber,
-      customerEmail: sessionUser.email,
+    // Build customerDetail, filling missing fields from User schema
+    const customerDetail = {
+      customerId: sessionUser._id.toString(),
+      customerName: body.customerDetail?.customerName || sessionUser.fullName,
+      phoneNumber: body.customerDetail?.phoneNumber || sessionUser.phoneNumber || "",
+      customerEmail: body.customerDetail?.customerEmail || sessionUser.email,
       address: {
-        state: sessionUser.stateName,
-        city: sessionUser.cityName,
+        state: body.customerDetail?.stateName || sessionUser.stateName || "",
+        city: body.customerDetail?.cityName || sessionUser.cityName || "",
       },
     };
 
+    // Validate customerDetail (allow empty strings for non-required fields)
     if (
       !customerDetail.customerId ||
       !customerDetail.customerName ||
-      !customerDetail.phoneNumber ||
-      !customerDetail.customerEmail ||
-      !customerDetail.address.state ||
-      !customerDetail.address.city
+      !customerDetail.customerEmail
     ) {
-      return new Response(
-        JSON.stringify({ error: "Customer details are incomplete" }),
+      return NextResponse.json(
+        { error: "Critical customer details (ID, name, or email) are missing" },
         { status: 400 }
       );
     }
 
-    const products = body.products || [];
-    if (products.length === 0 && !body.auction) {
-      return new Response(
-        JSON.stringify({
-          error: "Order must contain either products or an auction",
-        }),
+    // Validate products or auction
+    if (products.length === 0 && !auction) {
+      return NextResponse.json(
+        { error: "Order must contain either products or an auction" },
         { status: 400 }
       );
     }
 
+    // Validate and update product quantities
     for (const orderProduct of products) {
       const { productId, quantity } = orderProduct;
       const product = await Product.findById(productId);
       if (!product) {
-        return new Response(
-          JSON.stringify({ error: `Product with ID ${productId} not found` }),
+        return NextResponse.json(
+          { error: `Product with ID ${productId} not found` },
           { status: 404 }
         );
       }
 
       if (product.quantity < quantity) {
-        return new Response(
-          JSON.stringify({
-            error: `Insufficient quantity for product: ${product.productName}`,
-          }),
+        return NextResponse.json(
+          { error: `Insufficient quantity for product: ${product.productName}` },
           { status: 400 }
         );
       }
@@ -82,50 +83,68 @@ export async function POST(req) {
       await product.save();
     }
 
-    if (!body.transactionRef) {
-      return new Response(
-        JSON.stringify({ error: "Transaction reference is required" }),
+    // Validate transaction reference
+    if (!transactionRef) {
+      return NextResponse.json(
+        { error: "Transaction reference is required" },
         { status: 400 }
       );
     }
 
-    const location = {
+    // Validate location coordinates
+    const orderLocation = {
       type: "Point",
-      coordinates: body.location?.coordinates || [],
+      coordinates: location?.coordinates || [],
     };
-
-    if (!location.coordinates.length) {
-      return new Response(
-        JSON.stringify({ error: "Location coordinates are required" }),
+    if (!orderLocation.coordinates.length) {
+      return NextResponse.json(
+        { error: "Location coordinates are required" },
         { status: 400 }
       );
+    }
+
+    // Fetch and validate merchant details
+    if (!merchantId) {
+      return NextResponse.json({ error: "Merchant ID is required" }, { status: 400 });
     }
 
     const merchantUser = await User.findById("68323a2e41ede2167f7c03e2");
-    if (!merchantUser) {
-      return new Response(JSON.stringify({ error: "Merchant not found" }), {
-        status: 404,
-      });
-    }
 
     const merchantDetail = {
-      merchantId: merchantUser._id,
+      merchantId: merchantUser._id.toString(),
       merchantName: merchantUser.fullName,
       merchantEmail: merchantUser.email,
-      phoneNumber: merchantUser.phoneNumber,
-      account_name: merchantUser.account_name,
-      account_number: merchantUser.account_number,
-      bank_code: merchantUser.bank_code,
+      phoneNumber: merchantUser.phoneNumber || "",
+      account_name: merchantUser.account_name || "",
+      account_number: merchantUser.account_number || "",
+      bank_code: merchantUser.bank_code || "",
     };
 
-    const auction = body.auction
+    // Validate merchantDetail (required fields for merchants)
+    if (
+      !merchantDetail.merchantId ||
+      !merchantDetail.merchantName ||
+      !merchantDetail.merchantEmail ||
+      !merchantDetail.account_name ||
+      !merchantDetail.account_number ||
+      !merchantDetail.bank_code
+    ) {
+      return NextResponse.json(
+        { error: "Critical merchant details are missing" },
+        { status: 400 }
+      );
+    }
+
+    // Build auction object if provided
+    const auctionData = auction
       ? {
-          auctionId: body.auction.auctionId,
-          delivery: body.auction.delivery,
-          deliveryPrice: body.auction.deliveryPrice,
+          auctionId: auction.auctionId,
+          delivery: auction.delivery,
+          deliveryPrice: auction.deliveryPrice,
         }
       : null;
 
+    // Create new order
     const newOrder = new Order({
       customerDetail,
       merchantDetail,
@@ -138,29 +157,30 @@ export async function POST(req) {
         deliveryPrice: p.deliveryPrice,
         categoryName: p.categoryName,
       })),
-      auction,
-      totalPrice: body.total || 0,
-      status: body.status || "Pending",
-      paymentStatus: body.paymentStatus || "Pending",
-      transactionRef: body.transactionRef,
-      chapaRef: body.paymentStatus === "Paid" ? body.chapaRef : undefined,
-      location,
+      auction: auctionData,
+      totalPrice: total || 0,
+      status: status || "Pending",
+      paymentStatus: paymentStatus || "Pending",
+      transactionRef,
+      chapaRef: paymentStatus === "Paid" ? chapaRef : undefined,
+      location: orderLocation,
     });
 
     await newOrder.save();
 
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         message: "Order created successfully",
         order: newOrder,
-      }),
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating order:", error);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-      status: 500,
-    });
+    console.error("Error creating order:", error.message, error.stack);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
