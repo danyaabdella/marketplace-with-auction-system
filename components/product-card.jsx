@@ -31,14 +31,14 @@ export function ProductCard({ product }) {
   const { toast } = useToast()
   const { data: session } = useSession()
   const productName = product.productName || "Unnamed Product"
-  const originalPrice = product.price || 0
+  const originalPrice = product.price
   const offerPrice = product.offer?.price
   const offerEndDate = product.offer?.offerEndDate ? new Date(product.offer.offerEndDate) : null
   const isOfferActive = offerPrice && offerEndDate && offerEndDate > new Date()
   const displayPrice = isOfferActive ? offerPrice : originalPrice
-  const soldCount = product.soldQuantity || 0
+  const soldCount = product.soldQuantity
   const image = product.images?.[0] || "/placeholder.svg"
-  const quantity = product.quantity || 0
+  const quantity = product.quantity
   const isOutOfStock = quantity === 0
   const { addToCart, cart } = useCart()
   const averageRating = product.review?.length 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Order from "@/models/Order";
 import User from "@/models/User";
 import Product from "@/models/Product";
-import { connectToDB } from "@/libs/functions";
+import { connectToDB, userInfo } from "@/libs/functions";
 
 export async function POST(req) {
   try {
@@ -11,11 +11,21 @@ export async function POST(req) {
 
     // Parse request body
     const body = await req.json();
-    const { userId, merchantId, products = [], auction, transactionRef, total, status, paymentStatus, chapaRef, location } = body;
+    const { userId, transactionRef, paymentStatus, ...orderData } = body;
+    const {
+      customerDetail = {},
+      merchantDetail,
+      products = [],
+      totalPrice,
+      location,
+    } = orderData;
 
     // Validate userId and fetch user
     if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
     }
 
     const sessionUser = await User.findById(userId);
@@ -25,26 +35,32 @@ export async function POST(req) {
       sessionUser.isDeleted ||
       !sessionUser.isEmailVerified
     ) {
-      return NextResponse.json({ error: "Unauthorized or invalid user" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized or invalid user" },
+        { status: 401 }
+      );
     }
 
     // Build customerDetail, filling missing fields from User schema
-    const customerDetail = {
+    const validatedCustomerDetail = {
       customerId: sessionUser._id.toString(),
-      customerName: body.customerDetail?.customerName || sessionUser.fullName,
-      phoneNumber: body.customerDetail?.phoneNumber || sessionUser.phoneNumber || "",
-      customerEmail: body.customerDetail?.customerEmail || sessionUser.email,
+      customerName:
+        customerDetail.customerName ||
+        sessionUser.fullName ||
+        "Unknown Customer",
+      phoneNumber: customerDetail.phoneNumber || sessionUser.phoneNumber || "",
+      customerEmail: customerDetail.customerEmail || sessionUser.email || "",
       address: {
-        state: body.customerDetail?.stateName || sessionUser.stateName || "",
-        city: body.customerDetail?.cityName || sessionUser.cityName || "",
+        state: customerDetail.address?.state || sessionUser.stateName || "",
+        city: customerDetail.address?.city || sessionUser.cityName || "",
       },
     };
 
-    // Validate customerDetail (allow empty strings for non-required fields)
+    // Validate critical customerDetail fields
     if (
-      !customerDetail.customerId ||
-      !customerDetail.customerName ||
-      !customerDetail.customerEmail
+      !validatedCustomerDetail.customerId ||
+      !validatedCustomerDetail.customerName ||
+      !validatedCustomerDetail.customerEmail
     ) {
       return NextResponse.json(
         { error: "Critical customer details (ID, name, or email) are missing" },
@@ -52,10 +68,10 @@ export async function POST(req) {
       );
     }
 
-    // Validate products or auction
-    if (products.length === 0 && !auction) {
+    // Validate products
+    if (products.length === 0) {
       return NextResponse.json(
-        { error: "Order must contain either products or an auction" },
+        { error: "Order must contain at least one product" },
         { status: 400 }
       );
     }
@@ -63,17 +79,26 @@ export async function POST(req) {
     // Validate and update product quantities
     for (const orderProduct of products) {
       const { productId, quantity } = orderProduct;
-      const product = await Product.findById(productId);
-      if (!product) {
+      if (!productId || !quantity) {
         return NextResponse.json(
-          { error: `Product with ID ${productId} not found` },
+          { error: `Product ID and quantity are required for all products` },
+          { status: 400 }
+        );
+      }
+
+      const product = await Product.findById(productId);
+      if (!product || product.isBanned || product.isDeleted) {
+        return NextResponse.json(
+          { error: `Product with ID ${productId} not found or unavailable` },
           { status: 404 }
         );
       }
 
       if (product.quantity < quantity) {
         return NextResponse.json(
-          { error: `Insufficient quantity for product: ${product.productName}` },
+          {
+            error: `Insufficient quantity for product: ${product.productName}`,
+          },
           { status: 400 }
         );
       }
@@ -93,41 +118,55 @@ export async function POST(req) {
 
     // Validate location coordinates
     const orderLocation = {
-      type: "Point",
-      coordinates: location?.coordinates || [],
+      type: location?.type || "Point",
+      coordinates: location?.coordinates || [0, 0],
     };
-    if (!orderLocation.coordinates.length) {
+    if (!orderLocation.coordinates || orderLocation.coordinates.length !== 2) {
       return NextResponse.json(
-        { error: "Location coordinates are required" },
+        { error: "Valid location coordinates are required" },
         { status: 400 }
       );
     }
 
-    // Fetch and validate merchant details
-    if (!merchantId) {
-      return NextResponse.json({ error: "Merchant ID is required" }, { status: 400 });
+    // Validate and fetch merchant details
+    if (!merchantDetail?.merchantId) {
+      return NextResponse.json(
+        { error: "Merchant ID is required" },
+        { status: 400 }
+      );
     }
 
-    const merchantUser = await User.findById("68323a2e41ede2167f7c03e2");
+    const merchantUser = await User.findById(merchantDetail.merchantId);
+    if (!merchantUser) {
+      return NextResponse.json(
+        { error: "Merchant not found" },
+        { status: 404 }
+      );
+    }
 
-    const merchantDetail = {
+    const validatedMerchantDetail = {
       merchantId: merchantUser._id.toString(),
-      merchantName: merchantUser.fullName,
-      merchantEmail: merchantUser.email,
-      phoneNumber: merchantUser.phoneNumber || "",
-      account_name: merchantUser.account_name || "",
-      account_number: merchantUser.account_number || "",
-      bank_code: merchantUser.bank_code || "",
+      merchantName:
+        merchantDetail.merchantName ||
+        merchantUser.fullName ||
+        "Unknown Merchant",
+      merchantEmail: merchantDetail.merchantEmail || merchantUser.email || "",
+      phoneNumber: merchantDetail.phoneNumber || merchantUser.phoneNumber || "",
+      account_name:
+        merchantDetail.account_name || merchantUser.account_name || "",
+      account_number:
+        merchantDetail.account_number || merchantUser.account_number || "",
+      bank_code: merchantDetail.bank_code || merchantUser.bank_code || "",
     };
 
-    // Validate merchantDetail (required fields for merchants)
+    // Validate critical merchantDetail fields
     if (
-      !merchantDetail.merchantId ||
-      !merchantDetail.merchantName ||
-      !merchantDetail.merchantEmail ||
-      !merchantDetail.account_name ||
-      !merchantDetail.account_number ||
-      !merchantDetail.bank_code
+      !validatedMerchantDetail.merchantId ||
+      !validatedMerchantDetail.merchantName ||
+      !validatedMerchantDetail.merchantEmail ||
+      !validatedMerchantDetail.account_name ||
+      !validatedMerchantDetail.account_number ||
+      !validatedMerchantDetail.bank_code
     ) {
       return NextResponse.json(
         { error: "Critical merchant details are missing" },
@@ -135,35 +174,30 @@ export async function POST(req) {
       );
     }
 
-    // Build auction object if provided
-    const auctionData = auction
-      ? {
-          auctionId: auction.auctionId,
-          delivery: auction.delivery,
-          deliveryPrice: auction.deliveryPrice,
-        }
-      : null;
+    // Map products to schema-compliant structure
+    const orderProducts = products.map((p) => ({
+      productId: p.productId,
+      productName: p.productName || "Unknown Product",
+      quantity: p.quantity,
+      price: p.price || 0,
+      delivery: p.delivery || "FREE",
+      deliveryPrice: p.deliveryPrice || 0,
+      categoryName: p.categoryName || "Uncategorized",
+      weight: p.weight || 0,
+      location: p.location || { type: "Point", coordinates: [0, 0] },
+    }));
 
     // Create new order
     const newOrder = new Order({
-      customerDetail,
-      merchantDetail,
-      products: products.map((p) => ({
-        productId: p.productId,
-        productName: p.productName,
-        quantity: p.quantity,
-        price: p.price,
-        delivery: p.deliveryType,
-        deliveryPrice: p.deliveryPrice,
-        categoryName: p.categoryName,
-      })),
-      auction: auctionData,
-      totalPrice: total || 0,
-      status: status || "Pending",
+      customerDetail: validatedCustomerDetail,
+      merchantDetail: validatedMerchantDetail,
+      products: orderProducts,
+      totalPrice: totalPrice || 0,
+      status: "Pending",
       paymentStatus: paymentStatus || "Pending",
       transactionRef,
-      chapaRef: paymentStatus === "Paid" ? chapaRef : undefined,
       location: orderLocation,
+      userId,
     });
 
     await newOrder.save();
@@ -188,6 +222,7 @@ export async function PUT(req) {
   try {
     const sessionUser = await userInfo(req);
     const body = await req.json();
+    console
 
     if (!sessionUser) {
       return NextResponse.json(

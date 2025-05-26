@@ -45,7 +45,7 @@ export async function GET(req) {
             near: { type: "Point", coordinates: [lng, lat] },
             distanceField: "distance",
             spherical: true,
-            maxDistance: 100000,
+            maxDistance: 1000000,
             query: filter,
           },
         },
@@ -71,10 +71,14 @@ export async function GET(req) {
 
       console.log("Running geoNear aggregation...");
       products = await Product.aggregate(aggregationPipeline);
+      console.log("Products: ", products);
+
       console.log(`GeoNear aggregation returned ${products.length} products`);
 
       if (products.length === 0) {
-        console.log("No geo-located products found, falling back to default find()");
+        console.log(
+          "No geo-located products found, falling back to default find()"
+        );
         products = await Product.find(filter)
           .select(
             "_id productName category price offer images merchantDetail delivery createdAt"
