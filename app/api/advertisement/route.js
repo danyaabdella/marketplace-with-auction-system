@@ -129,13 +129,12 @@ export const POST = async (req) => {
   });
 
   await newAd.save();
-
-  try {
-    const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`, {
+  
   const agendaInstance = await initializeAgenda();
 
   // Schedule the job to deactivate the ad at endsAt
   await agendaInstance.schedule(endDate, "deactivate ad", { adId: newAd._id });
+
 
   try {
     const checkoutResponse = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`, {
