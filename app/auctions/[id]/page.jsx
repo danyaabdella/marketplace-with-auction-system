@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +27,15 @@ import { socket } from "@/libs/socketClient";
 import { calculateTimeLeft } from "@/libs/utils";
 
 export default function AuctionDetailPage({ params }) {
-  const {id} = use(params);
+  const { id } = use(params);
   const [auctionData, setAuctionData] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [timeLeft, setTimeLeft] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isBidding, setIsBidding] = useState(false); // New state for bid loading
+  const [dialogOpen, setDialogOpen] = useState(false); // State to control dialog
+  const dialogCloseRef = useRef(null); // Ref for DialogClose
   const { toast } = useToast();
   const { data: session } = useSession();
   const router = useRouter();
@@ -46,7 +50,9 @@ export default function AuctionDetailPage({ params }) {
         }
         const data = await response.json();
         setAuctionData(data);
-        setBidAmount(data.highestBid + data.bidIncrement || data.startingPrice + data.bidIncrement);
+        setBidAmount(
+          data.highestBid + data.bidIncrement || data.startingPrice + data.bidIncrement
+        );
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -101,7 +107,8 @@ export default function AuctionDetailPage({ params }) {
 
     if (!auctionData) return;
 
-    const minBidAmount = (auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement;
+    const minBidAmount =
+      (auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement;
     if (bidAmount < minBidAmount) {
       toast({
         title: "Invalid bid amount",
@@ -110,6 +117,8 @@ export default function AuctionDetailPage({ params }) {
       });
       return;
     }
+
+    setIsBidding(true); // Start loading
 
     try {
       const response = await fetch("/api/bid", {
@@ -145,12 +154,17 @@ export default function AuctionDetailPage({ params }) {
         bidderName: session.user.name,
         bidderEmail: session.user.email,
       });
+
+      // Close the dialog
+      setDialogOpen(false);
     } catch (error) {
       toast({
         title: "Error placing bid",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsBidding(false); // Stop loading
     }
   };
 
@@ -159,10 +173,9 @@ export default function AuctionDetailPage({ params }) {
       <div className="container p-6">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          
         </div>
       </div>
-    ) 
+    );
   }
 
   if (error || !auctionData) {
@@ -242,7 +255,7 @@ export default function AuctionDetailPage({ params }) {
                     <p className="font-medium">${auctionData.bidIncrement}</p>
                   </div>
                 </div>
-                <Dialog>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="gradient-bg border-0 w-full">
                       Place Bid
@@ -270,10 +283,22 @@ export default function AuctionDetailPage({ params }) {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleBid} className="gradient-bg border-0">
-                        Place Bid
+                      <Button
+                        onClick={handleBid}
+                        className="gradient-bg border-0"
+                        disabled={isBidding}
+                      >
+                        {isBidding ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                            Placing Bid...
+                          </div>
+                        ) : (
+                          "Place Bid"
+                        )}
                       </Button>
                     </DialogFooter>
+                    <DialogClose ref={dialogCloseRef} />
                   </DialogContent>
                 </Dialog>
               </div>

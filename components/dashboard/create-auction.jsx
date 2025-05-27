@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/libs/utils";
+import { cn, uploadImagesToFirebase } from "@/libs/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,6 +52,8 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     const fetchCategoriesAndProducts = async () => {
@@ -166,12 +167,56 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
     // resolver: zodResolver(formSchema),
     // defaultValue
 
-  const handleImageUpload = (e) => {
+  const validateImage = (file) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      throw new Error(`Invalid file type. Only ${validTypes.join(', ')} are allowed.`);
+    }
+
+    if (file.size > maxSize) {
+      throw new Error('File size must be less than 5MB');
+    }
+
+    return true;
+  };
+
+  const handleImageUpload = async (e) => {
     const files = e.target.files;
-    if (files) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
-      setImages((prev) => [...prev, ...newImages]);
-      form.setValue("images", [...(form.getValues("images") || []), ...newImages]);
+    if (!files || files.length === 0) return;
+
+    setUploadError(null);
+    const newProgress = {};
+    const validFiles = [];
+
+    // Validate all files first
+    try {
+      Array.from(files).forEach(file => {
+        validateImage(file);
+        validFiles.push(file);
+        newProgress[file.name] = 0;
+      });
+    } catch (error) {
+      setUploadError(error.message);
+      return;
+    }
+
+    setUploadProgress(newProgress);
+
+    try {
+      const uploadedUrls = await uploadImagesToFirebase(validFiles, (progress) => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [progress.fileName]: progress.progress
+        }));
+      });
+
+      setImages(prev => [...prev, ...uploadedUrls]);
+      setUploadProgress({});
+    } catch (error) {
+      setUploadError('Failed to upload images. Please try again.');
+      console.error('Upload failed:', error);
     }
   };
 
@@ -431,16 +476,39 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
               </div>
               <FormItem>
                 <FormLabel>Images</FormLabel>
+                <FormDescription>Upload one or more images of your item (max 5MB each, JPEG/PNG/WEBP)</FormDescription>
                 <FormControl>
                   <Input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     multiple
                     onChange={handleImageUpload}
-                    className="cursor-pointer"
+                    className="cursor-pointer mt-2"
                   />
                 </FormControl>
-                <FormDescription>Upload one or more images of your item</FormDescription>
+                
+                {uploadError && (
+                  <div className="text-red-500 text-sm mt-2">
+                    {uploadError}
+                  </div>
+                )}
+
+                {Object.keys(uploadProgress).length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(uploadProgress).map(([fileName, progress]) => (
+                      <div key={fileName} className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-gray-200 rounded-full">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-gray-500">{progress}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {images.length > 0 && (
                   <div className="grid grid-cols-3 gap-4 mt-4">
                     {images.map((image, index) => (
@@ -451,6 +519,15 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
                           fill
                           className="rounded-lg object-cover"
                         />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute right-1 top-1 h-6 w-6"
+                          onClick={() => setImages(images.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>

@@ -238,6 +238,7 @@ export const GET = async (req) => {
   const page = parseInt(url.searchParams.get("page")) || 1;
   const limit = parseInt(url.searchParams.get("limit")) || 15; // Keep dynamic limit for pagination
   const status = url.searchParams.get("status");
+  const productId = url.searchParams.get("productId");
 
   console.log("Filters: ", center, radius, page, limit, status);
 
@@ -245,6 +246,9 @@ export const GET = async (req) => {
     isActive: true, // Ensure only active ads are returned
     approvalStatus: "APPROVED", // Default to APPROVED if no status provided
   };
+  if (productId) {
+    filter["product._id"] = productId; // Assuming product._id is stored in the Advertisement model
+  }
 
   try {
     if (center) {

@@ -32,7 +32,7 @@ const formSchema = z.object({
   quantity: z.string().min(1, { message: "Quantity is required." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   brand: z.string().optional(),
-  delivery: z.enum(["PERPIECE", "PERKG", "FREE", "PERKM"]),
+  delivery: z.enum(["PERPIECE", "PERKG", "FREE", "FLAT", "PERKM"]),
   deliveryPrice: z.string(),
   KilometerPerPrice: z.string().optional().refine((val) => {
     if (val) return Number(val) > 0;
@@ -55,6 +55,7 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const [location, setLocation] = useState({ lat: 9.03, lng: 38.74 });
   const [uploadProgress, setUploadProgress] = useState({});
   const [uploadError, setUploadError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -213,6 +214,7 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   };
 
   const onSubmit = async (values) => {
+    setIsSubmitting(true);
     try {
       const selectedCategory = categories.find((cat) => cat._id === values.categoryId);
       if (!selectedCategory) {
@@ -276,6 +278,8 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false); // Reset loading state
     }
   };
 
@@ -614,9 +618,15 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
               <Button
                 type="submit"
                 className="gradient-bg border-0"
-                disabled={mode === "edit" && !isDirty}
+                disabled={mode === "edit" && !isDirty || isSubmitting}
               >
-                {mode === "add" ? "Add Product" : "Update Product"}
+                {isSubmitting
+                  ? mode === "add"
+                    ? "Adding..."
+                    : "Editing..."
+                  : mode === "add"
+                  ? "Add Product"
+                  : "Update Product"}
               </Button>
             </DialogFooter>
           </form>

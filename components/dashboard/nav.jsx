@@ -23,12 +23,12 @@ export function DashboardNav({ currentView, setCurrentView }) {
   const NavItems = () => (
     <div className="w-64 h-auto fixed left-0 top-20 shadow-lg z-10">
       <div className="flex h-14 items-center px-4 border-b">
-        <Link href="/" className="flex items-center gap-2">
+        {/* <Link href="/" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full gradient-bg flex items-center justify-center">
             <span className="text-primary-foreground font-bold">A</span>
           </div>
           <span className="text-xl font-bold bg-clip-text text-primary-foreground gradient-bg rounded-lg px-3 py-2">AuctionHub</span>
-        </Link>
+        </Link> */}
       </div>
       <div className="flex-1 space-y-1 p-2">
       {navigation.map((item) => {

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "react-hot-toast";
+import { useToast } from "./ui/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { VerifyEmailDialog } from "./verify-email-dialogue";
 import { State, City } from "country-state-city";
@@ -15,6 +15,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/libs/firebase";
 
 export function SignUpDialog({ open, onOpenChange, onSignIn }) {
+  const {toast} = useToast()
   const [role, setRole] = useState("customer");
   const [showVerifyEmail, setShowVerifyEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -70,11 +71,17 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
           }
         } else {
           console.error("Invalid bank accounts data format:", data);
-          toast.error("Failed to load bank accounts");
+          toast({
+            title: "Error",
+            description:"Failed to load bank accounts",
+            variant: "destructive"});
         }
       } catch (error) {
         console.error("Failed to fetch bank accounts:", error);
-        toast.error("Failed to load bank accounts");
+        toast({
+          title: "Error",
+          description:"Failed to load bank accounts",
+          variant: "destructive"});
       }
     };
     if (role === "merchant") fetchBankAccounts();
@@ -92,9 +99,13 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
       console.log(`${field} URL:`, downloadUrl);
 
       setFormData((prev) => ({ ...prev, [field]: downloadUrl }));
-      toast.success(`${field === "tinNumber" ? "TIN Number" : "National ID"} uploaded successfully!`);
+      toast({
+        description:`${field === "tinNumber" ? "TIN Number" : "National ID"} uploaded successfully!`});
     } catch (error) {
-      toast.error(`Failed to upload ${field === "tinNumber" ? "TIN Number" : "National ID"}`);
+      toast({
+        title: "Error",
+        description:`Failed to upload ${field === "tinNumber" ? "TIN Number" : "National ID"}`,
+        variant: "destructive"});
     } finally {
       if (field === "tinNumber") setIsUploadingTinNumber(false);
       else if (field === "nationalId") setIsUploadingNationalId(false);
@@ -106,25 +117,33 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
     setIsLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast({
+        description:"Passwords do not match",
+        variant: "destructive"});
       setIsLoading(false);
       return;
     }
 
     if (formData.password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+      toast({
+        description:"Password must be at least 8 characters long",
+        variant: "destructive"});
       setIsLoading(false);
       return;
     }
 
     if (role === "merchant") {
       if (!formData.tinNumber || !formData.nationalId || !formData.account_name || !formData.account_number || !formData.bank_code) {
-        toast.error("Please fill in all merchant fields");
+        toast({
+          description:"Please fill in all merchant fields",
+          variant:"destruction"});
         setIsLoading(false);
         return;
       }
       if (formData.acct_length && formData.account_number.length !== formData.acct_length) {
-        toast.error(`Account number must be exactly ${formData.acct_length} digits`);
+        toast({
+          description:`Account number must be exactly ${formData.acct_length} digits`,
+          variant: "destructive"});
         setIsLoading(false);
         return;
       }
@@ -163,11 +182,15 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
 
       await sendOtp(formData.email);
 
-      toast.success("Account created successfully! Please verify your email.");
+      toast({
+        title: "Success",
+        description:"Account created successfully! Please verify your email."});
       setShowVerifyEmail(true);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error.message || "Failed to create account");
+      toast({
+        description:error.message || "Failed to create account",
+        variant: "destructive"});
     } finally {
       setIsLoading(false);
     }
@@ -184,9 +207,12 @@ export function SignUpDialog({ open, onOpenChange, onSignIn }) {
       const otpData = await otpResponse.json();
       if (!otpResponse.ok) throw new Error(otpData.message || "Failed to send OTP");
 
-      toast.success("OTP sent to your email");
+      toast({
+        description:"OTP sent to your email"});
     } catch (error) {
-      toast.error(error.message || "Failed to send OTP");
+      toast({
+        description:error.message || "Failed to send OTP",
+        variant: "destructive"});
     }
   };
 

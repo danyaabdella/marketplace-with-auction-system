@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toast } from "react-hot-toast"
+import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from "lucide-react"
 import { VerifyEmailDialog } from "./verify-email-dialogue"
 import { ForgotPasswordPage } from "./forgot-password-dialogue"
@@ -20,6 +20,7 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
   // Add state to control VerifyEmailDialog visibility
   const [showVerifyEmail, setShowVerifyEmail] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false); 
+  const {toast} = useToast()
 
   const handleOpenChange = (isOpen) => {
     if (!isOpen) {
@@ -43,21 +44,26 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
       if (res.error) {
         // Check if the error is due to an unverified email
         if (res.error === "Email not verified") {
-          // Send OTP to the user's email
           await sendOtp(formData.email);
-          // Open the verification dialog
           setShowVerifyEmail(true);
+        } else if(res.error === "No user found with this email" || res.error === "Invalid email or password") {
+            toast({
+              title: "Invalid email or password",
+            })
         } else {
-          // Throw other errors to display them as toast messages
-          throw new Error(res.error);
+           toast({
+            description:res.error || "Failed to sign in",
+            variant: "destructive"});
         }
       } else {
-        // Sign-in successful
-        toast.success("Successfully signed in!");
+        toast({
+          title: "Signed in successfully",
+        });
         onOpenChange(false);
       }
     } catch (error) {
-      toast.error(error.message || "Failed to sign in");
+      toast({
+        title:"An unexpected error occurred"});
     } finally {
       setIsLoading(false);
     }
@@ -86,9 +92,13 @@ export function SignInDialog({ open, onOpenChange, onSignUp }) {
       const otpData = await otpResponse.json();
       if (!otpResponse.ok) throw new Error(otpData.message || "Failed to send OTP");
 
-      toast.success("OTP sent to your email");
+      toast({
+        title:"OTP sent to your email"});
     } catch (error) {
-      toast.error(error.message || "Failed to send OTP");
+      toast({
+        description:error.message || "Failed to send OTP",
+        variant: "destructive",
+        });
     }
   };
 
