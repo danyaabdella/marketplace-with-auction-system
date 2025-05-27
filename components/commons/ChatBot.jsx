@@ -27,6 +27,7 @@ export default function ChatBot() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showChatIcon, setShowChatIcon] = useState(false);
   const chatIconRef = useRef(null);
+  const internalChatIconRef = useRef(null);
   const scrollRef = useRef(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, stop, reload, error } =
@@ -67,7 +68,7 @@ export default function ChatBot() {
             className="fixed bottom-4 right-4 sm:right-8 md:right-16 z-50" // Adjusted for mobile and larger screens
           >
             <Button
-              ref={chatIconRef}
+              ref={chatIconRef || internalChatIconRef}
               onClick={toggleChat}
               size="icon"
               className="rounded-full size-14 p-2 shadow-lg"

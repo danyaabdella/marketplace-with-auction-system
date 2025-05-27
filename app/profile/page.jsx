@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ProfileReviews } from "@/components/profile/profile-reviews"
 import { EditProfileDialog } from "@/components/profile/edit-profile-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Calendar, MapPin, Shield, Star, UserIcon, Eye, EyeOff } from "lucide-react"
+import { Calendar, MapPin, Shield, Star, UserIcon, Eye, EyeOff, Pencil } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useToast } from "@/components/ui/use-toast"
 import { State, City } from "country-state-city"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Form schemas
 const profileFormSchema = z.object({
@@ -43,6 +51,20 @@ const passwordFormSchema = z
     path: ["confirmPassword"],
   })
 
+const merchantInfoFormSchema = z.object({
+  account_name: z.string().min(2, { message: "Account name must be at least 2 characters." }),
+  account_number: z.string().min(8, { message: "Account number must be at least 8 characters." }),
+  bank_code: z.string().min(3, { message: "Bank code must be at least 3 characters." }),
+})
+
+const promoteToMerchantSchema = z.object({
+  tinNumber: z.string().min(10, { message: "TIN number must be at least 10 characters." }),
+  nationalId: z.string().min(8, { message: "National ID must be at least 8 characters." }),
+  account_name: z.string().min(2, { message: "Account name must be at least 2 characters." }),
+  account_number: z.string().min(8, { message: "Account number must be at least 8 characters." }),
+  bank_code: z.string().min(3, { message: "Bank code must be at least 3 characters." }),
+})
+
 const ProfilePage = () => {
   const { toast } = useToast()
   const { data: session } = useSession()
@@ -52,18 +74,24 @@ const ProfilePage = () => {
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
   const [selectedStateIsoCode, setSelectedStateIsoCode] = useState("")
+  const [bankAccounts, setBankAccounts] = useState([])
+  const [isLoadingBanks, setIsLoadingBanks] = useState(false) // New: Track bank list loading
+  const [bankFetchError, setBankFetchError] = useState(null) // New: Track bank fetch errors
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
     confirm: false,
   })
+  const [isEditingMerchant, setIsEditingMerchant] = useState(false)
+  const [isUpdatingMerchant, setIsUpdatingMerchant] = useState(false)
+  const [isPromoting, setIsPromoting] = useState(false)
+  
 
   // Fetch user data when session changes
   useEffect(() => {
     const fetchUser = async () => {
       if (session?.user?.email) {
         setIsLoading(true)
-        console.log("Session: ", session.user.email)
         try {
           const response = await fetch('/api/user')
           if (!response.ok) {
@@ -71,6 +99,11 @@ const ProfilePage = () => {
           }
           const user = await response.json()
           setLoggedUser(user)
+          merchantInfoForm.reset({
+            account_name: user.account_name || "",
+            account_number: user.account_number || "",
+            bank_code: user.bank_code || "",
+          })
         } catch (error) {
           console.error("Error fetching user data:", error)
         } finally {
@@ -82,12 +115,44 @@ const ProfilePage = () => {
     fetchUser()
   }, [session])
 
-
   // Fetch states for Ethiopia
   useEffect(() => {
     const ethiopianStates = State.getStatesOfCountry("ET")
     setStates(ethiopianStates)
   }, [])
+
+   // Fetch bank accounts
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      setIsLoadingBanks(true)
+      try {
+        const response = await fetch("/api/bankList")
+        const data = await response.json()
+        if (Array.isArray(data.data)) {
+          setBankAccounts(data.data)
+        } else {
+          console.error("Invalid bank accounts data format:", data)
+          setBankFetchError("Invalid bank accounts data format")
+          toast({
+            title: "Error",
+            description: "Failed to load bank accounts",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Failed to fetch bank accounts:", error)
+        setBankFetchError(error.message)
+        toast({
+          title: "Error",
+          description: "Failed to load bank accounts",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingBanks(false)
+      }
+    }
+    fetchBankAccounts()
+  }, [toast])
 
   // Set initial selected state ISO code
   useEffect(() => {
@@ -107,8 +172,6 @@ const ProfilePage = () => {
     }
   }, [selectedStateIsoCode])
 
-  
-
   // Password form
   const passwordForm = useForm({
     resolver: zodResolver(passwordFormSchema),
@@ -119,6 +182,28 @@ const ProfilePage = () => {
     },
   })
 
+  // Merchant info form
+  const merchantInfoForm = useForm({
+    resolver: zodResolver(merchantInfoFormSchema),
+    defaultValues: {
+      account_name: "",
+      account_number: "",
+      bank_code: "",
+    },
+  })
+
+  // Promote to merchant form
+  const promoteForm = useForm({
+    resolver: zodResolver(promoteToMerchantSchema),
+    defaultValues: {
+      tinNumber: "",
+      nationalId: "",
+      account_name: "",
+      account_number: "",
+      bank_code: "",
+    },
+  })
+
   // Function to toggle password visibility
   const togglePasswordVisibility = (field) => {
     setShowPassword((prev) => ({
@@ -126,7 +211,6 @@ const ProfilePage = () => {
       [field]: !prev[field],
     }))
   }
-
 
   async function onPasswordSubmit(values) {
     try {
@@ -140,6 +224,60 @@ const ProfilePage = () => {
       passwordForm.reset({ currentPassword: "", newPassword: "", confirmPassword: "" })
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
+
+  async function onMerchantInfoSubmit(values) {
+    setIsUpdatingMerchant(true)
+    try {
+      const selectedBank = bankAccounts.find((acc) => acc.name === values.account_name)
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _id: loggedUser._id,
+          account_name: values.account_name,
+          account_number: values.account_number,
+          bank_code: selectedBank ? String(selectedBank.id) : values.bank_code,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to update merchant information')
+      const updatedUser = await response.json()
+      setLoggedUser(updatedUser)
+      setIsEditingMerchant(false)
+      toast({ title: "Success", description: "Merchant information updated successfully." })
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    } finally {
+      setIsUpdatingMerchant(false)
+    }
+  }
+
+  async function onPromoteSubmit(values) {
+    setIsPromoting(true)
+    try {
+      const selectedBank = bankAccounts.find((acc) => acc.name === values.account_name)
+      const response = await fetch('/api/user/promote', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _id: loggedUser._id,
+          tinNumber: values.tinNumber,
+          nationalId: values.nationalId,
+          account_name: values.account_name,
+          account_number: values.account_number,
+          bank_code: selectedBank ? String(selectedBank.id) : values.bank_code,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to submit merchant promotion request')
+      const updatedUser = await response.json()
+      setLoggedUser(updatedUser)
+      promoteForm.reset()
+      toast({ title: "Success", description: "Merchant promotion request submitted successfully." })
+    } catch (err) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    } finally {
+      setIsPromoting(false)
     }
   }
 
@@ -171,7 +309,120 @@ const ProfilePage = () => {
                   <span className="text-sm">@{loggedUser?.fullName.toLowerCase().replace(/\s+/g, "")}</span>
                 </div>
               </div>
-              <EditProfileDialog user={loggedUser} />
+              <div className="flex gap-2">
+                <EditProfileDialog user={loggedUser} />
+                {loggedUser?.role === "customer" && (
+                   <Dialog>
+                   <DialogTrigger asChild>
+                     <Button variant="outline">Promote to Merchant</Button>
+                   </DialogTrigger>
+                   <DialogContent>
+                     <DialogHeader>
+                       <DialogTitle>Promote to Merchant</DialogTitle>
+                       <DialogDescription>
+                         Please provide the required information to request merchant status.
+                       </DialogDescription>
+                     </DialogHeader>
+                     <Form {...promoteForm}>
+                       <form onSubmit={promoteForm.handleSubmit(onPromoteSubmit)} className="space-y-4">
+                         <FormField
+                           control={promoteForm.control}
+                           name="tinNumber"
+                           render={({ field }) => (
+                             <FormItem>
+                               <FormLabel>TIN Number</FormLabel>
+                               <FormControl>
+                                 <Input placeholder="Enter TIN number" {...field} />
+                               </FormControl>
+                               <FormMessage />
+                             </FormItem>
+                           )}
+                         />
+                         <FormField
+                           control={promoteForm.control}
+                           name="nationalId"
+                           render={({ field }) => (
+                             <FormItem>
+                               <FormLabel>National ID</FormLabel>
+                               <FormControl>
+                                 <Input placeholder="Enter National ID" {...field} />
+                               </FormControl>
+                               <FormMessage />
+                             </FormItem>
+                           )}
+                         />
+                         <FormField
+                           control={promoteForm.control}
+                           name="account_name"
+                           render={({ field }) => (
+                             <FormItem>
+                               <FormLabel>Bank Account</FormLabel>
+                               <Select
+                                  onValueChange={(value) => {
+                                    const selectedAccount = bankAccounts.find((acc) => acc.name === value)
+                                    field.onChange(value)
+                                    promoteForm.setValue("bank_code", selectedAccount ? String(selectedAccount.id) : "")
+                                  }}
+                                  defaultValue={field.value}
+                                >
+                                 <FormControl>
+                                   <SelectTrigger>
+                                     <SelectValue placeholder="Select bank account" />
+                                   </SelectTrigger>
+                                 </FormControl>
+                                 <SelectContent>
+                                   {bankAccounts.map((account) => (
+                                     <SelectItem key={account.id} value={account.name}>
+                                       {account.name}
+                                     </SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                               <FormMessage />
+                             </FormItem>
+                           )}
+                         />
+                         <FormField
+                           control={promoteForm.control}
+                           name="account_number"
+                           render={({ field }) => (
+                             <FormItem>
+                               <FormLabel>Account Number</FormLabel>
+                               <FormControl>
+                                 <Input placeholder="Enter account number" {...field} />
+                               </FormControl>
+                               <FormMessage />
+                             </FormItem>
+                           )}
+                         />
+                         <FormField
+                           control={promoteForm.control}
+                           name="bank_code"
+                           render={({ field }) => (
+                             <FormItem>
+                               <FormLabel>Bank Code</FormLabel>
+                               <FormControl>
+                                 <Input placeholder="Enter bank code" {...field} disabled />
+                               </FormControl>
+                               <FormMessage />
+                             </FormItem>
+                           )}
+                         />
+                         <Button type="submit" disabled={isPromoting} className="w-full">
+                            {isPromoting ? "Submitting..." : "Submit Request"}
+                            {isPromoting && (
+                              <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            )}
+                          </Button>
+                       </form>
+                     </Form>
+                   </DialogContent>
+                 </Dialog>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4">
@@ -217,10 +468,12 @@ const ProfilePage = () => {
 
         {/* Profile Content Tabs */}
         <Tabs defaultValue="personal" className="w-full">
-          <TabsList className="grid grid-cols-2 md:w-[400px]">
-            {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
+          <TabsList className="grid grid-cols-2 md:grid-cols-3 md:w-[600px]">
             <TabsTrigger value="personal">Personal Information</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
+            {loggedUser?.role === "merchant" && (
+              <TabsTrigger value="merchant">Merchant Information</TabsTrigger>
+            )}
           </TabsList>
           {/* Personal Information Tab */}
           <TabsContent value="personal" className="mt-6">
@@ -378,10 +631,118 @@ const ProfilePage = () => {
               </Card>
             </div>
           </TabsContent>
-
-          <TabsContent value="reviews" className="mt-6">
-            <ProfileReviews userId={loggedUser?.id} />
-          </TabsContent>
+          {loggedUser?.role === "merchant" && (
+            <TabsContent value="merchant" className="mt-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Merchant Information</CardTitle>
+                    <CardDescription>Manage your merchant account details</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingMerchant(!isEditingMerchant)}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    {isEditingMerchant ? "Cancel" : "Edit"}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <Form {...merchantInfoForm}>
+                    <form onSubmit={merchantInfoForm.handleSubmit(onMerchantInfoSubmit)} className="space-y-4">
+                      <FormField
+                        control={merchantInfoForm.control}
+                        name="account_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bank Account</FormLabel>
+                            <FormControl>
+                              {isEditingMerchant ? (
+                                <Select
+                                  onValueChange={(value) => {
+                                    const selectedAccount = bankAccounts.find((acc) => acc.name === value)
+                                    field.onChange(value)
+                                    merchantInfoForm.setValue("bank_code", selectedAccount ? String(selectedAccount.id) : "")
+                                  }}
+                                  defaultValue={field.value}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select bank account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {bankAccounts.map((account) => (
+                                      <SelectItem key={account.id} value={account.name}>
+                                        {account.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                ) : (
+                                  <Input
+                                    value={field.value}
+                                    disabled
+                                    placeholder="Select a bank account"
+                                  />
+                                )}
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={merchantInfoForm.control}
+                        name="account_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Account Number</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter account number"
+                                {...field}
+                                disabled={!isEditingMerchant}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={merchantInfoForm.control}
+                        name="bank_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bank Code</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter bank code"
+                                {...field}
+                                disabled
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {isEditingMerchant && (
+                        <div className="flex justify-end">
+                          <Button type="submit" disabled={isUpdatingMerchant} className="gradient-bg border-0">
+                            {isUpdatingMerchant ? "Updating..." : "Update Information"}
+                            {isUpdatingMerchant && (
+                              <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
@@ -419,4 +780,5 @@ function ProfileSkeleton() {
     </div>
   )
 }
+
 export default ProfilePage;

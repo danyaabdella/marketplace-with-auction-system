@@ -7,7 +7,7 @@ import { FilterBar } from "../filterBar"
 
 
 
-export function OrdersPage() {
+export default function OrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState([])
   const [searchQuery, setSearchQuery] = useState("");

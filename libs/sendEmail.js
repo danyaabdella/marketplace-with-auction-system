@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export async function sendEmail(to, subject, text) {
+export async function sendEmail(from, to, subject, text) {
     try {
         console.log("Email User:", process.env.EMAIL_USER);
         console.log("Email Pass Exists:", !!process.env.EMAIL_PASS); 
@@ -13,8 +13,8 @@ export async function sendEmail(to, subject, text) {
         });
 
         const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to,
+            from: from, // User's email address
+            to: to, // Configured email address
             subject,
             text,
         };
