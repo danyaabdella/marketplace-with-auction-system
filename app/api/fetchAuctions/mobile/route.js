@@ -5,9 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
-    console.log("Connecting to DB...");
     await connectToDB();
-    console.log("Connected to DB.");
 
     const { searchParams } = new URL(request.url);
     const page = Number(searchParams.get("page")) || 1;
@@ -15,20 +13,20 @@ export async function GET(request) {
     const skip = (page - 1) * limit;
     console.log(`Pagination params - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
-    console.log("Fetching all auctions without filters...");
-    const auctionResults = await Auction.find()
+    console.log("Fetching active auctions...");
+    const auctionResults = await Auction.find({ status: "active" })
       .populate("merchantId", "name avatar")
       .populate("productId", "name")
       .sort({ createdAt: -1 }) // latest first
       .skip(skip)
       .limit(limit)
       .lean();
-    console.log(`Fetched ${auctionResults.length} auctions.`);
+    console.log(`Fetched ${auctionResults.length} active auctions.`);
 
     const auctionIds = auctionResults.map((a) => a._id);
     console.log("Auction IDs for bid lookup:", auctionIds);
 
-    console.log("Fetching bids for auctions...");
+    console.log("Fetching bids for active auctions...");
     const bidResults = await Bid.find({
       auctionId: { $in: auctionIds },
     }).populate({
@@ -90,13 +88,13 @@ export async function GET(request) {
         timeLeft: timeLeftHours,
       };
     });
-    console.log("Final auctions with bid data:", auctions);
+    console.log("Final active auctions with bid data:", auctions);
 
-    return NextResponse.json(auctions); // <- send correct JSON response
+    return NextResponse.json(auctions);
   } catch (error) {
-    console.error("Error fetching auctions:", error);
+    console.error("Error fetching active auctions:", error.message, error.stack);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error.message },
       { status: 500 }
     );
   }
