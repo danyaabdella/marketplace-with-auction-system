@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Image from "next/image"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Mail, Phone, MapPin, Clock } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import 
+import ChatBot from "@/components/commons/ChatBot"
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -26,6 +26,7 @@ const formSchema = z.object({
 export default function ContactPage() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const chatIconRef = useRef(null);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -67,6 +68,17 @@ export default function ContactPage() {
       setIsSubmitting(false)
     }
   }
+  const handleStartChat = () => {
+    if (chatIconRef.current) {
+      chatIconRef.current.click(); // Programmatically trigger the chat icon click
+    } else {
+      toast({
+        title: "Error",
+        description: "Chatbot is not available at the moment.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const faqs = [
     {
@@ -309,11 +321,17 @@ export default function ContactPage() {
               <p className="mt-2 text-muted-foreground">
                 Chat with our AI assistance.
               </p>
-              <Button className="mt-4 gradient-bg border-0">Start Chat</Button>
+              <Button
+                className="mt-4 gradient-bg border-0"
+                onClick={handleStartChat}
+              >
+                Start Chat
+              </Button>
             </CardContent>
           </Card>
         </div>
       </section>
+      <ChatBot chatIconRef={chatIconRef} />
     </div>
   )
 }

@@ -30,7 +30,7 @@ import {
 import { EditAuctionForm } from "./editAuctionForm";
 import { useToast } from "@/components/ui/use-toast";
 
-export function MerchantAuctions() {
+export default function MerchantAuctions() {
   const router = useRouter();
   const { toast } = useToast();
   const [sortColumn, setSortColumn] = useState(null);
@@ -50,12 +50,8 @@ export function MerchantAuctions() {
     try {
       setLoading(true);
       setError(null);
-  
-      const response = await fetch("/api/auctions", {
-        credentials: "include", // Include session cookies
-      });
+      const response = await fetch("/api/auctions", { credentials: "include" });
       const data = await response.json();
-  
       if (response.ok) {
         setAuctions(data);
       } else {
@@ -76,32 +72,22 @@ export function MerchantAuctions() {
     } finally {
       setLoading(false);
     }
-  }, []); // Add dependencies here if needed (e.g. [user])
-  
+  }, [toast]);
+
   useEffect(() => {
     fetchAuctions();
   }, [fetchAuctions]);
 
   const filteredAuctions = auctions.filter((auction) => {
     const matchesSearch = (auction.productName || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || auction.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesApproval =
-      approvalFilter === "all" || auction.adminApproval.toLowerCase() === approvalFilter.toLowerCase();
+    const matchesStatus = statusFilter === "all" || auction.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesApproval = approvalFilter === "all" || auction.adminApproval.toLowerCase() === approvalFilter.toLowerCase();
     return matchesSearch && matchesStatus && matchesApproval;
   });
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-
-  const handleStatusFilterChange = (value) => {
-    setStatusFilter(value);
-  };
-
-  const handleApprovalFilterChange = (value) => {
-    setApprovalFilter(value);
-  };
+  const handleSearch = (query) => setSearchQuery(query);
+  const handleStatusFilterChange = (value) => setStatusFilter(value);
+  const handleApprovalFilterChange = (value) => setApprovalFilter(value);
 
   const statusFilters = [
     { value: "all", label: "All Statuses" },
@@ -126,10 +112,7 @@ export function MerchantAuctions() {
     }
   };
 
-  const handleAuctionClick = (auction) => {
-    router.push(`/dashboard/auctions/${auction._id}`);
-  };
-
+  const handleAuctionClick = (auction) => router.push(`/dashboard/auctions/${auction._id}`);
   const handleDeleteAuction = (auction, e) => {
     e.stopPropagation();
     setSelectedAuction(auction);
@@ -138,7 +121,6 @@ export function MerchantAuctions() {
 
   const confirmDelete = async () => {
     const payload = { auctionId: selectedAuction._id };
-    console.log("Sending DELETE request with payload:", payload);
     try {
       const response = await fetch('/api/auctions', {
         method: "DELETE",
@@ -146,23 +128,15 @@ export function MerchantAuctions() {
         credentials: "include",
         body: JSON.stringify(payload),
       });
-
       if (response.ok) {
         setAuctions(auctions.filter((auction) => auction._id !== selectedAuction._id));
-        toast({
-          title: "Success",
-          description: `${selectedAuction.productName} auction has been deleted successfully.`,
-        });
+        toast({ title: "Success", description: `${selectedAuction.productName} auction has been deleted successfully.` });
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to delete auction");
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete auction",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete auction", variant: "destructive" });
     }
     setIsDeleteDialogOpen(false);
     setSelectedAuction(null);
@@ -170,38 +144,23 @@ export function MerchantAuctions() {
 
   const getStatusBadgeClass = (status) => {
     switch (status?.toLowerCase()) {
-      case "active":
-        return "bg-success/10 text-success";
-      case "ended":
-        return "bg-muted";
-      case "cancelled":
-        return "bg-destructive/10 text-destructive";
-      default:
-        return "bg-muted";
+      case "active": return "bg-success/10 text-success";
+      case "ended": return "bg-muted";
+      case "cancelled": return "bg-destructive/10 text-destructive";
+      default: return "bg-muted";
     }
   };
 
   const getApprovalBadgeClass = (approval) => {
     switch (approval?.toLowerCase()) {
-      case "approved":
-        return "bg-success/10 text-success";
-      case "pending":
-        return "bg-warning/10 text-warning";
-      case "rejected":
-        return "bg-destructive/10 text-destructive";
-      default:
-        return "bg-muted";
+      case "approved": return "bg-success/10 text-success";
+      case "pending": return "bg-warning/10 text-warning";
+      case "rejected": return "bg-destructive/10 text-destructive";
+      default: return "bg-muted";
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const formatDate = (dateString) => (dateString ? new Date(dateString).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "N/A");
 
   if (loading) {
     return (
@@ -219,15 +178,7 @@ export function MerchantAuctions() {
       <div className="container p-6">
         <div className="bg-destructive/10 p-4 rounded-lg flex flex-col items-center">
           <p className="text-destructive mb-4">{error}</p>
-          <Button
-            onClick={() => {
-              setLoading(true);
-              fetchAuctions();
-            }}
-            variant="outline"
-          >
-            Retry Loading
-          </Button>
+          <Button onClick={() => { setLoading(true); fetchAuctions(); }} variant="outline">Retry Loading</Button>
         </div>
       </div>
     );
@@ -239,7 +190,6 @@ export function MerchantAuctions() {
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Auctions</h2>
         <p className="text-sm sm:text-base text-muted-foreground">Manage your upcoming and active auctions</p>
       </div>
-
       <FilterBar
         placeholder="Search auctions..."
         filters={statusFilters}
@@ -248,15 +198,14 @@ export function MerchantAuctions() {
         onFilterChange={handleStatusFilterChange}
         onApprovalFilterChange={handleApprovalFilterChange}
       />
-      <div className="rounded-xl border bg-card p-4 md:p-6">
-        <div className="flex sm:flex-row items-center justify-end mb-2">
+      <div className="rounded-xl border bg-card p-4 md:p-6 mt-4">
+        <div className="flex sm:flex-row items-center justify-end mb-4">
           <CreateAuctionDialog onAuctionCreated={() => fetchAuctions()} />
         </div>
-
-        <div className="w-full overflow-x-auto sm:overflow-visible">
+        <div className="w-full overflow-x-auto">
           <Table className="min-w-[600px] w-full">
             <TableHeader className="bg-gray-100">
-              <TableRow className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <TableRow>
                 <TableHead>Item</TableHead>
                 <TableHead onClick={() => handleSort("condition")}>Condition</TableHead>
                 <TableHead onClick={() => handleSort("status")}>Status</TableHead>
@@ -266,7 +215,6 @@ export function MerchantAuctions() {
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody className="bg-white divide-y divide-gray-200">
               {filteredAuctions.map((auction) => (
                 <TableRow
@@ -286,35 +234,19 @@ export function MerchantAuctions() {
                       <span className="font-medium text-sm sm:text-base">{auction.productName}</span>
                     </div>
                   </TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{auction.condition}</TableCell>
                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {auction.condition}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium",
-                        getStatusBadgeClass(auction.status)
-                      )}
-                    >
+                    <div className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium", getStatusBadgeClass(auction.status))}>
                       {auction.status}
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium",
-                        getApprovalBadgeClass(auction.adminApproval)
-                      )}
-                    >
+                    <div className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs sm:text-sm font-medium", getApprovalBadgeClass(auction.adminApproval))}>
                       {auction.adminApproval}
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${auction.startingPrice.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(auction.endTime)}
-                  </TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${auction.startingPrice.toFixed(2)}</TableCell>
+                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(auction.endTime)}</TableCell>
                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -327,23 +259,14 @@ export function MerchantAuctions() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAuctionToEdit(auction);
-                            setIsEditAuctionOpen(true);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); setAuctionToEdit(auction); setIsEditAuctionOpen(true); }}
                           disabled={auction.adminApproval === "approved"}
                           className={auction.adminApproval === "approved" ? "opacity-50 cursor-not-allowed" : ""}
                         >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Auction
+                          <Edit className="mr-2 h-4 w-4" /> Edit Auction
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => handleDeleteAuction(auction, e)}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Cancel Auction
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteAuction(auction, e)}>
+                          <Trash className="mr-2 h-4 w-4" /> Cancel Auction
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -353,36 +276,26 @@ export function MerchantAuctions() {
             </TableBody>
           </Table>
         </div>
-
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure you want to cancel this auction?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently cancel the auction for "
-                {selectedAuction?.productName}" and notify any bidders.
+                This action cannot be undone. This will permanently cancel the auction for "{selectedAuction?.productName}" and notify any bidders.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete
-              </AlertDialogAction>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
         {auctionToEdit && (
-          <EditAuctionForm 
+          <EditAuctionForm
             open={isEditAuctionOpen}
             onOpenChange={setIsEditAuctionOpen}
             auction={auctionToEdit}
-            onAuctionUpdated={() => {
-              setLoading(true);
-              fetchAuctions();
-            }}
+            onAuctionUpdated={() => { setLoading(true); fetchAuctions(); }}
           />
         )}
       </div>

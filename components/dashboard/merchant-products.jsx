@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 
-export function MerchantProducts() {
+export default function MerchantProducts() {
   const router = useRouter();
   const { toast } = useToast();
   const [sortColumn, setSortColumn] = useState(null);

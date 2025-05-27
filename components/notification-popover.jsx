@@ -161,7 +161,7 @@ export function NotificationPopover() {
                 <div className="divide-y">
                   {notifications.map((notification) => (
                     <div
-                      key={notification.id}
+                      key={notification._id}
                       className={`flex gap-4 p-4 ${
                         !notification.read ? "bg-primary/5" : ""
                       }`}
@@ -218,7 +218,7 @@ export function NotificationPopover() {
                     .filter((n) => !n.read)
                     .map((notification) => (
                       <div
-                        key={notification.id}
+                        key={notification._id}
                         className={`flex gap-4 p-4 ${!notification.read ? "bg-primary/5" : ""}`}
                       >
                         <div
@@ -263,7 +263,7 @@ export function NotificationPopover() {
                     .filter((n) => ["bid", "outbid", "won"].includes(n.type))
                     .map((notification) => (
                       <div
-                        key={notification.id}
+                        key={notification._id}
                         className={`flex gap-4 p-4 ${
                           !notification.read ? "bg-primary/5" : ""
                         }`}
