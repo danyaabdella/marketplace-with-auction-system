@@ -4,8 +4,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "next dev --turbo -p 4000",
         "dev:socket": "NODE_OPTIONS='--trace-warnings' node server.mjs next dev",
+        "dev": "next dev --turbo -p 3001",
         "build": "next build",
         "start": "next start",
         "lint": "next lint"

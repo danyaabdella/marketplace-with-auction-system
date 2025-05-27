@@ -163,7 +163,7 @@ export const POST = async (req) => {
     // Initialize payment
     try {
       const checkoutResponse = await fetch(
-        `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/adCheckout`,
+        `${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`,
         {
           method: "POST",
           headers: {
@@ -174,22 +174,8 @@ export const POST = async (req) => {
             amount: adPrice,
             adData: {
               adId: newAd._id,
-              product,
-              merchantDetail,
-              startsAt,
-              endsAt,
-              adRegion,
-              isHome,
-            },
-            user: {
-              _id: user._id,
-              email: user.email,
-              role: user.role,
-              fullName: user.fullName,
-              phoneNumber: user.phoneNumber,
             },
           }),
-          credentials: "include",
         }
       );
 
@@ -243,7 +229,6 @@ export const POST = async (req) => {
 };
 
 // Rest of the file (GET and PUT handlers) remains unchanged
-
 export const GET = async (req) => {
   await connectToDB();
 
@@ -277,7 +262,7 @@ export const GET = async (req) => {
         },
         { $sort: { createdAt: -1 } },
         { $skip: (page - 1) * limit },
-        { $limit: limit }, // Removed hardcoded limit of 5, using dynamic limit
+        { $limit: limit },
         {
           $facet: {
             metadata: [{ $count: "total" }],
@@ -336,4 +321,3 @@ export const GET = async (req) => {
     );
   }
 };
-
