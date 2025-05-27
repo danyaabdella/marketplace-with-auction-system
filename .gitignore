@@ -3,7 +3,7 @@
 
 # dependencies
 /node_modules
-/socket-server
+socket-server/
 /.pnp
 .pnp.*
 .yarn/*
