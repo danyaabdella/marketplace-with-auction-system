@@ -1,33 +1,54 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
+import { useSession } from "next-auth/react"
+import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Bell, Clock, DollarSign, Trophy, XCircle } from "lucide-react"
 import { cn } from "@/libs/utils"
-
-// interface MyAuctionCardProps {
-//   auction: any
-//   onClick: () => void
-// }
+import { Button } from "@/components/ui/button"
 
 export function MyAuctionCard({ auction, onClick }) {
   const [isHovered, setIsHovered] = useState(false)
+  const [loggedUser, setLoggedUser] = useState(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(false)
+  const { data: session } = useSession()
+
+  // Fetch user data when session is available
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (session?.user?.email) {
+        setIsLoadingUser(true)
+        try {
+          const response = await fetch("/api/user")
+          if (!response.ok) throw new Error(`Server error: ${response.status}`)
+          const userData = await response.json()
+          setLoggedUser(userData)
+        } catch (error) {
+          console.error("Error fetching user data:", error)
+          toast.error("Failed to load user data")
+        } finally {
+          setIsLoadingUser(false)
+        }
+      }
+    }
+    fetchUser()
+  }, [session])
 
   // Calculate time left percentage for progress bar
   const calculateTimeLeftPercentage = () => {
     if (auction.status !== "active") return 100
 
     const now = new Date().getTime()
-    const end = new Date(auction.endDate).getTime()
+    const end = new Date(auction.endTime).getTime()
     const total = end - now
 
     if (total <= 0) return 100
 
-    // Assuming a 7-day auction period for simplicity
     const sevenDays = 7 * 24 * 60 * 60 * 1000
     const elapsed = sevenDays - total
     return Math.min(Math.floor((elapsed / sevenDays) * 100), 100)
@@ -40,18 +61,12 @@ export function MyAuctionCard({ auction, onClick }) {
         return auction.isHighestBidder ? (
           <Badge className="bg-success text-success-foreground">Highest Bidder</Badge>
         ) : (
-          <Badge variant="outline" className="text-warning">
-            Outbid
-          </Badge>
+          <Badge variant="outline" className="text-warning">Outbid</Badge>
         )
       case "won":
         return <Badge className="bg-success text-success-foreground">Won</Badge>
       case "lost":
-        return (
-          <Badge variant="outline" className="text-destructive">
-            Lost
-          </Badge>
-        )
+        return <Badge variant="outline" className="text-destructive">Lost</Badge>
       case "ended":
         return <Badge variant="outline">Ended</Badge>
       default:
@@ -59,10 +74,10 @@ export function MyAuctionCard({ auction, onClick }) {
     }
   }
 
-  // Get status icon
+  // Get status icon based on auction.status
   const getStatusIcon = () => {
-    switch (auction.status) {
-      case "won":
+    switch (auction.timeLeft) {
+      case "Won":
         return <Trophy className="h-5 w-5 text-success" />
       case "lost":
         return <XCircle className="h-5 w-5 text-destructive" />
@@ -76,6 +91,84 @@ export function MyAuctionCard({ auction, onClick }) {
         return <Clock className="h-5 w-5 text-muted-foreground" />
     }
   }
+
+// Handle checkout process using fetched user data
+async function handleCheckout() {
+  if (!loggedUser) {
+    toast.error("User data not loaded. Please try again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/getAuctionOwner?auctionId=${auction._id}`);
+    if (!response.ok) {
+      toast.error("Failed to fetch merchant info");
+      return;
+    }
+
+    const data = await response.json();
+    const merchant = data.merchant;
+
+    const orderData = {
+      auction: {
+        auctionId: auction._id || "ID",
+        delivery: auction?.delivery || "FREE",
+        deliveryPrice: auction?.deliveryPrice || 0,
+      },
+      customerDetail: {
+        customerId: loggedUser._id,
+        customerName: loggedUser.fullName,
+        phoneNumber: loggedUser.phoneNumber,
+        customerEmail: loggedUser.email,
+        address: {
+          state: loggedUser.stateName,
+          city: loggedUser.cityName,
+        },
+      },
+      merchantDetail: {
+        merchantId: merchant._id,
+        merchantName: merchant.fullName,
+        merchantEmail: merchant.email,
+        phoneNumber: merchant.phoneNumber,
+        account_name: merchant.account_name,
+        account_number: merchant.account_number,
+        bank_code: merchant.bank_code,
+      },
+    };
+
+    console.log("Prepared orderData for checkout:", orderData);
+
+    const amount =
+      auction.currentBid +
+      (auction.delivery === "PAID" ? auction.deliveryPrice : 0);
+
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ amount, orderData }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      toast.error(error.message || "Checkout failed");
+      return;
+    }
+
+    const { checkout_url } = await res.json();
+    toast.success("Checkout initiated!");
+
+    // Optional: Redirect to checkout
+    if (checkout_url) {
+      window.location.href = checkout_url;
+    }
+  } catch (error) {
+    console.error("Error during checkout:", error);
+    toast.error("Checkout failed. Please try again.");
+  }
+}
+
 
   return (
     <Card
@@ -137,7 +230,7 @@ export function MyAuctionCard({ auction, onClick }) {
               <p
                 className={cn("text-lg font-bold", auction.isHighestBidder ? "text-success" : "text-muted-foreground")}
               >
-                ${auction.myBid}
+                ${auction.myBid || 0}
               </p>
             </div>
           </div>
@@ -148,16 +241,30 @@ export function MyAuctionCard({ auction, onClick }) {
         <div className="flex items-center gap-1.5 text-sm">
           {getStatusIcon()}
           <span
-            className={cn(auction.status === "won" && "text-success", auction.status === "lost" && "text-destructive")}
+            className={cn(auction.timeLeft === "Won" && "text-success", auction.timeLeft === "lost" && "text-destructive")}
           >
             {auction.timeLeft}
           </span>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {auction.bids} {auction.bids === 1 ? "bid" : "bids"}
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">
+            {auction.bids} {auction.bids === 1 ? "bid" : "bids"}
+          </div>
+          {auction.timeLeft === "Won" && (
+            <Button
+              size="sm"
+              className="ml-2"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCheckout()
+              }}
+              disabled={isLoadingUser}
+            >
+              {isLoadingUser ? "Loading..." : "Proceed to Checkout"}
+            </Button>
+          )}
         </div>
       </CardFooter>
     </Card>
   )
 }
-
