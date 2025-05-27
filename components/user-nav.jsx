@@ -19,7 +19,7 @@ import { CreditCard, LayoutDashboard, LogOut, User, Package } from "lucide-react
 export function UserNav() {
   // Helper function to generate initials from the user's name
   const getInitials = (name) => {
-    if (!name) return "U";
+    if (!name) return "";
     const names = name.split(" ");
     const initials = names.map((n) => n[0]).join("");
     return initials.toUpperCase().slice(0, 2); // e.g., "John Doe" -> "JD"

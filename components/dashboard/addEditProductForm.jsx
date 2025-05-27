@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { X, Plus, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import LocationPicker from "../location-picker";
+import { uploadImagesToFirebase } from "@/libs/utils";
 
 // Updated schema to remove latitude and longitude
 const formSchema = z.object({
@@ -52,6 +53,8 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
   const [images, setImages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [location, setLocation] = useState({ lat: 9.03, lng: 38.74 });
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadError, setUploadError] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -152,11 +155,56 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
     setSizes(sizes.filter((s) => s !== size));
   };
 
-  const handleImageUpload = (e) => {
+  const validateImage = (file) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      throw new Error(`Invalid file type. Only ${validTypes.join(', ')} are allowed.`);
+    }
+
+    if (file.size > maxSize) {
+      throw new Error('File size must be less than 5MB');
+    }
+
+    return true;
+  };
+
+  const handleImageUpload = async (e) => {
     const files = e.target.files;
-    if (files) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
-      setImages([...images, ...newImages]);
+    if (!files || files.length === 0) return;
+
+    setUploadError(null);
+    const newProgress = {};
+    const validFiles = [];
+
+    // Validate all files first
+    try {
+      Array.from(files).forEach(file => {
+        validateImage(file);
+        validFiles.push(file);
+        newProgress[file.name] = 0;
+      });
+    } catch (error) {
+      setUploadError(error.message);
+      return;
+    }
+
+    setUploadProgress(newProgress);
+
+    try {
+      const uploadedUrls = await uploadImagesToFirebase(validFiles, (progress) => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [progress.fileName]: progress.progress
+        }));
+      });
+
+      setImages(prev => [...prev, ...uploadedUrls]);
+      setUploadProgress({});
+    } catch (error) {
+      setUploadError('Failed to upload images. Please try again.');
+      console.error('Upload failed:', error);
     }
   };
 
@@ -503,14 +551,37 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
             {/* Images */}
             <div>
               <FormLabel>Product Images</FormLabel>
-              <FormDescription>Upload one or more images of your product</FormDescription>
+              <FormDescription>Upload one or more images of your product (max 5MB each, JPEG/PNG/WEBP)</FormDescription>
               <Input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 multiple
                 onChange={handleImageUpload}
                 className="cursor-pointer mt-2"
               />
+              
+              {uploadError && (
+                <div className="text-red-500 text-sm mt-2">
+                  {uploadError}
+                </div>
+              )}
+
+              {Object.keys(uploadProgress).length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {Object.entries(uploadProgress).map(([fileName, progress]) => (
+                    <div key={fileName} className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-500">{progress}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {images.length > 0 && (
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   {images.map((image, index) => (

@@ -1,14 +1,32 @@
 import { NextResponse } from "next/server";
-
 import Order from "@/models/Order";
 import User from "@/models/User";
 import Product from "@/models/Product";
-import { userInfo } from "@/libs/functions";
+import { connectToDB, userInfo } from "@/libs/functions";
 
 export async function POST(req) {
   try {
+    // Connect to the database
+    await connectToDB();
+
+    // Parse request body
     const body = await req.json();
-    const { userId, merchantId } = body;
+    const { userId, transactionRef, paymentStatus, ...orderData } = body;
+    const {
+      customerDetail = {},
+      merchantDetail,
+      products = [],
+      totalPrice,
+      location,
+    } = orderData;
+
+    // Validate userId and fetch user
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
     const sessionUser = await User.findById(userId);
     if (
@@ -17,62 +35,70 @@ export async function POST(req) {
       sessionUser.isDeleted ||
       !sessionUser.isEmailVerified
     ) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized or invalid user." }),
+      return NextResponse.json(
+        { error: "Unauthorized or invalid user" },
         { status: 401 }
       );
     }
 
-    const customerDetail = body.customerDetail || {
-      customerId: sessionUser._id,
-      customerName: sessionUser.fullName,
-      phoneNumber: sessionUser.phoneNumber,
-      customerEmail: sessionUser.email,
+    // Build customerDetail, filling missing fields from User schema
+    const validatedCustomerDetail = {
+      customerId: sessionUser._id.toString(),
+      customerName:
+        customerDetail.customerName ||
+        sessionUser.fullName ||
+        "Unknown Customer",
+      phoneNumber: customerDetail.phoneNumber || sessionUser.phoneNumber || "",
+      customerEmail: customerDetail.customerEmail || sessionUser.email || "",
       address: {
-        state: sessionUser.stateName,
-        city: sessionUser.cityName,
+        state: customerDetail.address?.state || sessionUser.stateName || "",
+        city: customerDetail.address?.city || sessionUser.cityName || "",
       },
     };
 
+    // Validate critical customerDetail fields
     if (
-      !customerDetail.customerId ||
-      !customerDetail.customerName ||
-      !customerDetail.phoneNumber ||
-      !customerDetail.customerEmail ||
-      !customerDetail.address.state ||
-      !customerDetail.address.city
+      !validatedCustomerDetail.customerId ||
+      !validatedCustomerDetail.customerName ||
+      !validatedCustomerDetail.customerEmail
     ) {
-      return new Response(
-        JSON.stringify({ error: "Customer details are incomplete" }),
+      return NextResponse.json(
+        { error: "Critical customer details (ID, name, or email) are missing" },
         { status: 400 }
       );
     }
 
-    const products = body.products || [];
-    if (products.length === 0 && !body.auction) {
-      return new Response(
-        JSON.stringify({
-          error: "Order must contain either products or an auction",
-        }),
+    // Validate products
+    if (products.length === 0) {
+      return NextResponse.json(
+        { error: "Order must contain at least one product" },
         { status: 400 }
       );
     }
 
+    // Validate and update product quantities
     for (const orderProduct of products) {
       const { productId, quantity } = orderProduct;
+      if (!productId || !quantity) {
+        return NextResponse.json(
+          { error: `Product ID and quantity are required for all products` },
+          { status: 400 }
+        );
+      }
+
       const product = await Product.findById(productId);
-      if (!product) {
-        return new Response(
-          JSON.stringify({ error: `Product with ID ${productId} not found` }),
+      if (!product || product.isBanned || product.isDeleted) {
+        return NextResponse.json(
+          { error: `Product with ID ${productId} not found or unavailable` },
           { status: 404 }
         );
       }
 
       if (product.quantity < quantity) {
-        return new Response(
-          JSON.stringify({
+        return NextResponse.json(
+          {
             error: `Insufficient quantity for product: ${product.productName}`,
-          }),
+          },
           { status: 400 }
         );
       }
@@ -82,85 +108,113 @@ export async function POST(req) {
       await product.save();
     }
 
-    if (!body.transactionRef) {
-      return new Response(
-        JSON.stringify({ error: "Transaction reference is required" }),
+    // Validate transaction reference
+    if (!transactionRef) {
+      return NextResponse.json(
+        { error: "Transaction reference is required" },
         { status: 400 }
       );
     }
 
-    const location = {
-      type: "Point",
-      coordinates: body.location?.coordinates || [],
+    // Validate location coordinates
+    const orderLocation = {
+      type: location?.type || "Point",
+      coordinates: location?.coordinates || [0, 0],
     };
-
-    if (!location.coordinates.length) {
-      return new Response(
-        JSON.stringify({ error: "Location coordinates are required" }),
+    if (!orderLocation.coordinates || orderLocation.coordinates.length !== 2) {
+      return NextResponse.json(
+        { error: "Valid location coordinates are required" },
         { status: 400 }
       );
     }
 
-    const merchantUser = await User.findById("68323a2e41ede2167f7c03e2");
+    // Validate and fetch merchant details
+    if (!merchantDetail?.merchantId) {
+      return NextResponse.json(
+        { error: "Merchant ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const merchantUser = await User.findById(merchantDetail.merchantId);
     if (!merchantUser) {
-      return new Response(JSON.stringify({ error: "Merchant not found" }), {
-        status: 404,
-      });
+      return NextResponse.json(
+        { error: "Merchant not found" },
+        { status: 404 }
+      );
     }
 
-    const merchantDetail = {
-      merchantId: merchantUser._id,
-      merchantName: merchantUser.fullName,
-      merchantEmail: merchantUser.email,
-      phoneNumber: merchantUser.phoneNumber,
-      account_name: merchantUser.account_name,
-      account_number: merchantUser.account_number,
-      bank_code: merchantUser.bank_code,
+    const validatedMerchantDetail = {
+      merchantId: merchantUser._id.toString(),
+      merchantName:
+        merchantDetail.merchantName ||
+        merchantUser.fullName ||
+        "Unknown Merchant",
+      merchantEmail: merchantDetail.merchantEmail || merchantUser.email || "",
+      phoneNumber: merchantDetail.phoneNumber || merchantUser.phoneNumber || "",
+      account_name:
+        merchantDetail.account_name || merchantUser.account_name || "",
+      account_number:
+        merchantDetail.account_number || merchantUser.account_number || "",
+      bank_code: merchantDetail.bank_code || merchantUser.bank_code || "",
     };
 
-    const auction = body.auction
-      ? {
-          auctionId: body.auction.auctionId,
-          delivery: body.auction.delivery,
-          deliveryPrice: body.auction.deliveryPrice,
-        }
-      : null;
+    // Validate critical merchantDetail fields
+    if (
+      !validatedMerchantDetail.merchantId ||
+      !validatedMerchantDetail.merchantName ||
+      !validatedMerchantDetail.merchantEmail ||
+      !validatedMerchantDetail.account_name ||
+      !validatedMerchantDetail.account_number ||
+      !validatedMerchantDetail.bank_code
+    ) {
+      return NextResponse.json(
+        { error: "Critical merchant details are missing" },
+        { status: 400 }
+      );
+    }
 
+    // Map products to schema-compliant structure
+    const orderProducts = products.map((p) => ({
+      productId: p.productId,
+      productName: p.productName || "Unknown Product",
+      quantity: p.quantity,
+      price: p.price || 0,
+      delivery: p.delivery || "FREE",
+      deliveryPrice: p.deliveryPrice || 0,
+      categoryName: p.categoryName || "Uncategorized",
+      weight: p.weight || 0,
+      location: p.location || { type: "Point", coordinates: [0, 0] },
+    }));
+
+    // Create new order
     const newOrder = new Order({
-      customerDetail,
-      merchantDetail,
-      products: products.map((p) => ({
-        productId: p.productId,
-        productName: p.productName,
-        quantity: p.quantity,
-        price: p.price,
-        delivery: p.deliveryType,
-        deliveryPrice: p.deliveryPrice,
-        categoryName: p.categoryName,
-      })),
-      auction,
-      totalPrice: body.total || 0,
-      status: body.status || "Pending",
-      paymentStatus: body.paymentStatus || "Pending",
-      transactionRef: body.transactionRef,
-      chapaRef: body.paymentStatus === "Paid" ? body.chapaRef : undefined,
-      location,
+      customerDetail: validatedCustomerDetail,
+      merchantDetail: validatedMerchantDetail,
+      products: orderProducts,
+      totalPrice: totalPrice || 0,
+      status: "Pending",
+      paymentStatus: paymentStatus || "Pending",
+      transactionRef,
+      location: orderLocation,
+      userId,
     });
 
     await newOrder.save();
 
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         message: "Order created successfully",
         order: newOrder,
-      }),
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating order:", error);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
-      status: 500,
-    });
+    console.error("Error creating order:", error.message, error.stack);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -168,6 +222,7 @@ export async function PUT(req) {
   try {
     const sessionUser = await userInfo(req);
     const body = await req.json();
+    console
 
     if (!sessionUser) {
       return NextResponse.json(

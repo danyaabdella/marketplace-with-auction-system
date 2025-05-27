@@ -3,40 +3,51 @@ import Advertisement from "@/models/Advertisement";
 import { connectToDB } from "@/libs/functions";
 import mongoose from "mongoose";
 
-
 export async function GET(req) {
-  await connectToDB();
-
-  const chapaKey = process.env.CHAPA_SECRET_KEY;
-  if (!chapaKey) {
-    console.error("Chapa secret key missing");
-    return NextResponse.json({ message: "Server configuration error" }, { status: 500 });
-  }
-
   try {
+    // Connect to the database
+    await connectToDB();
+
+    // Verify Chapa secret key
+    const chapaKey = process.env.CHAPA_SECRET_KEY;
+    if (!chapaKey) {
+      console.error("Chapa secret key missing");
+      return NextResponse.json(
+        { message: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Extract query parameters
     const { searchParams } = new URL(req.url);
     const tx_ref = searchParams.get("tx_ref");
     const adId = searchParams.get("adId");
-  let adId;
-  try {
-    const { searchParams } = new URL(req.url);
-    const tx_ref = searchParams.get("tx_ref");
-    adId = searchParams.get("adId");
 
     console.log("VerifyPayment request params:", { tx_ref, adId });
 
+    // Validate query parameters
     if (!tx_ref || !adId) {
-      return NextResponse.json({ message: "Missing tx_ref or adId" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Missing tx_ref or adId" },
+        { status: 400 }
+      );
     }
 
     if (!mongoose.isValidObjectId(adId)) {
-      return NextResponse.json({ message: "Invalid adId format" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid adId format" },
+        { status: 400 }
+      );
     }
 
+    // Find advertisement
     const advertisement = await Advertisement.findById(adId);
     if (!advertisement) {
       console.error("Advertisement not found:", adId);
-      return NextResponse.json({ message: "Advertisement not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Advertisement not found" },
+        { status: 404 }
+      );
     }
 
     // Check if payment is already processed
@@ -53,24 +64,18 @@ export async function GET(req) {
     }
 
     // Verify payment with Chapa
-    if (advertisement.paymentStatus !== "PENDING") {
-      return NextResponse.json(
-        {
-          message: "Payment already processed",
-          status: advertisement.paymentStatus === "PAID" ? "success" : "failed",
+    const chapaResponse = await fetch(
+      `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${chapaKey}`,
+          "Content-Type": "application/json",
         },
-        { status: 200 }
-      );
-    }
+      }
+    );
 
-    const chapaResponse = await fetch(`https://api.chapa.co/v1/transaction/verify/${tx_ref}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${chapaKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
+    // Check response content type
     const contentType = chapaResponse.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       console.error("Chapa response is not JSON:", {
@@ -87,6 +92,7 @@ export async function GET(req) {
       data,
     });
 
+    // Handle payment verification failure
     if (!chapaResponse.ok || data.status !== "success") {
       console.error("Chapa verification failed:", {
         status: chapaResponse.status,
@@ -94,7 +100,10 @@ export async function GET(req) {
       });
       await Advertisement.findByIdAndUpdate(adId, {
         paymentStatus: "FAILED",
-        rejectionReason: { reason: "Payment verification failed", description: data.message || "Unknown error" },
+        rejectionReason: {
+          reason: "Payment verification failed",
+          description: data.message || "Unknown error",
+        },
       });
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/products?status=failed`
@@ -105,20 +114,6 @@ export async function GET(req) {
     await Advertisement.findByIdAndUpdate(adId, {
       paymentStatus: "PAID",
       approvalStatus: "PENDING", // Still pending admin approval
-        rejectionReason: {
-          reason: "Payment verification failed",
-          description: data.message || "Unknown error",
-        },
-      });
-      return NextResponse.json(
-        { message: "Payment verification failed", status: "failed" },
-        { status: 400 }
-      );
-    }
-
-    await Advertisement.findByIdAndUpdate(adId, {
-      paymentStatus: "PAID",
-      approvalStatus: "PENDING",
       tx_ref,
     });
 
@@ -128,13 +123,6 @@ export async function GET(req) {
       `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/products?status=success`
     );
   } catch (error) {
-    console.error("VerifyPayment error:", error);
-    if (adId) {
-    return NextResponse.json(
-      { message: "Payment verified successfully", status: "success" },
-      { status: 200 }
-    );
-  } catch (error) {
     console.error("VerifyPayment error:", error.message, error.stack);
     if (adId && mongoose.isValidObjectId(adId)) {
       await Advertisement.findByIdAndUpdate(adId, {
@@ -142,9 +130,8 @@ export async function GET(req) {
         rejectionReason: { reason: "Server error", description: error.message },
       });
     }
-    return NextResponse.json({ message: "Internal Server Error", error: error.message }, { status: 500 });
     return NextResponse.json(
-      { message: "Internal Server Error", error: error.message, status: "error" },
+      { message: "Internal Server Error", error: error.message },
       { status: 500 }
     );
   }

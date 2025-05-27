@@ -212,7 +212,6 @@ export default function ProductDetailPage({ params }) {
 
       const data = await response.json()
 
-      const data = await response.json()
       console.log("fff:", data);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create advertisement')
