@@ -147,7 +147,6 @@ export function CreateAuctionDialog({ onAuctionCreated }) {
         setOpen(false);
         form.reset();
         setImages([]);
-        setBuyByParts(false);
         if (onAuctionCreated) onAuctionCreated();
       } else {
         const errorData = await response.json();

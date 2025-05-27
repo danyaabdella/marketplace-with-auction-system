@@ -325,7 +325,7 @@ export default function ProductDetail({ product }) {
   console.log("product" , product)
   const mainImage = product?.images?.[0] || "/placeholder.svg"
   const categoryName = product?.category?.categoryName || "Uncategorized"
-  const merchantName = product?.merchantDetail?.[0]?.merchantName || "Unknown Seller"
+  const merchantName = product?.merchantDetail?.[0]?.merchantName || "Abdelaziz Ebrahim1"
   const productPrice = product?.price?.toFixed(2) || "0.00"
   const [reviews, setReviews] = useState(product?.review || [])
   const { addToCart } = useCart()

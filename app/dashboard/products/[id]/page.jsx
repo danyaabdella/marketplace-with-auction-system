@@ -276,7 +276,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
       <div className="container p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Product not found</h1>
-          <Button onClick={() => router.push("/dashboard/products")} className="mt-4">
+          <Button onClick={() => router.push("/dashboard")} className="mt-4">
             Back to Products
           </Button>
         </div>
@@ -319,7 +319,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   return (
     <div className="container p-6">
       <div className="mb-6">
-        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/dashboard/products')}>
+        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/dashboard')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
         </Button>
