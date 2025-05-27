@@ -36,18 +36,35 @@ export default function ContactPage() {
     },
   })
 
-  function onSubmit(values) {
+  async function onSubmit(values) {
     setIsSubmitting(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast({
-        title: "Message sent!",
-        description: "We'll get back to you as soon as possible.",
+    try {
+      const response = await fetch('/api/sendEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
       })
-      form.reset()
-    }, 1500)
+      if (response.ok) {
+        toast({
+          title: "Message sent!",
+          description: "We'll get back to you as soon as possible.",
+        })
+        form.reset()
+      } else {
+        throw new Error('Failed to send message')
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const faqs = [
@@ -171,15 +188,15 @@ export default function ContactPage() {
                 <Mail className="mt-1 h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Email</p>
-                  <p className="text-muted-foreground">support@auctionhub.com</p>
-                  <p className="text-muted-foreground">info@auctionhub.com</p>
+                  <p className="text-muted-foreground">abdelazizebrahim@gmail.com</p>
+                  <p className="text-muted-foreground">danyaabdella@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="mt-1 h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Phone</p>
-                  <p className="text-muted-foreground">+1 (555) 123-4567</p>
+                  <p className="text-muted-foreground">+251975805980</p>
                   <p className="text-muted-foreground">Mon-Fri, 9am-5pm EST</p>
                 </div>
               </div>
@@ -187,8 +204,8 @@ export default function ContactPage() {
                 <MapPin className="mt-1 h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Address</p>
-                  <p className="text-muted-foreground">123 Auction Lane</p>
-                  <p className="text-muted-foreground">New York, NY 10001</p>
+                  <p className="text-muted-foreground">Peyasa building</p>
+                  <p className="text-muted-foreground">Bahir Dar</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -287,9 +304,9 @@ export default function ContactPage() {
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold">Live Chat</h3>
+              <h3 className="text-xl font-semibold"> Chat</h3>
               <p className="mt-2 text-muted-foreground">
-                Chat with our support team in real-time for immediate assistance.
+                Chat with our AI assistance.
               </p>
               <Button className="mt-4 gradient-bg border-0">Start Chat</Button>
             </CardContent>

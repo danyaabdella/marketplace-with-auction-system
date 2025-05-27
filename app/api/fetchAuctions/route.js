@@ -15,6 +15,7 @@ export async function GET(request) {
         // Fetch active auctions with pagination
         const auctionResults = await Auction.find({
             status: "active",
+            startTime: { $lte: new Date() },
             endTime: { $gt: new Date() }
         })
         .populate('merchantId', 'name avatar')

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import Product from "@/models/Product"
 import { connectToDB } from "@/libs/functions"
-
+import mongoose from "mongoose"
 export async function GET(request, { params }) {
-  const { id } = params
+  const { id } = await params
   
   if (!id) {
     return NextResponse.json(
@@ -13,7 +13,12 @@ export async function GET(request, { params }) {
   }
 
   await connectToDB()
-
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return NextResponse.json(
+      { error: "Invalid product ID" },
+      { status: 400 }
+    );
+  }
   try {
     const product = await Product.findById(id)
       .populate('category.categoryId', 'name')

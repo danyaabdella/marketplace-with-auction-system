@@ -75,14 +75,14 @@ export function Navbar() {
       >
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center space-x-2 group">
+            {/* <Link href="/" className="flex items-center space-x-2 group"> */}
               <div className="h-9 w-9 rounded-full gradient-bg flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
-                <span className="text-white font-bold text-lg">A</span>
+                <span className="text-white font-bold text-lg">B</span>
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent gradient-bg lg:block hidden">
-                AuctionHub
+              <span className="text-xl font-bold bg-clip-text text-primary  lg:block hidden">
+                Bahirmart
               </span>
-            </Link>
+            {/* </Link> */}
           </div>
           <div className="hidden md:flex flex-grow items-center justify-center mx-4">
             <nav className="flex items-center space-x-1 text-sm font-medium">

@@ -68,9 +68,9 @@ export function Footer() {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <div className="h-8 w-8 rounded-full gradient-bg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">A</span>
+                <span className="text-primary-foreground font-bold">B</span>
               </div>
-              <h3 className="text-lg font-semibold bg-clip-text text-transparent gradient-bg">AuctionHub</h3>
+              <h3 className="text-lg font-semibold bg-clip-text text-primary ">Bahirmart</h3>
             </div>
             <p className="text-sm text-muted-foreground">
               The premier online marketplace for unique items and collectibles.
@@ -160,7 +160,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} AuctionHub. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Bahirmart. All rights reserved.</p>
         </div>
       </div>
     </footer>
