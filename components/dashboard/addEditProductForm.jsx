@@ -272,6 +272,8 @@ export function AddEditProductForm({ open, onOpenChange, product, mode }) {
         description: `${values.productName} has been ${mode === "add" ? "added" : "updated"} successfully.`,
       });
       onOpenChange(false);
+      window.location.reload();
+
     } catch (error) {
       toast({
         title: "Error",

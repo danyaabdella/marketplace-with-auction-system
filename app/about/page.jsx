@@ -419,25 +419,6 @@ export default function AboutUsPage() {
           </div>
         ) : null}
       </div>
-
-      {isLoading ? (
-        <Skeleton className="h-64 w-full" />
-      ) : aboutData?.cta ? (
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-8 text-white text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-            {aboutData.cta.title}
-          </h2>
-          <p className="text-lg text-purple-100 mb-6 max-w-2xl mx-auto">
-            {aboutData.cta.description}
-          </p>
-          <Link href={aboutData.cta.buttonLink || "#"}>
-            <Button size="lg" variant="secondary" className="group">
-              {aboutData.cta.buttonText || "Get Started"}
-              <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }

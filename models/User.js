@@ -49,9 +49,11 @@ const UserSchema = new Schema(
     },
     uniqueTinNumber: {
       type: String,
-      // unique: true,
-      // sparse: true, // important for unique index on possibly missing fields
-      // Removed required, validate in app logic instead
+      unique: true,
+      sparse: true,
+      required: function () {
+        return this.approvalStatus === "approved";
+      },
     },
     nationalId: {
       type: String,

@@ -85,15 +85,15 @@ export const POST = async (req) => {
       );
     }
 
-    // Calculate and validate price
-    const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
-    const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
-    if (adPrice !== expectedPrice) {
-      return NextResponse.json(
-        { error: "Invalid advertisement price" },
-        { status: 400 }
-      );
-    }
+    // // Calculate and validate price
+    // const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
+    // const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
+    // if (adPrice !== expectedPrice) {
+    //   return NextResponse.json(
+    //     { error: "Invalid advertisement price" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Check active ad count for the region
     const regionAdCount = await Advertisement.countDocuments({

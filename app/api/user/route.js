@@ -3,10 +3,9 @@ import User from "@/models/User";
 import argon2 from "argon2";
 
 export async function GET(req) {
-  // console.log("GET request received");
+  await connectToDB();
 
   const user = await userInfo(req);
-  // console.log("User info fetched:", user);
 
   if (!user) {
     // console.log("No user found. Returning 401 Unauthorized.");

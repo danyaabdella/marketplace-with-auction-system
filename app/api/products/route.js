@@ -10,7 +10,7 @@ export async function POST(req) {
     if (!merchantInfo?.email) {
       return new Response(JSON.stringify({ error: "Unauthorized. No session found." }), { status: 401 });
     }
-    console.log('merchantInfo;:', merchantInfo);
+    console.log('merchantInfo:', merchantInfo);
 
     const productData = await req.json();
 
