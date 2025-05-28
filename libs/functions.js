@@ -193,6 +193,7 @@ export async function userInfo(req) {
 
     await connectToDB();
     const user = await User.findOne({ email }).select("-password").lean();
+    console.log("usererere: ", user)
 
     return user;
   } catch (error) {
