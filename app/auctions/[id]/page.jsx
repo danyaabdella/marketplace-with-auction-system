@@ -112,7 +112,7 @@ export default function AuctionDetailPage({ params }) {
     if (bidAmount < minBidAmount) {
       toast({
         title: "Invalid bid amount",
-        description: `Your bid must be at least $${minBidAmount}`,
+        description: `Your bid must be at least ETB${minBidAmount}`,
         variant: "destructive",
       });
       return;
@@ -136,7 +136,7 @@ export default function AuctionDetailPage({ params }) {
 
       toast({
         title: "Bid placed successfully!",
-        description: `You placed a bid of $${bidAmount} on ${auctionData.auctionTitle}`,
+        description: `You placed a bid of ETB${bidAmount} on ${auctionData.auctionTitle}`,
       });
 
       // Update local state
@@ -237,22 +237,22 @@ export default function AuctionDetailPage({ params }) {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Current Bid</p>
                   <p className="text-3xl font-bold text-primary">
-                    ${auctionData.highestBid || auctionData.startingPrice}
+                    ETB{auctionData.highestBid || auctionData.startingPrice}
                   </p>
                   <p className="text-sm text-muted-foreground">{auctionData.totalBids || 0} bids</p>
                 </div>
                 <div className="flex gap-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Starting Price</p>
-                    <p className="font-medium">${auctionData.startingPrice}</p>
+                    <p className="font-medium">ETB{auctionData.startingPrice}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Reserve Price</p>
-                    <p className="font-medium">${auctionData.reservedPrice}</p>
+                    <p className="font-medium">ETB{auctionData.reservedPrice}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Increment</p>
-                    <p className="font-medium">${auctionData.bidIncrement}</p>
+                    <p className="font-medium">ETB{auctionData.bidIncrement}</p>
                   </div>
                 </div>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -265,13 +265,13 @@ export default function AuctionDetailPage({ params }) {
                     <DialogHeader>
                       <DialogTitle>Place a Bid</DialogTitle>
                       <DialogDescription>
-                        Current highest bid is ${auctionData.highestBid || auctionData.startingPrice}. Your bid must be
-                        at least ${(auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement}.
+                        Current highest bid is ETB{auctionData.highestBid || auctionData.startingPrice}. Your bid must be
+                        at least ETB{(auctionData.highestBid || auctionData.startingPrice) + auctionData.bidIncrement}.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="bid-amount">Bid Amount ($)</Label>
+                        <Label htmlFor="bid-amount">Bid Amount (ETB)</Label>
                         <Input
                           id="bid-amount"
                           type="number"
@@ -350,7 +350,7 @@ export default function AuctionDetailPage({ params }) {
                 </div>
                 <div>
                   <p className="font-medium">Shipping Cost</p>
-                  <p className="text-muted-foreground">${auctionData.shippingCost || "TBD"}</p>
+                  <p className="text-muted-foreground">ETB{auctionData.shippingCost || "TBD"}</p>
                 </div>
               </div>
             </TabsContent>

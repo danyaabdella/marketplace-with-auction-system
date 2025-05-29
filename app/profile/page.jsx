@@ -1,14 +1,11 @@
-
-
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ProfileReviews } from "@/components/profile/profile-reviews"
 import { EditProfileDialog } from "@/components/profile/edit-profile-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar, MapPin, Shield, Star, UserIcon, Eye, EyeOff, Pencil } from "lucide-react"
@@ -30,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { uploadImagesToFirebase } from "@/libs/utils"
 
 // Form schemas
 const profileFormSchema = z.object({
@@ -58,12 +56,10 @@ const merchantInfoFormSchema = z.object({
 })
 
 const promoteToMerchantSchema = z.object({
-  tinNumber: z.string().min(10, { message: "TIN number must be at least 10 characters." }),
-  nationalId: z.string().min(8, { message: "National ID must be at least 8 characters." }),
   account_name: z.string().min(2, { message: "Account name must be at least 2 characters." }),
   account_number: z.string().min(8, { message: "Account number must be at least 8 characters." }),
   bank_code: z.string().min(3, { message: "Bank code must be at least 3 characters." }),
-})
+});
 
 const ProfilePage = () => {
   const { toast } = useToast()
@@ -85,6 +81,8 @@ const ProfilePage = () => {
   const [isEditingMerchant, setIsEditingMerchant] = useState(false)
   const [isUpdatingMerchant, setIsUpdatingMerchant] = useState(false)
   const [isPromoting, setIsPromoting] = useState(false)
+  const tinFileInputRef = useRef(null);
+  const nationalIdFileInputRef = useRef(null);
   
 
   // Fetch user data when session changes
@@ -253,33 +251,48 @@ const ProfilePage = () => {
     }
   }
 
-  async function onPromoteSubmit(values) {
-    setIsPromoting(true)
-    try {
-      const selectedBank = bankAccounts.find((acc) => acc.name === values.account_name)
-      const response = await fetch('/api/user/promote', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          _id: loggedUser._id,
-          tinNumber: values.tinNumber,
-          nationalId: values.nationalId,
-          account_name: values.account_name,
-          account_number: values.account_number,
-          bank_code: selectedBank ? String(selectedBank.id) : values.bank_code,
-        }),
-      })
-      if (!response.ok) throw new Error('Failed to submit merchant promotion request')
-      const updatedUser = await response.json()
-      setLoggedUser(updatedUser)
-      promoteForm.reset()
-      toast({ title: "Success", description: "Merchant promotion request submitted successfully." })
-    } catch (err) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
-    } finally {
-      setIsPromoting(false)
+async function onPromoteSubmit(values) {
+  setIsPromoting(true);
+  try {
+    // Upload TIN file
+    const tinFile = tinFileInputRef.current.files[0];
+    if (!tinFile) {
+      throw new Error("TIN number file is required");
     }
+    const [tinUrl] = await uploadImagesToFirebase([tinFile]);
+
+    // Upload National ID file
+    const nationalIdFile = nationalIdFileInputRef.current.files[0];
+    if (!nationalIdFile) {
+      throw new Error("National ID file is required");
+    }
+    const [nationalIdUrl] = await uploadImagesToFirebase([nationalIdFile]);
+
+    // Use URLs in the API request
+    const selectedBank = bankAccounts.find((acc) => acc.name === values.account_name);
+    const response = await fetch('/api/user/promote', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        _id: loggedUser._id,
+        tinNumber: tinUrl,
+        nationalId: nationalIdUrl,
+        account_name: values.account_name,
+        account_number: values.account_number,
+        bank_code: selectedBank ? String(selectedBank.id) : values.bank_code,
+      }),
+    });
+    if (!response.ok) throw new Error('Failed to submit merchant promotion request');
+    const updatedUser = await response.json();
+    setLoggedUser(updatedUser);
+    promoteForm.reset();
+    toast({ title: "Success", description: "Merchant promotion request submitted successfully." });
+  } catch (err) {
+    toast({ title: "Error", description: err.message, variant: "destructive" });
+  } finally {
+    setIsPromoting(false);
   }
+}
 
   if (isLoading) {
     return <ProfileSkeleton />
@@ -317,109 +330,99 @@ const ProfilePage = () => {
                      <Button variant="outline">Promote to Merchant</Button>
                    </DialogTrigger>
                    <DialogContent>
-                     <DialogHeader>
-                       <DialogTitle>Promote to Merchant</DialogTitle>
-                       <DialogDescription>
-                         Please provide the required information to request merchant status.
-                       </DialogDescription>
-                     </DialogHeader>
-                     <Form {...promoteForm}>
-                       <form onSubmit={promoteForm.handleSubmit(onPromoteSubmit)} className="space-y-4">
-                         <FormField
-                           control={promoteForm.control}
-                           name="tinNumber"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>TIN Number</FormLabel>
-                               <FormControl>
-                                 <Input placeholder="Enter TIN number" {...field} />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                         <FormField
-                           control={promoteForm.control}
-                           name="nationalId"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>National ID</FormLabel>
-                               <FormControl>
-                                 <Input placeholder="Enter National ID" {...field} />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                         <FormField
-                           control={promoteForm.control}
-                           name="account_name"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>Bank Account</FormLabel>
-                               <Select
-                                  onValueChange={(value) => {
-                                    const selectedAccount = bankAccounts.find((acc) => acc.name === value)
-                                    field.onChange(value)
-                                    promoteForm.setValue("bank_code", selectedAccount ? String(selectedAccount.id) : "")
-                                  }}
-                                  defaultValue={field.value}
-                                >
-                                 <FormControl>
-                                   <SelectTrigger>
-                                     <SelectValue placeholder="Select bank account" />
-                                   </SelectTrigger>
-                                 </FormControl>
-                                 <SelectContent>
-                                   {bankAccounts.map((account) => (
-                                     <SelectItem key={account.id} value={account.name}>
-                                       {account.name}
-                                     </SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                         <FormField
-                           control={promoteForm.control}
-                           name="account_number"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>Account Number</FormLabel>
-                               <FormControl>
-                                 <Input placeholder="Enter account number" {...field} />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                         <FormField
-                           control={promoteForm.control}
-                           name="bank_code"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>Bank Code</FormLabel>
-                               <FormControl>
-                                 <Input placeholder="Enter bank code" {...field} disabled />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                         <Button type="submit" disabled={isPromoting} className="w-full">
-                            {isPromoting ? "Submitting..." : "Submit Request"}
-                            {isPromoting && (
-                              <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                            )}
-                          </Button>
-                       </form>
-                     </Form>
-                   </DialogContent>
+  <DialogHeader>
+    <DialogTitle>Promote to Merchant</DialogTitle>
+    <DialogDescription>
+      Please provide the required information to request merchant status.
+    </DialogDescription>
+  </DialogHeader>
+  <Form {...promoteForm}>
+    <form onSubmit={promoteForm.handleSubmit(onPromoteSubmit)} className="space-y-4">
+      <FormItem>
+        <FormLabel>TIN Number File</FormLabel>
+        <FormControl>
+          <Input type="file" ref={tinFileInputRef} />
+        </FormControl>
+      </FormItem>
+      <FormItem>
+        <FormLabel>National ID File</FormLabel>
+        <FormControl>
+          <Input type="file" ref={nationalIdFileInputRef} />
+        </FormControl>
+      </FormItem>
+      <FormField
+        control={promoteForm.control}
+        name="account_name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Bank Account</FormLabel>
+            <Select
+              onValueChange={(value) => {
+                const selectedAccount = bankAccounts.find((acc) => acc.name === value);
+                field.onChange(value);
+                promoteForm.setValue("bank_code", selectedAccount ? String(selectedAccount.id) : "");
+              }}
+              defaultValue={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bank account" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {bankAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.name}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={promoteForm.control}
+        name="account_number"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Account Number</FormLabel>
+            <FormControl>
+              <Input placeholder="Enter account number" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={promoteForm.control}
+        name="bank_code"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Bank Code</FormLabel>
+            <FormControl>
+              <Input placeholder="Enter bank code" {...field} disabled />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <Button type="submit" disabled={isPromoting} className="w-full">
+        {isPromoting ? "Submitting..." : "Submit Request"}
+        {isPromoting && (
+          <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+        )}
+      </Button>
+    </form>
+  </Form>
+</DialogContent>
                  </Dialog>
                 )}
               </div>

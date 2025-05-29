@@ -62,7 +62,14 @@ export const POST = async (req) => {
     } = await req.json();
 
     // Validate required fields
-    if (!product || !merchantDetail || !startsAt || !endsAt || !adPrice || !adRegion) {
+    if (
+      !product ||
+      !merchantDetail ||
+      !startsAt ||
+      !endsAt ||
+      !adPrice ||
+      !adRegion
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -85,15 +92,15 @@ export const POST = async (req) => {
       );
     }
 
-    // Calculate and validate price
-    const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
-    const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
-    if (adPrice !== expectedPrice) {
-      return NextResponse.json(
-        { error: "Invalid advertisement price" },
-        { status: 400 }
-      );
-    }
+    // // Calculate and validate price
+    // const weeks = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 7));
+    // const expectedPrice = isHome ? 100 * Math.max(1, weeks) : 50 * Math.max(1, weeks);
+    // if (adPrice !== expectedPrice) {
+    //   return NextResponse.json(
+    //     { error: "Invalid advertisement price" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Check active ad count for the region
     const regionAdCount = await Advertisement.countDocuments({
@@ -158,17 +165,25 @@ export const POST = async (req) => {
 
     // Initialize Agenda and schedule deactivation job
     const agendaInstance = await initializeAgenda();
-    await agendaInstance.schedule(endDate, "deactivate ad", { adId: newAd._id });
+    await agendaInstance.schedule(endDate, "deactivate ad", {
+      adId: newAd._id,
+    });
+
+    const userr = await userInfo(req);
+    console.log("uuuuu: ", userr);
 
     // Initialize payment
     try {
       const checkoutResponse = await fetch(
-        `${process.env.NEXTAUTH_URL || "http://localhost:3001"}/api/adCheckout`,
+        `${
+          process.env.NEXTAUTH_URL || "http://localhost:3001"
+        }/api/adCheckout?_id=${userr._id}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: req.headers.get("authorization") || `Bearer ${user.token || ""}`,
+            Authorization:
+              req.headers.get("authorization") || `Bearer ${user.token || ""}`,
           },
           body: JSON.stringify({
             amount: adPrice,
@@ -180,11 +195,15 @@ export const POST = async (req) => {
       );
 
       const checkoutData = await checkoutResponse.json();
+      console.log("chapppap: ", checkoutData);
 
-      if (!checkoutResponse.ok) {
+      if (!checkoutData.checkout_url) {
         // Clean up on failure
         await Advertisement.findByIdAndDelete(newAd._id);
-        await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
+        await agendaInstance.cancel({
+          name: "deactivate ad",
+          "data.adId": newAd._id,
+        });
         return NextResponse.json(
           {
             error: "Payment initialization failed",
@@ -198,8 +217,8 @@ export const POST = async (req) => {
         {
           message: "Ad created and payment initialized successfully",
           checkout_url: checkoutData.checkout_url,
-          tx_ref,
-          adId: newAd._id,
+          tx_ref: checkoutData.tx_ref,
+          adId: checkoutData.adId,
         },
         { status: 201 }
       );
@@ -207,7 +226,10 @@ export const POST = async (req) => {
       // Clean up on error
       console.error("Error initializing payment:", error);
       await Advertisement.findByIdAndDelete(newAd._id);
-      await agendaInstance.cancel({ name: "deactivate ad", "data.adId": newAd._id });
+      await agendaInstance.cancel({
+        name: "deactivate ad",
+        "data.adId": newAd._id,
+      });
       return NextResponse.json(
         {
           error: "Error creating ad or initializing payment",
@@ -233,7 +255,7 @@ export const GET = async (req) => {
   await connectToDB();
 
   const url = new URL(req.url);
-  const center = url.searchParams.get("center");
+  const center = url.searchParams.get("center") || "37.3883-11.6";
   const radius = parseInt(url.searchParams.get("radius")) || 50000;
   const page = parseInt(url.searchParams.get("page")) || 1;
   const limit = parseInt(url.searchParams.get("limit")) || 15; // Keep dynamic limit for pagination

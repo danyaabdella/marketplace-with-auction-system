@@ -7,72 +7,98 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { MyAuctionCard } from "@/components/auction/my-auctions-card"
-import { useRouter } from "next/navigation";
-
+import { useRouter } from "next/navigation"
 
 export default function MyAuctionsPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [sortOption, setSortOption] = useState("ending-soon")
+  const [searchQuery, setSearchQuery] = useState(() => {
+    console.log("Initializing searchQuery state: ", "");
+    return "";
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    console.log("Initializing statusFilter state: ", "all");
+    return "all";
+  });
+  const [sortOption, setSortOption] = useState(() => {
+    console.log("Initializing sortOption state: ", "ending-soon");
+    return "ending-soon";
+  });
   const router = useRouter();
-  const [selectedAuction, setSelectedAuction] = useState(null)
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
-  const [data, setData] = useState({ allActive: [], activeBids: [], won: [], lost: [] })
-  const [loading, setLoading] = useState(true)
- 
+  const [showFilters, setShowFilters] = useState(() => {
+    console.log("Initializing showFilters state: ", false);
+    return false;
+  });
+  const [data, setData] = useState(() => {
+    console.log("Initializing data state: ", { participated: [], activeBids: [], won: [], lost: [] });
+    return { participated: [], activeBids: [], won: [], lost: [] };
+  });
+  const [loading, setLoading] = useState(() => {
+    console.log("Initializing loading state: ", true);
+    return true;
+  });
+
   useEffect(() => {
     async function fetchAuctions() {
-      setLoading(true)
-      const res = await fetch("/api/fetchAuctions/auctionById")
+      setLoading(true);
+      const res = await fetch("/api/fetchAuctions/auctionById");
       if (res.ok) {
-        const json = await res.json()
-        setData(json)
+        const json = await res.json();
+        console.log("datann: ", data);
+        setData(json);
       }
-      setLoading(false)
+      setLoading(false);
     }
-    fetchAuctions()
-  }, [])
+    fetchAuctions();
+  }, []);
 
-  const baseArray = {
-    all: data.participated,
-    active: data.activeBids,
-    won: data.won,
-    lost: data.lost,
-  }[statusFilter] || []
+  // Define baseArray with "ended" combining won and lost auctions
+  const baseArray = (() => {
+    const result = {
+      all: data.participated,
+      active: data.activeBids,
+      won: data.won,
+      lost: data.lost,
+      ended: [...(data.won || []), ...(data.lost || [])],
+    }[statusFilter] || [];
+    return result;
+  })();
 
-  // 1) Filter by search + status (for “ended” tab include both won+lost)
-  const filtered = baseArray.filter(auction => {
-    const matchesSearch =
-    (auction.auctionTitle || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (auction.description || "").toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch
-  })
+  // Filter by search query
+  const filtered = (() => {
+    const result = baseArray.filter(auction => {
+      const matchesSearch =
+        (auction.auctionTitle || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (auction.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    });
+    return result;
+  })();
 
-  // 2) Sort according to sortOption
-  const sorted = filtered.sort((a, b) => {
-    if (sortOption === "ending-soon") {
-      // active first, then by soonest endDate
-      if (a.status !== "active" && b.status === "active") return 1
-      if (a.status === "active" && b.status !== "active") return -1
-      return new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
-    }
-    if (sortOption === "newest") {
-      return new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
-    }
-    if (sortOption === "highest-bid") {
-      return b.highestBid - a.highestBid
-    }
-    if (sortOption === "most-bids") {
-      return b.totalQuantity - a.totalQuantity // or use b.bidCount if you have it
-    }
-    return 0
-  })
-
+  // Sort according to sortOption
+  const sorted = (() => {
+    const result = filtered.sort((a, b) => {
+      if (sortOption === "ending-soon") {
+        if (a.status !== "active" && b.status === "active") return 1;
+        if (a.status === "active" && b.status !== "active") return -1;
+        return new Date(a.endTime).getTime() - new Date(b.endTime).getTime();
+      }
+      if (sortOption === "newest") {
+        return new Date(b.endTime).getTime() - new Date(a.endTime).getTime();
+      }
+      if (sortOption === "highest-bid") {
+        return (b.highestBid || 0) - (a.highestBid || 0);
+      }
+      if (sortOption === "most-bids") {
+        return (b.totalQuantity || 0) - (a.totalQuantity || 0);
+      }
+      return 0;
+    });
+    console.log("Sorted auctions: ", result);
+    return result;
+  })();
 
   const handleAuctionClick = (auction) => {
-    router.push(`/auctions/${auction._id}`)
-  }
+    router.push(`/auctions/${auction._id}`);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -89,15 +115,29 @@ export default function MyAuctionsPage() {
             placeholder="Search your auctions..."
             className="pl-9 pr-4"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              console.log("Search query changed to: ", e.target.value);
+              setSearchQuery(e.target.value);
+            }}
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="sm:hidden" onClick={() => setShowFilters(!showFilters)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="sm:hidden"
+            onClick={() => {
+              console.log("Toggling filters, new state: ", !showFilters);
+              setShowFilters(!showFilters);
+            }}
+          >
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
           <div className={`flex-1 sm:flex items-center gap-2 ${showFilters ? "flex" : "hidden"}`}>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => {
+              console.log("Status filter changed to: ", val);
+              setStatusFilter(val);
+            }}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -109,7 +149,10 @@ export default function MyAuctionsPage() {
                 <SelectItem value="ended">Ended Auctions</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sortOption} onValueChange={setSortOption}>
+            <Select value={sortOption} onValueChange={(val) => {
+              console.log("Sort option changed to: ", val);
+              setSortOption(val);
+            }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -124,9 +167,12 @@ export default function MyAuctionsPage() {
         </div>
       </div>
 
-       <Tabs
+      <Tabs
         defaultValue="all"
-        onValueChange={(val) => setStatusFilter(val)}
+        onValueChange={(val) => {
+          console.log("Tabs value changed to: ", val);
+          setStatusFilter(val);
+        }}
         className="w-full"
       >
         <TabsList className="mb-6">
@@ -134,35 +180,33 @@ export default function MyAuctionsPage() {
           <TabsTrigger value="active">Active Bids</TabsTrigger>
           <TabsTrigger value="won">Won</TabsTrigger>
           <TabsTrigger value="lost">Lost</TabsTrigger>
+          <TabsTrigger value="ended">Ended</TabsTrigger>
         </TabsList>
 
         {loading ? (
-          <div className="text-center py-12">Loading…</div>
-            ) : sorted.length > 0 ? (
-              <TabsContent value={statusFilter} className="mt-0">
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {sorted.map((auction) => (
-                    <MyAuctionCard
-                      key={auction._id}
-                      auction={auction}
-                      onClick={() => handleAuctionClick(auction)}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-            ) : (
-              <TabsContent value={statusFilter} className="mt-0 text-center py-12">
-                <h3 className="text-lg font-medium">No auctions found</h3>
-                <p className="text-muted-foreground mt-1">Try adjusting your search or filters</p>
-              </TabsContent>
-            )}
+          <div className="text-center py-12">
+            <p>Rendering loading state...</p>
+          </div>
+        ) : sorted.length > 0 ? (
+          <TabsContent value={statusFilter} className="mt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {sorted.map((auction) => (
+                <MyAuctionCard
+                  key={auction._id}
+                  auction={auction}
+                  onClick={() => handleAuctionClick(auction)}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        ) : (
+          <TabsContent value={statusFilter} className="mt-0 text-center py-12">
+            <h3 className="text-lg font-medium">No auctions found</h3>
+            <p className="text-muted-foreground mt-1">Try adjusting your search or filters</p>
+            <p>Rendering no auctions for tab: {statusFilter}</p>
+          </TabsContent>
+        )}
       </Tabs>
-
-      {/* Auction Detail Dialog */}
-      {/* {selectedAuction && (
-        <AuctionDetailDialog open={isDetailOpen} onOpenChange={setIsDetailOpen} auction={selectedAuction} />
-      )} */}
     </div>
   )
 }
-

@@ -24,6 +24,7 @@ export async function GET(req) {
   const filter = {
     isBanned: { $ne: true },
     isDeleted: { $ne: true },
+    
   };
 
   if (category) {
@@ -63,6 +64,7 @@ export async function GET(req) {
             merchantDetail: { merchantId: 1, merchantName: 1 },
             location: 1,
             delivery: 1,
+            deliveryPrice: 1,
             distance: 1,
             createdAt: 1,
           },

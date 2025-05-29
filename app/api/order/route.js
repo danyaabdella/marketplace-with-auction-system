@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import Order from "@/models/Order";
 import User from "@/models/User";
 import Product from "@/models/Product";
 import { connectToDB, userInfo } from "@/libs/functions";
+import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
@@ -16,6 +16,7 @@ export async function POST(req) {
       customerDetail = {},
       merchantDetail,
       products = [],
+      auction,
       totalPrice,
       location,
     } = orderData;
@@ -68,44 +69,49 @@ export async function POST(req) {
       );
     }
 
-    // Validate products
-    if (products.length === 0) {
-      return NextResponse.json(
-        { error: "Order must contain at least one product" },
-        { status: 400 }
-      );
-    }
+    // Validate and update product quantities if products are provided
+    const orderProducts = [];
+    if (products.length > 0) {
+      for (const orderProduct of products) {
+        const { productId, quantity } = orderProduct;
+        if (!productId || !quantity) {
+          return NextResponse.json(
+            { error: `Product ID and quantity are required for all products` },
+            { status: 400 }
+          );
+        }
 
-    // Validate and update product quantities
-    for (const orderProduct of products) {
-      const { productId, quantity } = orderProduct;
-      if (!productId || !quantity) {
-        return NextResponse.json(
-          { error: `Product ID and quantity are required for all products` },
-          { status: 400 }
-        );
+        const product = await Product.findById(productId);
+        if (!product || product.isBanned || product.isDeleted) {
+          return NextResponse.json(
+            { error: `Product with ID ${productId} not found or unavailable` },
+            { status: 404 }
+          );
+        }
+
+        if (product.quantity < quantity) {
+          return NextResponse.json(
+            {
+              error: `Insufficient quantity for product: ${product.productName}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        product.quantity -= quantity;
+        product.soldQuantity += quantity;
+        await product.save();
+
+        orderProducts.push({
+          productId: productId,
+          productName: orderProduct.productName || "Unknown Product",
+          quantity: quantity,
+          price: orderProduct.price || 0,
+          delivery: orderProduct.delivery || "FREE",
+          deliveryPrice: orderProduct.deliveryPrice || 0,
+          categoryName: orderProduct.categoryName || "Uncategorized",
+        });
       }
-
-      const product = await Product.findById(productId);
-      if (!product || product.isBanned || product.isDeleted) {
-        return NextResponse.json(
-          { error: `Product with ID ${productId} not found or unavailable` },
-          { status: 404 }
-        );
-      }
-
-      if (product.quantity < quantity) {
-        return NextResponse.json(
-          {
-            error: `Insufficient quantity for product: ${product.productName}`,
-          },
-          { status: 400 }
-        );
-      }
-
-      product.quantity -= quantity;
-      product.soldQuantity += quantity;
-      await product.save();
     }
 
     // Validate transaction reference
@@ -174,30 +180,17 @@ export async function POST(req) {
       );
     }
 
-    // Map products to schema-compliant structure
-    const orderProducts = products.map((p) => ({
-      productId: p.productId,
-      productName: p.productName || "Unknown Product",
-      quantity: p.quantity,
-      price: p.price || 0,
-      delivery: p.delivery || "FREE",
-      deliveryPrice: p.deliveryPrice || 0,
-      categoryName: p.categoryName || "Uncategorized",
-      weight: p.weight || 0,
-      location: p.location || { type: "Point", coordinates: [0, 0] },
-    }));
-
     // Create new order
     const newOrder = new Order({
       customerDetail: validatedCustomerDetail,
       merchantDetail: validatedMerchantDetail,
       products: orderProducts,
+      auction: auction,
       totalPrice: totalPrice || 0,
       status: "Pending",
       paymentStatus: paymentStatus || "Pending",
       transactionRef,
       location: orderLocation,
-      userId,
     });
 
     await newOrder.save();
@@ -222,7 +215,7 @@ export async function PUT(req) {
   try {
     const sessionUser = await userInfo(req);
     const body = await req.json();
-    console
+    console;
 
     if (!sessionUser) {
       return NextResponse.json(

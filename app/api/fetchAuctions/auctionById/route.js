@@ -1,4 +1,5 @@
 
+
 // import { connectToDB, userInfo } from "@/libs/functions";
 // import Auction from "@/models/Auction";
 // import Bid from "@/models/Bid";
@@ -215,3 +216,4 @@ export async function GET(req) {
 
   return NextResponse.json(result, { status: 200 });
 }
+

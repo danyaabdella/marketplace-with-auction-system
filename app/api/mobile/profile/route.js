@@ -25,7 +25,7 @@ export async function GET(req) {
     const userData = await authenticate(req);
 
     const user = await User.findById(userData.id).lean();
-    if (!user || user.role !== 'customer') {
+    if (!user) {
       return NextResponse.json({ error: 'User not found or not a customer' }, { status: 404 });
     }
 

@@ -51,7 +51,7 @@ const orderSchema = new mongoose.Schema({
   auction: {
     auctionId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
+      ref: "Auction",
       required: function () {
         return !(this.products && this.products.length > 0); // Required if products is empty
       },

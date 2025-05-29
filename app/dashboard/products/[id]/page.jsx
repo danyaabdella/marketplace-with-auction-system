@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -68,12 +67,32 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   // Unwrap the params Promise using React.use
   const params = React.use(paramsPromise)
 
- 
-
   useEffect(() => {
     const fetchProductAndAd = async () => {
       try {
         setLoading(true);
+
+        // Check URL for payment status
+        const url = new URL(window.location.href);
+        const paymentStatus = url.searchParams.get("payment");
+        if (paymentStatus) {
+          // Remove payment status from URL
+          url.searchParams.delete("payment");
+          window.history.replaceState({}, "", url);
+
+          if (paymentStatus === "success") {
+            toast({
+              title: "Success",
+              description: "Advertisement payment completed successfully",
+            });
+          } else if (paymentStatus === "failed") {
+            toast({
+              title: "Payment Failed",
+              description: "Advertisement payment failed. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }
 
         // Fetch product
         const productResponse = await fetch(`/api/products/${params.id}`);
@@ -219,6 +238,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
         throw new Error("No matching region found for product location");
       }
 
+      // Create advertisement and initialize payment
       const response = await fetch('/api/advertisement', {
         method: 'POST',
         headers: {
@@ -233,33 +253,40 @@ export default function ProductDetailPage({ params: paramsPromise }) {
           adRegion,
           isHome: isHomeAd,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
-      console.log("fff:", data);
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create advertisement')
+        throw new Error(data.error || 'Failed to create advertisement');
       }
 
       if (data.checkout_url) {
-        window.location.href = data.checkout_url // Redirect to Chapa checkout
+        // Store ad data in localStorage before redirect
+        localStorage.setItem('pendingAd', JSON.stringify({
+          adId: data.adId,
+          tx_ref: data.tx_ref,
+          productId: params.id
+        }));
+        
+        // Redirect to checkout URL
+        window.location.href = data.checkout_url;
       } else {
         toast({
           title: "Success",
           description: "Advertisement created successfully",
-        })
-        setIsAdDialogOpen(false)
+        });
+        setIsAdDialogOpen(false);
       }
     } catch (error) {
-      console.error("Error creating advertisement:", error)
+      console.error("Error creating advertisement:", error);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -276,7 +303,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
       <div className="container p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Product not found</h1>
-          <Button onClick={() => router.push("/dashboard/products")} className="mt-4">
+          <Button onClick={() => router.push("/dashboard")} className="mt-4">
             Back to Products
           </Button>
         </div>
@@ -319,7 +346,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   return (
     <div className="container p-6">
       <div className="mb-6">
-        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/dashboard/products')}>
+        <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.push('/dashboard')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
         </Button>

@@ -6,7 +6,7 @@ export async function POST(req) {
     const chapaKey = process.env.CHAPA_SECRET_KEY;
     const body = await req.json();
     const { amount, orderData } = body;
-    console.log('orderData', orderData);
+    console.log('orderData', orderData.auction);
     const tx_ref = `tx_${uuidv4().split('-')[0]}`;
 
     if (!amount || !orderData) {
