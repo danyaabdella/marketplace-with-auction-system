@@ -24,6 +24,7 @@ export async function GET(req) {
   const filter = {
     isBanned: { $ne: true },
     isDeleted: { $ne: true },
+    
   };
 
   if (category) {

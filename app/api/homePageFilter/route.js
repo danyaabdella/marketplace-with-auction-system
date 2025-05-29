@@ -6,7 +6,7 @@ export async function GET(req) {
 
   const url = new URL(req.url);
   const type = url.searchParams.get("type");
-  const center = url.searchParams.get("center");
+  const center = url.searchParams.get("centerg");
   const radius = parseInt(url.searchParams.get("radius")) || 10000; // Default to 10KM
   const page = parseInt(url.searchParams.get("page")) || 1;
   const limit = parseInt(url.searchParams.get("limit")) || 8;

@@ -319,7 +319,7 @@ export default function CartPage() {
                           <div className="flex-1">
                             <h3 className="font-medium">{product.name}</h3>
                             <p className="text-sm text-muted-foreground mt-1">
-                              ${(
+                              ETB{(
                                 product.offer?.price && product.offer?.offerEndDate > new Date()
                                   ? product.offer.price
                                   : product.price

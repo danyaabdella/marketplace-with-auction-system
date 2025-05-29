@@ -255,7 +255,7 @@ export const GET = async (req) => {
   await connectToDB();
 
   const url = new URL(req.url);
-  const center = url.searchParams.get("center");
+  const center = url.searchParams.get("center") || "37.3883-11.6";
   const radius = parseInt(url.searchParams.get("radius")) || 50000;
   const page = parseInt(url.searchParams.get("page")) || 1;
   const limit = parseInt(url.searchParams.get("limit")) || 15; // Keep dynamic limit for pagination
